@@ -1,5 +1,13 @@
 # Enterprise FDRE Optimization Engine
 
+## Developer Handoff
+
+Start with the [Enterprise Development Handoff](docs/enterprise/README.md) for
+the current-system inventory, multiple tender families, rule-engine design,
+enterprise UI specifications, data/API contracts, input dictionary, validation
+matrix and phased delivery backlog. Proposed features are clearly separated
+from what is implemented today.
+
 ## React Application
 
 The current frontend is in `react_demo/`, with a FastAPI backend and the Python

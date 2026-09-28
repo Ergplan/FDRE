@@ -1,0 +1,97 @@
+{
+  "specification_version": "1.0",
+  "artifact_type": "illustrative_review_draft",
+  "executable": false,
+  "family": "seci_cfd_i",
+  "approval_status": "unreviewed",
+  "capability_status": "unsupported_in_current_engine",
+  "source_documents": [
+    {
+      "id": "base_rfs",
+      "filename": "Revised_RfS_for_1000_MWh_assured_Peak_Supply_under_CfD_Mechanism_(CfD-I).pdf",
+      "sha256": "8f56020a6b138d1b421aa9e5896e7dae0a0abd24b99ef8d444f610314f2fd10c",
+      "issue_date": "2026-07-15",
+      "physical_pages": 129
+    },
+    {
+      "id": "amendment_01",
+      "filename": "Amendment-01-SECI-CfD-I-final_upload.pdf",
+      "sha256": "2c9acd3f1ca83cad76dc65dc2a1e3d465445a72cddbda21804a60b51bc4f0ce8",
+      "issue_date": "2026-07-17",
+      "physical_pages": 2,
+      "base_document_id": "base_rfs"
+    }
+  ],
+  "procurement": {"power_mw": 500, "daily_peak_energy_mwh": 1000},
+  "project_contracted_capacity_mw": null,
+  "calendar": {
+    "timezone": "Asia/Kolkata",
+    "interval_minutes": 15,
+    "term_years": 12,
+    "term_start_basis": "SCD",
+    "contract_week_anchor": null,
+    "partial_week_policy": null
+  },
+  "rules": [
+    {
+      "rule_id": "peak_daily_energy",
+      "rule_type": "energy_minimum",
+      "quantity": 2000,
+      "unit": "kWh_per_MW_per_day",
+      "aggregation": "day",
+      "basis": "eligible_exchange_cleared_energy",
+      "schedule": {
+        "policy": "day_ahead_rpd_selected_blocks",
+        "clock_window": {"start": "18:00", "end": "24:00"},
+        "required_minutes": 120,
+        "consecutive_required": false,
+        "additional_constraint": "approved_non_solar_hours_definition"
+      },
+      "evidence": [{"document_id": "base_rfs", "physical_page": 21, "clause": "9.1"}],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "weekly_shortfall",
+      "rule_type": "penalty",
+      "quantity": 14,
+      "unit": "MWh_per_MW_per_contract_week",
+      "aggregation": "contract_week",
+      "shortfall_allowance_ratio": 0.10,
+      "settlement_collection_period": "month",
+      "penalty_formula_registry_key": "cfd_weekly_shortfall_v1_pending",
+      "evidence": [{"document_id": "base_rfs", "physical_page": 25, "clause": "9.4"}],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "external_green_share",
+      "rule_type": "source_eligibility",
+      "limit_ratio": 0.25,
+      "aggregation": "contract_year_pending_confirmation",
+      "denominator": "total_annual_energy_required",
+      "storage_accounting_basis": "discharged_energy",
+      "evidence": [{"document_id": "base_rfs", "physical_page": 21, "clause": "9.1.d"}],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "mcp_above_10_increment",
+      "rule_type": "settlement",
+      "mcp_threshold_inr_per_kwh": 10,
+      "pool_share_ratio": 0.5,
+      "rpd_share_ratio": 0.5,
+      "basis": "gain_attributable_to_mcp_above_threshold_only",
+      "dependencies": ["base_cfd_slab_settlement_pending"],
+      "effective_date": null,
+      "evidence": [{"document_id": "amendment_01", "physical_page": 1, "clause": "RfS 9.3.a.iv"}],
+      "review_status": "unreviewed"
+    }
+  ],
+  "unresolved": [
+    "Authenticated source review and complete consolidated rule set",
+    "Contract-week anchor and partial-period treatment",
+    "Non-solar calendar and prospective scheduling information set",
+    "All base settlement slabs, penalties, fees and REC treatment",
+    "Amendment effective-date and authority confirmation",
+    "Market-price, clearing and external-green scenarios",
+    "Validated CfD adapter and independent golden test approval"
+  ]
+}

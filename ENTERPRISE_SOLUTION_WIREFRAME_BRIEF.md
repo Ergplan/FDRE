@@ -1,5 +1,10 @@
 # FDRE Enterprise Platform Solution & Wireframe Brief
 
+> Updated development entry point (2026-09-28): [Enterprise Development Handoff](docs/enterprise/README.md).
+> Use that specification for multiple tender families, current implementation gaps,
+> server-side review, versioning and the new enterprise UI. This earlier brief remains
+> a feature/reference inventory; the new specification takes precedence where they differ.
+
 Version: 0.1  
 Date: 20 July 2026  
 Product: FDRE Optimizer, Energy Yield Assessment and Bid Intelligence Platform  
