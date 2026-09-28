@@ -1,0 +1,80 @@
+const { chromium } = require("playwright");
+const assert = require("node:assert/strict");
+
+(async () => {
+  const browser = await chromium.launch({ headless: true, channel: "msedge" });
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1050 } });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  try {
+    await page.goto("http://127.0.0.1:5173/");
+    await page.getByLabel("Document extraction", { exact: true }).selectOption("standard");
+    const base = "/Users/rachitagarwal/Downloads/Revised_RfS_for_1000_MWh_assured_Peak_Supply_under_CfD_Mechanism_(CfD-I).pdf";
+    const amendment = "/Users/rachitagarwal/Downloads/Amendment-01-SECI-CfD-I-final_upload.pdf";
+    for (const path of [base, amendment]) {
+      const response = page.waitForResponse(res => res.url().endsWith("/api/tender/parse") && res.status() === 200);
+      await page.locator('input[type="file"]').setInputFiles(path);
+      const result = await (await response).json();
+      assert.equal(result.compatibility.can_apply, false);
+      assert.equal(result.tender_schema.procurement_mw, 500);
+      assert.equal(result.source_pages.length, path === base ? 129 : 2);
+      await page.getByRole("heading", { name: "Extraction Reviewer", exact: true }).waitFor();
+    }
+    const reviewer = page.getByRole("article", { name: "Extraction reviewer" });
+    await reviewer.getByLabel("Reviewer", { exact: true }).fill("QA Reviewer");
+    await reviewer.getByLabel("Associated base tender").selectOption({ index: 1 });
+    await reviewer.getByLabel("Group", { exact: true }).selectOption("cfd_terms");
+    await reviewer.getByLabel("Reviewer note").fill("Checked amendment against the cited source; retain original term.");
+    await reviewer.getByRole("button", { name: "Approve field", exact: true }).click();
+    assert.equal(await reviewer.getByRole("button", { name: "Apply approved model inputs", exact: true }).isDisabled(), true);
+    let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("fdre-tender-reviews-v1")));
+    assert.equal(stored.length, 2);
+    let amended = stored.find(doc => doc.parsed.rag_status.amendment_role === "amendment");
+    assert.equal(amended.audit.length, 1);
+    assert(amended.baseDocumentId);
+    await reviewer.getByLabel("Reviewed value", { exact: true }).fill("Reviewer correction draft");
+    stored = await page.evaluate(() => JSON.parse(localStorage.getItem("fdre-tender-reviews-v1")));
+    amended = stored.find(doc => doc.parsed.rag_status.amendment_role === "amendment");
+    assert.equal(Object.values(amended.decisions)[0].status, "pending");
+    await reviewer.getByRole("button", { name: "Reject field", exact: true }).click();
+    await reviewer.getByLabel("Compare source").selectOption("base");
+    await reviewer.getByLabel("Physical page").selectOption("25");
+    assert((await reviewer.locator(".review-source-text").innerText()).includes("Contract Week"));
+    const download = page.waitForEvent("download");
+    await reviewer.getByRole("button", { name: "Download review JSON" }).click();
+    assert((await download).suggestedFilename().endsWith(".review.json"));
+    await reviewer.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "/private/tmp/fdre-review-desktop.png", fullPage: false });
+    await page.reload();
+    await page.getByRole("heading", { name: "Extraction Reviewer", exact: true }).waitFor();
+    assert.equal(await page.getByLabel("Reviewer", { exact: true }).inputValue(), "QA Reviewer");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("article", { name: "Extraction reviewer" }).scrollIntoViewIfNeeded();
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await page.screenshot({ path: "/private/tmp/fdre-review-mobile.png", fullPage: false });
+    await page.setViewportSize({ width: 1500, height: 1050 });
+    await page.getByLabel("Document extraction", { exact: true }).selectOption("standard");
+    const response = page.waitForResponse(res => res.url().endsWith("/api/tender/parse") && res.status() === 200);
+    await page.locator('input[type="file"]').setInputFiles({name: "review-fixture.txt", mimeType: "text/plain", buffer: Buffer.from("Declared annual CUF shall be 45%. Monthly peak availability shall be 90%.")});
+    await response;
+    await page.getByLabel("Group", { exact: true }).selectOption("settings");
+    await page.getByLabel("Reviewer", { exact: true }).fill("QA Reviewer");
+    await page.getByLabel("Reviewed value", { exact: true }).fill("47");
+    await page.getByRole("button", { name: "Project Configuration", exact: true }).click();
+    assert.equal(await page.getByLabel("Declared annual CUF %", {exact: true}).inputValue(), "40");
+    await page.getByRole("button", { name: "Tender Upload", exact: true }).click();
+    await page.getByLabel("Group", { exact: true }).selectOption("settings");
+    await page.getByRole("button", { name: "Approve field", exact: true }).click();
+    await page.getByRole("button", { name: "Apply approved model inputs", exact: true }).click();
+    await page.getByRole("button", { name: "Project Configuration", exact: true }).click();
+    assert.equal(await page.getByLabel("Declared annual CUF %", {exact: true}).inputValue(), "47");
+    assert.deepEqual(errors, []);
+    console.log("PASS: actual PDF uploads, CfD guard, approve/edit/reject, base comparison, audit download, reload persistence, mobile width, explicit approval required for model application, no JS errors.");
+  } catch (error) {
+    console.error("Browser errors:", errors);
+    console.error(await page.evaluate(() => ({width: innerWidth, scroll: document.documentElement.scrollWidth, elements: [...document.querySelectorAll("body *")].filter(el => !el.closest(".table-wrap") && el.getBoundingClientRect().right > innerWidth + 1 && el.clientWidth > 0).slice(0, 15).map(el => ({ tag: el.tagName, cls: el.className, width: el.clientWidth, right: el.getBoundingClientRect().right }))})));
+    console.error((await page.locator("body").innerText()).slice(0, 1800));
+    await page.screenshot({ path: "/private/tmp/fdre-review-failure.png" });
+    throw error;
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

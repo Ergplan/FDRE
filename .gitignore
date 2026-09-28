@@ -1,0 +1,27 @@
+# Installed dependencies and generated output
+.venv*/
+venv/
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Local credentials and machine files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+.~lock.*#
+~$*
+*.log
+
+# Unrelated documents stored alongside the application
+/Aayuda_*.pdf
+/Fuze_Housing_Manufacturing_Report.pdf
+/Note_155mm_Artillery_Machining_DMG_MORI.pdf

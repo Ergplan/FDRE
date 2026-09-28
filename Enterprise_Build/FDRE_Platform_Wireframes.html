@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FDRE Platform — Interactive Wireframes (S1–S17)</title>
+<style>
+  :root{
+    --ink:#2b3440; --mut:#7a8794; --line:#c8d0d8; --bg:#eef1f4; --panel:#ffffff;
+    --accent:#1f4e5f; --accent2:#e8f0f3; --warn:#b8860b; --ok:#2e7d52; --bad:#b0483f;
+    --wire:#f6f8f9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--ink); font-size:13px;}
+  .frame{max-width:1280px; margin:18px auto; border:2px solid var(--ink); border-radius:10px; overflow:hidden; background:var(--panel); box-shadow:0 4px 18px rgba(0,0,0,.12);}
+  /* wireframe key bar */
+  .keybar{background:var(--ink); color:#fff; padding:10px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+  .keybar b{font-size:14px;}
+  .keybar .scr{background:#fff2; border:1px solid #fff5; border-radius:4px; padding:3px 8px; cursor:pointer; font-size:12px;}
+  .keybar .scr:hover,.keybar .scr.on{background:#fff; color:var(--ink);}
+  /* app shell */
+  .shell{display:flex; min-height:760px;}
+  .rail{width:196px; background:#243038; color:#cfd8de; padding:14px 0; flex-shrink:0;}
+  .rail .logo{padding:0 16px 14px; color:#fff; font-weight:700; font-size:14px; letter-spacing:.4px; border-bottom:1px solid #ffffff22; margin-bottom:10px;}
+  .rail .grp{padding:10px 16px 4px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#8fa0ab;}
+  .rail a{display:block; padding:8px 16px; color:#cfd8de; text-decoration:none; border-left:3px solid transparent;}
+  .rail a:hover{background:#ffffff12;}
+  .rail a.on{background:#ffffff1c; color:#fff; border-left-color:#6fb3c8;}
+  .main{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .top{display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--panel);}
+  .top h1{font-size:16px; font-weight:700;}
+  .top .crumb{color:var(--mut); font-size:12px;}
+  .top .sp{flex:1;}
+  .badge{border:1px solid var(--line); border-radius:12px; padding:3px 10px; font-size:11px; color:var(--mut); background:var(--wire);}
+  .badge.role{border-color:var(--accent); color:var(--accent); font-weight:600;}
+  .content{padding:16px 18px; background:var(--bg); flex:1;}
+  /* primitives */
+  .row{display:flex; gap:14px; flex-wrap:wrap;}
+  .col{flex:1; min-width:240px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px;}
+  .card h3{font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--mut); margin-bottom:10px;}
+  .kpi{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+  .kpi .k{flex:1; min-width:150px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px;}
+  .k .lab{font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.5px;}
+  .k .val{font-size:22px; font-weight:700; margin-top:4px;}
+  .k .sub{font-size:11px; color:var(--mut); margin-top:2px;}
+  table{width:100%; border-collapse:collapse; background:var(--panel);}
+  th{background:var(--accent2); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--accent); padding:8px 10px; border-bottom:1px solid var(--line);}
+  td{padding:8px 10px; border-bottom:1px solid #e4e8ec; font-size:12px;}
+  tr.click{cursor:pointer;} tr.click:hover td{background:#f2f6f8;}
+  .chip{display:inline-block; border-radius:10px; padding:2px 9px; font-size:11px; font-weight:600;}
+  .chip.ok{background:#e2f1e8; color:var(--ok);} .chip.warn{background:#f7eed7; color:var(--warn);}
+  .chip.bad{background:#f6e3e1; color:var(--bad);} .chip.mut{background:#eceff2; color:var(--mut);}
+  .chip.acc{background:var(--accent2); color:var(--accent);}
+  .btn{display:inline-block; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;}
+  .btn.sec{background:var(--panel); color:var(--accent); border:1px solid var(--accent);}
+  .btn.ghost{background:transparent; color:var(--mut); border:1px dashed var(--line);}
+  .btn:hover{opacity:.88;}
+  .field{margin-bottom:10px;}
+  .field label{display:block; font-size:11px; color:var(--mut); margin-bottom:3px; text-transform:uppercase; letter-spacing:.4px;}
+  .field .in{border:1px solid var(--line); border-radius:6px; padding:8px 10px; background:var(--wire); color:var(--ink); font-size:12px;}
+  .ph{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 8px,#e6eaee 8px,#e6eaee 16px); border:1px dashed var(--line); border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--mut); font-size:11px; text-align:center; padding:8px;}
+  .note{background:#fffbe8; border:1px solid #e8dfae; border-radius:6px; padding:10px 12px; font-size:11.5px; color:#6b5d1c; margin-top:8px;}
+  .note b{color:#4d430f;}
+  .tabs{display:flex; gap:2px; border-bottom:2px solid var(--line); margin-bottom:14px;}
+  .tabs span{padding:8px 16px; font-size:12px; font-weight:600; color:var(--mut); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px;}
+  .tabs span.on{color:var(--accent); border-bottom-color:var(--accent);}
+  .screen{display:none;} .screen.on{display:block;}
+  .bar{height:10px; background:var(--accent2); border-radius:5px; overflow:hidden; margin-top:6px;}
+  .bar i{display:block; height:100%; background:var(--accent);}
+  .chat{display:flex; flex-direction:column; gap:10px;}
+  .msg{max-width:78%; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.45;}
+  .msg.user{align-self:flex-end; background:var(--accent); color:#fff;}
+  .msg.ai{align-self:flex-start; background:var(--panel); border:1px solid var(--line);}
+  .cite{display:inline-block; background:var(--accent2); color:var(--accent); border-radius:4px; padding:1px 6px; font-size:10.5px; font-weight:700; cursor:pointer; margin:0 2px;}
+  .split{display:flex; gap:14px;}
+  .split>div{flex:1; min-width:0;}
+  .heat{display:grid; grid-template-columns:repeat(12,1fr); gap:3px;}
+  .heat i{height:26px; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:9.5px; color:#fff; font-style:normal;}
+  .login-wrap{min-height:760px; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg,#243038,#1f4e5f);}
+  .login-card{background:#fff; border-radius:10px; padding:34px 38px; width:360px; text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="keybar">
+    <b>FDRE Platform Wireframes</b>
+    <span style="font-size:11px;opacity:.8">Click any screen ID (or navigate inside the mock). Companion to SDD §12.</span>
+    <span style="flex-basis:100%"></span>
+    <span class="scr" data-s="s1">S1 Login</span><span class="scr" data-s="s2">S2 Dashboard</span>
+    <span class="scr" data-s="s3">S3 Projects</span><span class="scr" data-s="s4">S4 Project</span>
+    <span class="scr" data-s="s5">S5 Documents</span><span class="scr" data-s="s6">S6 Extraction</span>
+    <span class="scr" data-s="s7">S7 Scenario</span><span class="scr" data-s="s8">S8 Runs</span>
+    <span class="scr" data-s="s9">S9 Compliance</span><span class="scr" data-s="s10">S10 Finance</span>
+    <span class="scr" data-s="s11">S11 Dispatch/EYA</span><span class="scr" data-s="s12">S12 Compare</span>
+    <span class="scr" data-s="s13">S13 Copilot</span><span class="scr" data-s="s14">S14 Reports</span>
+    <span class="scr" data-s="s15">S15 Approvals</span><span class="scr" data-s="s16">S16 Users</span>
+    <span class="scr" data-s="s17">S17 Settings/Audit</span><span class="scr" data-s="s18">S18 Agents</span>
+  </div>
+
+  <!-- ============ S1 LOGIN ============ -->
+  <div class="screen" id="s1">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">FDRE Optimizer</div>
+        <div style="color:var(--mut);font-size:12px;margin:6px 0 22px">Enterprise Platform · Joulewise</div>
+        <div class="field" style="text-align:left"><label>Email</label><div class="in">analyst@joulewise.com</div></div>
+        <div class="field" style="text-align:left"><label>Password</label><div class="in">••••••••••</div></div>
+        <a class="btn" style="width:100%;margin-top:6px" href="#" data-go="s2">Sign in</a>
+        <div style="margin:14px 0;color:var(--mut);font-size:11px">— or —</div>
+        <a class="btn sec" style="width:100%" href="#" data-go="s2">Continue with Company SSO (OIDC/SAML)</a>
+        <div class="note" style="text-align:left"><b>Spec:</b> Hosted by Keycloak inside the tenant. MFA enforced by policy. Session 8 h idle timeout. Failed logins audited.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ APP SHELL SCREENS ============ -->
+  <div class="screen" id="appwrap" style="display:none"></div>
+
+  <div class="screen" id="s2">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Dashboard</h1><span class="sp"></span><span class="badge role">Senior Analyst</span><span class="badge">R. Agarwal ▾</span></div>
+        <div class="content">
+          <div class="kpi">
+            <div class="k"><div class="lab">Active projects</div><div class="val">4</div><div class="sub">1 archived</div></div>
+            <div class="k"><div class="lab">Pending approvals</div><div class="val" style="color:var(--warn)">3</div><div class="sub"><a href="#" data-go="s15">Open inbox →</a></div></div>
+            <div class="k"><div class="lab">Runs this week</div><div class="val">27</div><div class="sub">2 running now</div></div>
+            <div class="k"><div class="lab">Best approved tariff</div><div class="val">₹4.61</div><div class="sub">NHPC T-II · Scenario B4</div></div>
+          </div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Recent runs</h3>
+                <table>
+                  <tr><th>Run</th><th>Project · Scenario</th><th>Type</th><th>Status</th><th>Tariff</th></tr>
+                  <tr class="click" data-go="s9"><td>#412</td><td>NHPC T-II · B4</td><td>Optimize · Balanced</td><td><span class="chip ok">Succeeded</span></td><td>₹4.61</td></tr>
+                  <tr class="click" data-go="s8"><td>#411</td><td>NHPC T-II · B5</td><td>Exact term</td><td><span class="chip warn">Running 62%</span></td><td>—</td></tr>
+                  <tr class="click" data-go="s9"><td>#409</td><td>SJVN FDRE · A1</td><td>Evaluate · Fast</td><td><span class="chip bad">Infeasible</span></td><td>NaN</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Quick actions</h3>
+                <p><a class="btn" href="#" data-go="s7">+ New scenario</a></p><br>
+                <p><a class="btn sec" href="#" data-go="s5">Upload tender PDF</a></p><br>
+                <p><a class="btn sec" href="#" data-go="s13">Ask the copilot</a></p>
+              </div>
+              <div class="card"><h3>Activity</h3>
+                <table>
+                  <tr><td>P. Mehta approved <b>Tender v3</b></td><td style="color:var(--mut)">2 h</td></tr>
+                  <tr><td>Run #412 finished (12 m 40 s)</td><td style="color:var(--mut)">3 h</td></tr>
+                  <tr><td>S. Rao commented on B4</td><td style="color:var(--mut)">5 h</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="note"><b>Spec:</b> KPIs scoped to the user's project memberships. Viewer role sees approved results only. All cards deep-link.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S3 Projects -->
+  <div class="screen" id="s3">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Projects</h1><span class="sp"></span><a class="btn" href="#" title="Portfolio Manager only">+ New project</a></div>
+        <div class="content">
+          <div class="card">
+            <div class="row" style="margin-bottom:10px">
+              <div class="field" style="flex:2"><label>Search</label><div class="in">Search name / code / tender…</div></div>
+              <div class="field"><label>Status</label><div class="in">Active ▾</div></div>
+              <div class="field"><label>Tender</label><div class="in">All ▾</div></div>
+            </div>
+            <table>
+              <tr><th>Project</th><th>Tender</th><th>Contracted</th><th>Scenarios</th><th>Last run</th><th>Status</th><th>Members</th></tr>
+              <tr class="click" data-go="s4"><td><b>Rajasthan 200 MW FDRE</b> · RJ-200</td><td>NHPC Tranche-II</td><td>200 MW</td><td>7</td><td>#412 · today</td><td><span class="chip ok">Active</span></td><td>6</td></tr>
+              <tr class="click" data-go="s4"><td><b>Bikaner Hybrid 250</b> · BK-250</td><td>NHPC FDRE (EYA ref)</td><td>250 MW</td><td>4</td><td>#399 · Tue</td><td><span class="chip ok">Active</span></td><td>4</td></tr>
+              <tr class="click" data-go="s4"><td><b>SJVN FDRE Bid</b> · SJ-100</td><td>SJVN T-I (draft)</td><td>100 MW</td><td>2</td><td>#409 · Mon</td><td><span class="chip warn">Tender under review</span></td><td>3</td></tr>
+            </table>
+          </div>
+          <div class="note"><b>Spec:</b> "New project" visible to Portfolio Manager only (capability project.create). Row click → S4. Server-side pagination + column sort.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S4 Project overview -->
+  <div class="screen" id="s4">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s3">Projects</a> /</span><h1>Rajasthan 200 MW FDRE</h1><span class="chip acc">NHPC Tranche-II · Tender v3 approved</span><span class="sp"></span><a class="btn sec" href="#" data-go="s14">Reports</a><a class="btn" href="#" data-go="s7">Open scenarios</a></div>
+        <div class="content">
+          <div class="kpi">
+            <div class="k"><div class="lab">Approved tariff</div><div class="val">₹4.61/kWh</div><div class="sub">Scenario B4 · Run #412 · engine 1.3.0</div></div>
+            <div class="k"><div class="lab">Equity IRR</div><div class="val">14.2%</div><div class="sub">Min DSCR 1.21</div></div>
+            <div class="k"><div class="lab">Compliance</div><div class="val" style="color:var(--ok)">PASS</div><div class="sub">25/25 years · hard mode</div></div>
+            <div class="k"><div class="lab">Capacity mix</div><div class="val">378 / 210 / 120·480</div><div class="sub">Solar MWac / Wind MW / BESS MW·MWh</div></div>
+          </div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Scenarios</h3>
+                <table>
+                  <tr><th>Name</th><th>Base</th><th>Status</th><th>Best run</th><th>Tariff</th><th></th></tr>
+                  <tr class="click" data-go="s7"><td><b>B4 — Optimized mix</b></td><td>B1</td><td><span class="chip ok">Approved</span></td><td>#412</td><td>₹4.61</td><td><a href="#" data-go="s9">Results →</a></td></tr>
+                  <tr class="click" data-go="s7"><td>B5 — Higher wind</td><td>B4</td><td><span class="chip warn">Submitted</span></td><td>#411 (running)</td><td>—</td><td><a href="#" data-go="s8">Run →</a></td></tr>
+                  <tr class="click" data-go="s7"><td>B3 — 4h BESS</td><td>B1</td><td><span class="chip mut">Draft</span></td><td>#391</td><td>₹4.74</td><td><a href="#" data-go="s12">Compare →</a></td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>Documents</h3>
+                <table>
+                  <tr><td>RFS.pdf</td><td><span class="chip ok">Parsed · v3 approved</span></td><td><a href="#" data-go="s6">Extraction →</a></td></tr>
+                  <tr><td>PVsyst_378MW.pdf</td><td><span class="chip ok">Parsed</span></td><td><a href="#" data-go="s5">Library →</a></td></tr>
+                  <tr><td>Wind Generation Bikaner.csv</td><td><span class="chip acc">8760 trace · P50/P75/P90</span></td><td></td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Members</h3>
+                <table>
+                  <tr><td>P. Mehta</td><td><span class="chip acc">Owner · Portfolio Mgr</span></td></tr>
+                  <tr><td>R. Agarwal</td><td><span class="chip acc">Editor · Sr Analyst</span></td></tr>
+                  <tr><td>S. Rao</td><td><span class="chip mut">Reviewer</span></td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>Copilot</h3>
+                <div class="msg ai" style="max-width:100%">Why did B4 beat B3 by ₹0.13? Ask me → <a href="#" data-go="s13"><b>Open copilot</b></a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5 Documents -->
+  <div class="screen" id="s5">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Documents</h1><span class="crumb">Rajasthan 200 MW FDRE</span><span class="sp"></span><span class="badge">Org library ▾</span></div>
+        <div class="content">
+          <div class="card">
+            <div class="ph" style="height:76px">Drop PDF / DOCX / CSV here — or click to upload · max 200 MB · types: RfS, PPA, PVsyst, EYA, BESS spec, 8760 trace</div>
+          </div>
+          <div class="card"><h3>Library</h3>
+            <table>
+              <tr><th>Document</th><th>Kind</th><th>Pages</th><th>Parse status</th><th>Indexed for AI</th><th>Actions</th></tr>
+              <tr><td><b>RFS.pdf</b></td><td>RfS</td><td>184</td><td><span class="chip ok">Extracted · v3 approved</span></td><td><span class="chip ok">Yes · 212 chunks</span></td><td><a href="#" data-go="s6">Review extraction</a> · View</td></tr>
+              <tr><td><b>Draft_PPA_NHPC.pdf</b></td><td>PPA</td><td>96</td><td><span class="chip warn">Extraction ready — needs review</span></td><td><span class="chip ok">Yes</span></td><td><a href="#" data-go="s6">Review extraction</a></td></tr>
+              <tr><td><b>PVsyst_378MW.pdf</b></td><td>PVsyst</td><td>28</td><td><span class="chip ok">Parsed → losses applied</span></td><td><span class="chip ok">Yes</span></td><td>View</td></tr>
+              <tr><td><b>BESS_Spec_Fuze.pdf</b></td><td>BESS spec</td><td>41</td><td><span class="chip warn">Parsing… 70%</span></td><td><span class="chip mut">Pending</span></td><td>—</td></tr>
+              <tr><td><b>Wind Generation Bikaner.csv</b></td><td>8760 trace</td><td>—</td><td><span class="chip ok">Validated (8,760 rows)</span></td><td><span class="chip mut">n/a</span></td><td>Map to generator</td></tr>
+            </table>
+          </div>
+          <div class="note"><b>Spec:</b> sha256 dedupe on upload; parse jobs on worker-docs with SSE status; in-app PDF viewer opens at cited page anchors from S6/S13. Deleting a doc requires no dependent tender_version.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6 Extraction review -->
+  <div class="screen" id="s6">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s5">Documents</a> /</span><h1>Extraction review — RFS.pdf</h1><span class="chip warn">Draft v4 · 2 fields need attention</span><span class="sp"></span><a class="btn sec" href="#">Reject</a><a class="btn" href="#" data-go="s4">Approve tender version</a></div>
+        <div class="content">
+          <div class="split">
+            <div>
+              <div class="card"><h3>Extracted parameters (18)</h3>
+                <table>
+                  <tr><th>Field</th><th>Value</th><th>Conf.</th><th>Src</th><th></th></tr>
+                  <tr><td>Declared CUF floor</td><td><b>≥ 40%</b></td><td><span class="chip ok">0.99</span></td><td><span class="cite">p.31 §4.2</span></td><td>✎</td></tr>
+                  <tr><td>Annual energy band</td><td><b>−15% / +10%</b></td><td><span class="chip ok">0.98</span></td><td><span class="cite">p.33 §4.5</span></td><td>✎</td></tr>
+                  <tr><td>Peak availability floor</td><td><b>90% monthly</b></td><td><span class="chip ok">0.97</span></td><td><span class="cite">p.35 §5.1</span></td><td>✎</td></tr>
+                  <tr><td>Peak hours</td><td><b>2 in 05–10h + 2 in 18–23h</b></td><td><span class="chip ok">0.95</span></td><td><span class="cite">p.35 §5.2</span></td><td>✎</td></tr>
+                  <tr><td>LD multiplier</td><td><b>1.5 × tariff</b></td><td><span class="chip ok">0.99</span></td><td><span class="cite">p.41 §7.3</span></td><td>✎</td></tr>
+                  <tr style="background:#fff8f0"><td>Green sourcing cap</td><td><b>5% of annual energy</b></td><td><span class="chip warn">0.71</span></td><td><span class="cite">p.44 §8.1</span></td><td>✎</td></tr>
+                  <tr style="background:#fff8f0"><td>PBG (ESS) ₹L/MW</td><td><b>36.60</b></td><td><span class="chip warn">0.64 · table OCR</span></td><td><span class="cite">p.52 Ann-B</span></td><td>✎</td></tr>
+                  <tr><td>PSM charge</td><td><b>₹0.02/kWh</b></td><td><span class="chip ok">0.96</span></td><td><span class="cite">p.47 §9.2</span></td><td>✎</td></tr>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div class="card" style="height:100%"><h3>Source — auto-scrolled to citation</h3>
+                <div class="ph" style="height:120px">PDF viewer · page 44, clause 8.1 highlighted</div>
+                <div style="border:1px solid var(--line); border-radius:6px; padding:10px; margin-top:10px; font-size:12px; background:var(--wire)">
+                  "…the RPD may procure green power from the market <b>up to five percent (5%)</b> of the annual contracted energy to meet its obligations…"
+                </div>
+                <div class="note"><b>Verbatim quote</b> stored per field with page + confidence. Accepting all fields creates immutable <b>tender_version v4</b>; engine only reads approved versions.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7 Scenario editor -->
+  <div class="screen" id="s7">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s4">RJ-200</a> /</span><h1>Scenario B5 — Higher wind</h1><span class="chip mut">Draft · cloned from B4</span><span class="sp"></span><a class="btn ghost" href="#" data-go="s12">Compare</a><a class="btn sec" href="#">Save</a><a class="btn" href="#" data-go="s8">Run ▾</a></div>
+        <div class="content">
+          <div class="tabs"><span class="on">Tender & offtake</span><span>Nodes & grid</span><span>Generators</span><span>BESS</span><span>Resource traces</span><span>Finance</span><span>Capex rates</span></div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Tender & offtake</h3>
+                <div class="row">
+                  <div class="field col"><label>Tender version</label><div class="in">NHPC T-II · v3 (approved) ▾</div></div>
+                  <div class="field col"><label>Contracted capacity (MW)</label><div class="in">200</div></div>
+                  <div class="field col"><label>Declared CUF (%)</label><div class="in">42.0</div></div>
+                </div>
+                <div class="row">
+                  <div class="field col"><label>Peak schedule mode</label><div class="in">Fixed ▾ (alt: worst-deficit stress)</div></div>
+                  <div class="field col"><label>Non-peak take fraction</label><div class="in">1.00</div></div>
+                  <div class="field col"><label>Green support</label><div class="in">Enabled · 5% cap ▾</div></div>
+                </div>
+              </div>
+              <div class="card"><h3>Generators</h3>
+                <table>
+                  <tr><th>Name</th><th>Tech</th><th>MW</th><th>CUF %</th><th>Node</th><th>Degradation %/yr</th><th>Trace</th></tr>
+                  <tr><td>Solar-Bikaner</td><td>Solar</td><td>378</td><td>28.5</td><td>N1</td><td>0.5</td><td><span class="chip acc">PVsyst_378MW</span></td></tr>
+                  <tr><td>Wind-Jaisalmer</td><td>Wind</td><td>260</td><td>34.0</td><td>N2</td><td>0.3</td><td><span class="chip acc">Bikaner.csv · P75 ▾</span></td></tr>
+                </table>
+                <p style="margin-top:8px"><a class="btn ghost" href="#">+ Add generator</a></p>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Validation</h3>
+                <p><span class="chip ok">✓</span> Node limits ≥ contracted MW</p>
+                <p style="margin-top:6px"><span class="chip ok">✓</span> BESS augmentation year matches SoH curve</p>
+                <p style="margin-top:6px"><span class="chip warn">!</span> Wind MW ↑30% vs base — capex rate unchanged</p>
+                <div class="note"><b>Spec:</b> validate() runs server-side on save; blocking errors prevent run submission.</div>
+              </div>
+              <div class="card"><h3>Run panel</h3>
+                <div class="field"><label>Run type</label><div class="in">Optimize capacity ▾</div></div>
+                <div class="field"><label>Solve mode</label><div class="in">Fast representative years ▾</div></div>
+                <div class="field"><label>Optimizer effort</label><div class="in">Balanced ▾</div></div>
+                <a class="btn" style="width:100%" href="#" data-go="s8">Submit run</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S8 Run center -->
+  <div class="screen" id="s8">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Run center</h1><span class="crumb">Rajasthan 200 MW FDRE</span><span class="sp"></span><span class="badge">Queue: 1 running · 1 queued</span></div>
+        <div class="content">
+          <div class="card"><h3>Active</h3>
+            <table>
+              <tr><th>Run</th><th>Scenario</th><th>Type · mode</th><th>Stage</th><th>Progress</th><th></th></tr>
+              <tr><td>#411</td><td>B5</td><td>Exact term</td><td>Dispatch year 16/25</td><td style="width:220px"><div class="bar"><i style="width:62%"></i></div><span style="font-size:10px;color:var(--mut)">62% · 07:41 elapsed · engine 1.3.0</span></td><td><a class="btn ghost" href="#">Cancel</a></td></tr>
+              <tr><td>#413</td><td>B5</td><td>Optimize · Balanced</td><td>Queued (pos 1)</td><td><div class="bar"><i style="width:0%"></i></div></td><td><a class="btn ghost" href="#">Cancel</a></td></tr>
+            </table>
+          </div>
+          <div class="card"><h3>History</h3>
+            <table>
+              <tr><th>Run</th><th>Scenario</th><th>Type</th><th>Engine</th><th>Seed</th><th>Duration</th><th>Result</th><th></th></tr>
+              <tr class="click" data-go="s9"><td>#412</td><td>B4</td><td>Optimize · Balanced</td><td>1.3.0</td><td>42</td><td>12m 40s</td><td><span class="chip ok">₹4.61 · PASS</span></td><td>Results →</td></tr>
+              <tr class="click" data-go="s9"><td>#409</td><td>A1 (SJVN)</td><td>Evaluate · Fast</td><td>1.3.0</td><td>42</td><td>38s</td><td><span class="chip bad">Infeasible: peak availability y1 = 87.2%</span></td><td>Details →</td></tr>
+              <tr class="click" data-go="s9"><td>#391</td><td>B3</td><td>Optimize · Fast</td><td>1.2.9</td><td>42</td><td>6m 02s</td><td><span class="chip ok">₹4.74 · PASS</span></td><td>Results →</td></tr>
+            </table>
+          </div>
+          <div class="note"><b>Spec:</b> progress via SSE from engine callbacks. Runs are immutable snapshots (inputs + engine_version + seed). Engine-version badge warns when comparing across versions.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S9 Results Compliance -->
+  <div class="screen" id="s9">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s8">Runs</a> /</span><h1>Run #412 — B4 Optimized mix</h1><span class="chip acc">engine 1.3.0 · seed 42 · Balanced</span><span class="sp"></span><a class="btn sec" href="#" data-go="s13">Explain this run ✦</a><a class="btn" href="#" data-go="s14">Generate report</a></div>
+        <div class="content">
+          <div class="tabs"><span class="on" data-go="s9">Compliance</span><span data-go="s10">Finance</span><span data-go="s11">Dispatch & EYA</span></div>
+          <div class="card" style="border-left:5px solid var(--ok)"><b style="color:var(--ok)">ALL HARD TENDER CONDITIONS PASS</b> — monthly 90% peak availability and annual CUF band met in all 25 years; zero LD exposure. Optimized: Solar 378 MWac · Wind 210 MW · BESS 120 MW / 480 MWh · Contracted 200 MW · Declared CUF 42%.</div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Year-1 monthly peak availability (floor 90%)</h3>
+                <div class="heat">
+                  <i style="background:#2e7d52">98</i><i style="background:#2e7d52">97</i><i style="background:#2e7d52">99</i><i style="background:#469b6e">95</i><i style="background:#469b6e">94</i><i style="background:#6fb388">92</i><i style="background:#6fb388">91</i><i style="background:#469b6e">93</i><i style="background:#469b6e">95</i><i style="background:#2e7d52">98</i><i style="background:#2e7d52">99</i><i style="background:#2e7d52">99</i>
+                </div>
+                <div style="font-size:10px;color:var(--mut);margin-top:4px">Jan → Dec · % · hover for delivered vs obligation MWh</div>
+              </div>
+              <div class="card"><h3>25-year compliance trend</h3>
+                <div class="ph" style="height:150px">Line chart: annual CUF vs band (35.7%–46.2%) and min monthly availability per year · augmentation marker at year 11</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Tests</h3>
+                <table>
+                  <tr><td>Monthly peak ≥ 90%</td><td><span class="chip ok">300/300 mo</span></td></tr>
+                  <tr><td>Annual CUF in band</td><td><span class="chip ok">25/25 yr</span></td></tr>
+                  <tr><td>LD exposure</td><td><span class="chip ok">₹0</span></td></tr>
+                  <tr><td>Green support used</td><td><span class="chip mut">0.8% of 5% cap</span></td></tr>
+                  <tr><td>RE-only BESS charging</td><td><span class="chip ok">Verified</span></td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>Copilot ✦</h3><div class="msg ai" style="max-width:100%">Tightest month is <b>July, year 12</b> (91.0%) — post-augmentation SoH plus monsoon solar depression. <a href="#" data-go="s13">Discuss →</a></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S10 Results Finance -->
+  <div class="screen" id="s10">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s8">Runs</a> /</span><h1>Run #412 — Finance</h1><span class="sp"></span><a class="btn" href="#" data-go="s14">Export XLSX model</a></div>
+        <div class="content">
+          <div class="tabs"><span data-go="s9">Compliance</span><span class="on">Finance</span><span data-go="s11">Dispatch & EYA</span></div>
+          <div class="kpi">
+            <div class="k"><div class="lab">Required tariff</div><div class="val">₹4.61/kWh</div><div class="sub">bisection · IRR & DSCR binding</div></div>
+            <div class="k"><div class="lab">Equity IRR</div><div class="val">14.2%</div><div class="sub">target 14.0% · NPV@14% ₹+8.1 cr</div></div>
+            <div class="k"><div class="lab">Min DSCR</div><div class="val">1.21</div><div class="sub">floor 1.20 · year 3</div></div>
+            <div class="k"><div class="lab">Total capex</div><div class="val">₹2,412 cr</div><div class="sub">incl. IDC ₹184 cr · aug. y11 ₹212 cr</div></div>
+          </div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Capex build-up</h3><div class="ph" style="height:130px">Waterfall: Solar EPC → Wind EPC → BESS energy → PCS → land/dev → transmission → owner's → contingency → IDC → total</div></div>
+              <div class="card"><h3>25-year financial model</h3>
+                <table>
+                  <tr><th>Yr</th><th>PPA MWh</th><th>Merchant MWh</th><th>Revenue ₹cr</th><th>EBITDA</th><th>CFADS</th><th>DSCR</th><th>FCFE</th></tr>
+                  <tr><td>1</td><td>735,840</td><td>96,210</td><td>391</td><td>352</td><td>288</td><td>1.24</td><td>96</td></tr>
+                  <tr><td>2</td><td>731,120</td><td>94,880</td><td>388</td><td>349</td><td>281</td><td>1.22</td><td>92</td></tr>
+                  <tr><td colspan="8" style="color:var(--mut)">… full table scrolls · augmentation year 11 highlighted · totals row pinned</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Sensitivity (tariff ₹/kWh)</h3>
+                <table>
+                  <tr><th></th><th>−10%</th><th>Base</th><th>+10%</th></tr>
+                  <tr><td>BESS ₹cr/MWh</td><td>4.48</td><td>4.61</td><td>4.74</td></tr>
+                  <tr><td>Solar CUF</td><td>4.79</td><td>4.61</td><td>4.47</td></tr>
+                  <tr><td>Merchant price</td><td>4.66</td><td>4.61</td><td>4.56</td></tr>
+                  <tr><td>Debt rate ±100bp</td><td>4.52</td><td>4.61</td><td>4.71</td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>Notes</h3><div class="note" style="margin-top:0"><b>Spec:</b> IRR multiple-root caveat surfaced when augmentation flips sign 3×; NPV shown alongside. All figures badge run id + engine version.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S11 Dispatch & EYA -->
+  <div class="screen" id="s11">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><span class="crumb"><a href="#" data-go="s8">Runs</a> /</span><h1>Run #412 — Dispatch & EYA</h1><span class="sp"></span><a class="btn sec" href="#">Download 8760×25 parquet</a></div>
+        <div class="content">
+          <div class="tabs"><span data-go="s9">Compliance</span><span data-go="s10">Finance</span><span class="on">Dispatch & EYA</span></div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Hourly dispatch explorer — year 1, week 24 (monsoon)</h3>
+                <div class="ph" style="height:170px">Stacked area: solar / wind / BESS discharge / merchant / spill · peak-hour bands shaded · SOC line overlay · zoom day/week/month</div>
+                <div style="margin-top:8px"><span class="chip acc">Year ▾ 1</span> <span class="chip acc">Window ▾ Week</span> <span class="chip acc">Node ▾ All</span></div>
+              </div>
+              <div class="card"><h3>EYA — hybrid yield</h3>
+                <div class="row">
+                  <div class="col"><div class="ph" style="height:110px">Loss waterfall (solar): GHI→POA→soiling→temp→DC→AC→grid</div></div>
+                  <div class="col"><div class="ph" style="height:110px">Monthly energy bars P50 vs P90 · wind + solar</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Exceedance</h3>
+                <table>
+                  <tr><th></th><th>GWh/yr</th><th>CUF</th></tr>
+                  <tr><td>P50</td><td>1,596</td><td>43.4%</td></tr>
+                  <tr><td>P75</td><td>1,541</td><td>41.9%</td></tr>
+                  <tr><td>P90</td><td>1,492</td><td>40.6%</td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>BESS health</h3>
+                <div class="ph" style="height:90px">SoH & RTE curves · augmentation reset at year 11</div>
+                <p style="margin-top:8px;font-size:11px;color:var(--mut)">Cycles/yr: 348 · avg DoD 78%</p>
+              </div>
+              <div class="card"><h3>Energy balance, year 1</h3>
+                <table>
+                  <tr><td>PPA delivered</td><td>735.8 GWh</td></tr>
+                  <tr><td>Merchant</td><td>96.2 GWh</td></tr>
+                  <tr><td>BESS losses</td><td>21.4 GWh</td></tr>
+                  <tr><td>Spill</td><td>11.9 GWh (0.7%)</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S12 Compare -->
+  <div class="screen" id="s12">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Scenario compare</h1><span class="crumb">RJ-200</span><span class="sp"></span><span class="badge">B4 vs B3 vs B5 ▾</span></div>
+        <div class="content">
+          <div class="card">
+            <table>
+              <tr><th>Metric</th><th>B4 · #412 <span class="chip ok">Approved</span></th><th>B3 · #391</th><th>B5 · #411 <span class="chip warn">running</span></th></tr>
+              <tr><td>Required tariff</td><td><b>₹4.61</b></td><td>₹4.74 <span style="color:var(--bad)">(+0.13)</span></td><td>—</td></tr>
+              <tr><td>Solar / Wind MW</td><td>378 / 210</td><td>420 / 150</td><td>378 / 260</td></tr>
+              <tr><td>BESS MW / MWh</td><td>120 / 480</td><td>150 / 600</td><td>110 / 440</td></tr>
+              <tr><td>Equity IRR / min DSCR</td><td>14.2% / 1.21</td><td>14.1% / 1.20</td><td>—</td></tr>
+              <tr><td>Compliance</td><td><span class="chip ok">PASS</span></td><td><span class="chip ok">PASS</span></td><td>—</td></tr>
+              <tr><td>Spill %</td><td>0.7%</td><td>1.9%</td><td>—</td></tr>
+              <tr><td>Engine</td><td>1.3.0</td><td>1.2.9 <span class="chip warn">version differs</span></td><td>1.3.0</td></tr>
+            </table>
+          </div>
+          <div class="card"><h3>AI diff narrative ✦</h3>
+            <div class="msg ai" style="max-width:100%">B3's larger 4-hour battery (600 MWh) adds ₹96 cr capex but the extra duration is rarely used — July evening peaks bind on <b>power</b>, not energy. B4 trades 42 MWac of solar for 60 MW of wind, whose evening skew cuts required discharge 14% and lets the optimizer shrink the BESS. Net effect: −₹0.13/kWh. Caution: B3 was solved on engine 1.2.9 <span class="cite">run #391</span>.</div>
+          </div>
+          <div class="note"><b>Spec:</b> up to 3 runs; config diff view (JSONB patch) toggleable; cross-engine-version comparisons carry a persistent warning banner.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S13 Copilot -->
+  <div class="screen" id="s13">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>AI Copilot</h1><span class="badge">Scope: RJ-200 project ▾</span><span class="sp"></span><span class="badge">claude-sonnet-5 · 12.4k tokens today</span></div>
+        <div class="content">
+          <div class="split">
+            <div style="flex:2">
+              <div class="card" style="min-height:420px">
+                <div class="chat">
+                  <div class="msg user">Can we bank unscheduled peak-hour energy against next month's availability test?</div>
+                  <div class="msg ai">No. The availability test is <b>monthly and standalone</b> — clause 5.4 states shortfall in any month attracts LD "notwithstanding surplus supply in any other month" <span class="cite" data-go="s5">RFS.pdf p.36 §5.4</span>. Energy offered but unscheduled may be sold to third parties <span class="cite" data-go="s5">RFS.pdf p.38 §6.2</span>, but it earns no compliance credit. The engine models this the same way (no inter-month banking).</div>
+                  <div class="msg user">Explain why run #409 was infeasible.</div>
+                  <div class="msg ai">Run #409 (SJVN A1) failed hard compliance: year-1 peak availability reached only <b>87.2%</b> vs the 90% floor. Binding constraint: BESS power (60 MW) covers just 60% of the 100 MW contracted capacity in zero-RE evening hours; July has 9 such days. Options: raise BESS power ≥ 90 MW, or enable green support (covers ≈1.1% of the 2.8% gap — insufficient alone) <span class="cite" data-go="s9">run #409 · compliance</span>.</div>
+                </div>
+                <div class="field" style="margin-top:14px"><div class="in" style="display:flex;justify-content:space-between"><span style="color:var(--mut)">Ask about tenders, runs, or the model…</span><b style="color:var(--accent)">Send ➤</b></div></div>
+              </div>
+            </div>
+            <div>
+              <div class="card"><h3>Suggested</h3>
+                <p><span class="chip acc">What changed between tender v2 and v3?</span></p>
+                <p style="margin-top:6px"><span class="chip acc">Which months are closest to the 90% floor?</span></p>
+                <p style="margin-top:6px"><span class="chip acc">Draft exec summary for B4 bid pack</span></p>
+              </div>
+              <div class="card"><h3>Grounding</h3>
+                <p style="font-size:12px">Corpus: 5 project docs + org library (212+118 chunks) + run summaries.</p>
+                <div class="note" style="margin-top:8px"><b>Spec:</b> answers must cite or state no support found. Citations page-jump into S5 viewer. No write path to configs — proposals become pre-filled forms. Per-user daily token budget.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S14 Reports -->
+  <div class="screen" id="s14">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Reports</h1><span class="crumb">RJ-200</span><span class="sp"></span><a class="btn" href="#">+ Generate report</a></div>
+        <div class="content">
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Generated</h3>
+                <table>
+                  <tr><th>Report</th><th>Run</th><th>Format</th><th>State</th><th>By</th><th></th></tr>
+                  <tr><td><b>Bid Summary Pack v3</b></td><td>#412</td><td>PDF · DOCX</td><td><span class="chip ok">Approved · no watermark</span></td><td>R. Agarwal</td><td><a class="btn sec" href="#">Download</a></td></tr>
+                  <tr><td>Full Financial Model v2</td><td>#412</td><td>XLSX</td><td><span class="chip ok">Approved</span></td><td>R. Agarwal</td><td><a class="btn sec" href="#">Download</a></td></tr>
+                  <tr><td>Bid Summary Pack v4 (B5)</td><td>#411</td><td>PDF</td><td><span class="chip warn">DRAFT watermark</span></td><td>A. Kumar</td><td><a class="btn ghost" href="#">Preview</a></td></tr>
+                  <tr><td>Hybrid EYA Report v1</td><td>#412</td><td>PDF</td><td><span class="chip ok">Approved</span></td><td>R. Agarwal</td><td><a class="btn sec" href="#">Download</a></td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>Generate</h3>
+                <div class="row">
+                  <div class="field col"><label>Template</label><div class="in">Bid Summary Pack ▾</div></div>
+                  <div class="field col"><label>Source run (approved only for final)</label><div class="in">#412 — B4 ▾</div></div>
+                  <div class="field col"><label>Formats</label><div class="in">PDF + DOCX ▾</div></div>
+                </div>
+                <a class="btn" href="#">Generate preview</a>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Preview</h3><div class="ph" style="height:260px">Report preview (HTML = PDF, Playwright print) · cover, KPIs, compliance dashboard, assumptions register, approval sheet</div></div>
+              <div class="note"><b>Spec:</b> reports immutable + versioned; store run_id + template version; DRAFT watermark until scenario approved; downloads audited; AI-drafted exec summary marked and editable pre-final.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S15 Approvals -->
+  <div class="screen" id="s15">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Approvals</h1><span class="sp"></span><span class="badge role">Reviewer view</span></div>
+        <div class="content">
+          <div class="row">
+            <div class="col">
+              <div class="card"><h3>Inbox (3)</h3>
+                <table>
+                  <tr class="click"><td><b>Scenario B5</b> — RJ-200<br><span style="color:var(--mut);font-size:11px">Submitted by R. Agarwal · 2 h ago</span></td><td><span class="chip warn">Pending</span></td></tr>
+                  <tr class="click"><td><b>Tender v4</b> — Draft PPA extraction<br><span style="color:var(--mut);font-size:11px">2 low-confidence fields</span></td><td><span class="chip warn">Pending</span></td></tr>
+                  <tr class="click"><td><b>Report</b> — Bid Summary Pack v4<br><span style="color:var(--mut);font-size:11px">Awaiting scenario approval</span></td><td><span class="chip mut">Blocked</span></td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Review: Scenario B5 (vs approved B4)</h3>
+                <table>
+                  <tr><th>Field</th><th>B4 (approved)</th><th>B5 (proposed)</th></tr>
+                  <tr><td>Wind MW</td><td>210</td><td><b style="color:var(--accent)">260</b></td></tr>
+                  <tr><td>BESS MW / MWh</td><td>120 / 480</td><td><b style="color:var(--accent)">110 / 440</b></td></tr>
+                  <tr><td>Required tariff</td><td>₹4.61</td><td>₹4.58 (run #413)</td></tr>
+                  <tr><td>Min monthly availability</td><td>91.0%</td><td>90.4% <span class="chip warn">margin ↓</span></td></tr>
+                </table>
+                <div class="field" style="margin-top:10px"><label>Comment (required on reject)</label><div class="in" style="height:52px">Tariff gain is thin vs availability margin loss — request P90 wind sensitivity before approval.</div></div>
+                <a class="btn" href="#" data-go="s2">Approve</a> <a class="btn sec" href="#" data-go="s2">Reject</a> <a class="btn ghost" href="#" data-go="s12">Full compare →</a>
+              </div>
+              <div class="note"><b>Spec:</b> approval locks the scenario (read-only) and unlocks watermark-free reports. Approvers cannot approve their own submissions. Full history retained per subject.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S16 Admin users -->
+  <div class="screen" id="s16">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Admin — Users & roles</h1><span class="sp"></span><a class="btn" href="#">+ Invite user</a></div>
+        <div class="content">
+          <div class="card">
+            <table>
+              <tr><th>User</th><th>Email</th><th>Global role</th><th>Projects</th><th>MFA</th><th>Status</th><th></th></tr>
+              <tr><td>P. Mehta</td><td>pmehta@joulewise.com</td><td><span class="chip acc">Portfolio Manager</span></td><td>All (implicit)</td><td>✓</td><td><span class="chip ok">Active</span></td><td>Edit</td></tr>
+              <tr><td>R. Agarwal</td><td>ergcon@joulewise.com</td><td><span class="chip acc">Senior Analyst</span></td><td>RJ-200 (editor), BK-250 (editor)</td><td>✓</td><td><span class="chip ok">Active</span></td><td>Edit</td></tr>
+              <tr><td>A. Kumar</td><td>akumar@joulewise.com</td><td><span class="chip acc">Analyst</span></td><td>RJ-200 (editor)</td><td>✓</td><td><span class="chip ok">Active</span></td><td>Edit</td></tr>
+              <tr><td>S. Rao</td><td>srao@joulewise.com</td><td><span class="chip acc">Reviewer</span></td><td>RJ-200 (viewer)</td><td>✓</td><td><span class="chip ok">Active</span></td><td>Edit</td></tr>
+              <tr><td>Lender datasite</td><td>guest-lnd@ext</td><td><span class="chip mut">Viewer</span></td><td>RJ-200 (viewer)</td><td>—</td><td><span class="chip warn">Expires 31 Aug</span></td><td>Edit</td></tr>
+            </table>
+          </div>
+          <div class="card"><h3>Role editor — permission matrix (read-only mirror of policy YAML)</h3>
+            <div class="ph" style="height:110px">Matrix grid: capability × role, ✓/– per SDD §7.3 · edits require Admin + audit reason</div>
+          </div>
+          <div class="note"><b>Spec:</b> identity lives in Keycloak (invite = Keycloak user + app row). Deactivation revokes sessions immediately. Every change audited with before/after diff.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S17 Settings & audit -->
+  <div class="screen" id="s17">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Admin — Settings & audit</h1><span class="sp"></span><span class="badge role">System Admin</span></div>
+        <div class="content">
+          <div class="row">
+            <div class="col">
+              <div class="card"><h3>Integrations</h3>
+                <table>
+                  <tr><td>Anthropic API</td><td><span class="chip ok">Connected · zero-retention</span></td></tr>
+                  <tr><td>Voyage embeddings</td><td><span class="chip ok">Connected</span></td></tr>
+                  <tr><td>Company IdP (SAML)</td><td><span class="chip ok">Federated</span></td></tr>
+                  <tr><td>Object storage</td><td><span class="chip ok">S3 · encrypted</span></td></tr>
+                </table>
+              </div>
+              <div class="card"><h3>AI budgets & defaults</h3>
+                <div class="field"><label>Daily token budget / user</label><div class="in">150,000</div></div>
+                <div class="field"><label>Extraction confidence threshold for auto-accept suggestion</label><div class="in">0.95</div></div>
+                <div class="field"><label>Engine version (workers)</label><div class="in">fdre-engine 1.3.0 ▾</div></div>
+              </div>
+            </div>
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Audit log</h3>
+                <div class="row" style="margin-bottom:8px">
+                  <div class="field col"><label>Actor</label><div class="in">Anyone ▾</div></div>
+                  <div class="field col"><label>Action</label><div class="in">All ▾</div></div>
+                  <div class="field col"><label>Range</label><div class="in">Last 7 days ▾</div></div>
+                </div>
+                <table>
+                  <tr><th>When</th><th>Actor</th><th>Action</th><th>Subject</th></tr>
+                  <tr><td>17:42</td><td>P. Mehta</td><td>approval.approved</td><td>tender_version v3</td></tr>
+                  <tr><td>17:31</td><td>R. Agarwal</td><td>report.downloaded</td><td>Bid Summary Pack v3 (PDF)</td></tr>
+                  <tr><td>16:58</td><td>A. Kumar</td><td>run.submitted</td><td>#413 optimize B5</td></tr>
+                  <tr><td>16:44</td><td>R. Agarwal</td><td>scenario.updated</td><td>B5 · diff: wind_mw 210→260</td></tr>
+                  <tr><td>15:02</td><td>system</td><td>ai.query</td><td>rag · 4,812 tokens · sonnet-5</td></tr>
+                  <tr><td>14:47</td><td>admin</td><td>user.role_changed</td><td>A. Kumar: Viewer→Analyst</td></tr>
+                </table>
+                <div class="note"><b>Spec:</b> append-only at DB privilege level; export CSV; retained ≥ 7 years (configurable).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S18 Agent Console -->
+  <div class="screen" id="s18">
+    <div class="shell">
+      <div class="rail" data-rail></div>
+      <div class="main">
+        <div class="top"><h1>Agent Console</h1><span class="sp"></span><span class="badge">Budgets: ₹-eq tokens 41% used today</span><span class="badge role">Sr Analyst</span></div>
+        <div class="content">
+          <div class="card"><h3>Agents</h3>
+            <table>
+              <tr><th>Agent</th><th>Trigger</th><th>Today</th><th>Budget</th><th>Status</th><th></th></tr>
+              <tr><td><b>A1 · What-If Scenario</b> ✦</td><td>Copilot instruction</td><td>6 runs</td><td><div class="bar"><i style="width:34%"></i></div></td><td><span class="chip ok">Enabled</span></td><td><a class="btn sec" href="#" data-go="s13">Invoke via copilot</a></td></tr>
+              <tr><td><b>A2 · Bid Exploration</b> ✦</td><td>User goal</td><td>1 sweep (18 runs)</td><td><div class="bar"><i style="width:72%"></i></div></td><td><span class="chip ok">Enabled</span></td><td><a class="btn sec" href="#">New goal…</a></td></tr>
+              <tr><td><b>A3 · Tender Ingestion</b> ✦</td><td>RfS/PPA upload</td><td>1 document</td><td><div class="bar"><i style="width:12%"></i></div></td><td><span class="chip ok">Enabled</span></td><td><a class="btn ghost" href="#" data-go="s6">Last output →</a></td></tr>
+              <tr><td><b>A4 · Compliance Sentinel</b> ✦</td><td>Nightly 02:00</td><td>3 scenarios checked</td><td><div class="bar"><i style="width:8%"></i></div></td><td><span class="chip ok">Enabled</span></td><td><a class="btn ghost" href="#">Run now</a></td></tr>
+              <tr><td><b>A5 · Bid Pack Drafting</b> ✦</td><td>User request</td><td>—</td><td><div class="bar"><i style="width:0%"></i></div></td><td><span class="chip ok">Enabled</span></td><td><a class="btn ghost" href="#" data-go="s14">Draft from run…</a></td></tr>
+              <tr><td><b>A6 · Tender Watch</b> ✦</td><td>Daily portal poll</td><td>—</td><td><div class="bar"><i style="width:0%"></i></div></td><td><span class="chip mut">Post-launch</span></td><td><a class="btn ghost" href="#" title="Admin only">Kill switch</a></td></tr>
+            </table>
+          </div>
+          <div class="row">
+            <div class="col" style="flex:2">
+              <div class="card"><h3>Agent run log — A2 #77 "minimize tariff, DSCR ≥ 1.2, wind ≤ 300"</h3>
+                <table>
+                  <tr><th>#</th><th>Tool call</th><th>Result</th></tr>
+                  <tr><td>1</td><td>list_runs(scenario=B4)</td><td>base #412 · ₹4.61</td></tr>
+                  <tr><td>2</td><td>clone_scenario(B4, wind=240, bess_mwh=440)</td><td>DRAFT ag-1</td></tr>
+                  <tr><td>3–8</td><td>submit_run × 6 (sweep batch 1)</td><td>5 PASS · 1 infeasible</td></tr>
+                  <tr><td>9</td><td>compare_runs([…])</td><td>best ₹4.57 @ wind 250</td></tr>
+                  <tr><td>10–14</td><td>submit_run × 5 (refine around 250)</td><td><span class="chip warn">running · 14/25 tool calls</span></td></tr>
+                </table>
+                <p style="margin-top:8px"><a class="btn ghost" href="#">Cancel agent run</a> <span style="font-size:11px;color:var(--mut)">transcript replayable · every call audited as agent-a2 / triggered_by R. Agarwal</span></p>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card"><h3>Drafts awaiting review (4)</h3>
+                <table>
+                  <tr class="click" data-go="s15"><td>✦ Memo: Sweep result — top-3 mixes</td><td><span class="chip warn">Review</span></td></tr>
+                  <tr class="click" data-go="s15"><td>✦ Scenario ag-3 (wind 250)</td><td><span class="chip warn">Review</span></td></tr>
+                  <tr class="click" data-go="s6"><td>✦ Extraction: Corrigendum-2.pdf</td><td><span class="chip warn">Review</span></td></tr>
+                  <tr class="click" data-go="s15"><td>✦ Risk memo: B4 July margin 90.4%</td><td><span class="chip warn">Review</span></td></tr>
+                </table>
+              </div>
+              <div class="note"><b>Spec (SDD §8.6–8.8, §7.5):</b> agents run under service identities, subset-of-Analyst capabilities, drafts only — approvals API rejects agent tokens. Max 25 tool calls/run, token ceiling, kill switch. ✦ badge marks agent-created artifacts everywhere.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const RAIL = [
+  ["Workspace",[["s2","Dashboard"],["s3","Projects"],["s15","Approvals"]]],
+  ["Project: RJ-200",[["s4","Overview"],["s7","Scenarios"],["s8","Runs"],["s9","Results"],["s12","Compare"],["s5","Documents"],["s14","Reports"]]],
+  ["Intelligence",[["s13","AI Copilot"],["s18","Agent Console"],["s6","Extraction review"]]],
+  ["Admin",[["s16","Users & roles"],["s17","Settings & audit"]]],
+];
+document.querySelectorAll("[data-rail]").forEach(el=>{
+  el.innerHTML = '<div class="logo">⚡ FDRE Platform</div>' + RAIL.map(([g,items])=>
+    '<div class="grp">'+g+'</div>'+items.map(([id,label])=>'<a href="#" data-go="'+id+'">'+label+'</a>').join("")
+  ).join("");
+});
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  const t = document.getElementById(id); if(t) t.classList.add("on");
+  document.querySelectorAll(".keybar .scr").forEach(b=>b.classList.toggle("on", b.dataset.s===id));
+  document.querySelectorAll(".rail a").forEach(a=>a.classList.toggle("on", a.dataset.go===id));
+  window.scrollTo(0,0);
+}
+document.addEventListener("click",e=>{
+  const go = e.target.closest("[data-go]"); if(go){ e.preventDefault(); show(go.dataset.go); return; }
+  const scr = e.target.closest(".keybar .scr"); if(scr){ show(scr.dataset.s); }
+});
+show("s1");
+</script>
+</body>
+</html>

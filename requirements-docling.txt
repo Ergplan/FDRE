@@ -1,0 +1,2 @@
+# Optional enhanced tender extraction; install in the backend environment.
+docling==2.130.0

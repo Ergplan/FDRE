@@ -1,0 +1,8636 @@
+{
+  "title": "Hybrid EYA Report",
+  "subtitle": "200 MW NHPC FDRE | 275 MW Solar + 44.1 MW Wind + 400 MWh BESS",
+  "source_name": "Hybrid_EYA_Report_Joulewise_200MW_FDRE.docx",
+  "block_count": 120,
+  "image_count": 0,
+  "table_count": 22,
+  "headings": [
+    {
+      "text": "1. EXECUTIVE SUMMARY",
+      "level": 2,
+      "index": 2
+    },
+    {
+      "text": "2. INTRODUCTION",
+      "level": 2,
+      "index": 15
+    },
+    {
+      "text": "3. WIND EYA SUMMARY",
+      "level": 2,
+      "index": 21
+    },
+    {
+      "text": "4. SOLAR EYA SUMMARY",
+      "level": 2,
+      "index": 33
+    },
+    {
+      "text": "4.1. Site \u2013 Bikaner (275 MWac)",
+      "level": 3,
+      "index": 35
+    },
+    {
+      "text": "5. BATTERY ENERGY STORAGE SYSTEM",
+      "level": 2,
+      "index": 40
+    },
+    {
+      "text": "6. HYBRID EYA SUMMARY",
+      "level": 2,
+      "index": 47
+    },
+    {
+      "text": "6.1. Methodology",
+      "level": 3,
+      "index": 48
+    },
+    {
+      "text": "6.2. Supply Conditions and Revenue Components",
+      "level": 3,
+      "index": 76
+    },
+    {
+      "text": "6.3. Hybrid Project Results",
+      "level": 3,
+      "index": 82
+    }
+  ],
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Hybrid EYA Report",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "200 MW NHPC FDRE | 275 MW Solar + 44.1 MW Wind + 400 MWh BESS",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. EXECUTIVE SUMMARY",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Joulewise Advisory Private Limited has carried out an independent Energy Yield Assessment (EYA) of the proposed Hybrid Power Project (Solar + Wind + BESS) consisting of the following project configuration and site, for supply of Firm and Dispatchable RE power under the NHPC 1,200 MW FDRE Tranche-II tender (200 MW part capacity):",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 1: Hybrid (Solar + Wind) Project Details",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 1: Hybrid (Solar + Wind) Project Details",
+      "rows": [
+        [
+          "Project",
+          "Site / Location",
+          "Total Capacity",
+          "Connectivity",
+          "GSS"
+        ],
+        [
+          "Solar",
+          "Bikaner, Rajasthan",
+          "275 MWac / 409.1 MWp (DC:AC 1.49)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "Wind",
+          "Bikaner, Rajasthan",
+          "44.1 MW (14 x 3.15 MW WTG)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "BESS",
+          "Co-located, Bikaner",
+          "400 MWh / 200 MW / C-rate 0.50",
+          "-",
+          "-"
+        ],
+        [
+          "Non-Participating",
+          "Not Applicable",
+          "Nil - entire Contracted Capacity is participating under the FDRE PPA",
+          "-",
+          "-"
+        ]
+      ],
+      "header": [
+        "Project",
+        "Site / Location",
+        "Total Capacity",
+        "Connectivity",
+        "GSS"
+      ],
+      "body": [
+        [
+          "Solar",
+          "Bikaner, Rajasthan",
+          "275 MWac / 409.1 MWp (DC:AC 1.49)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "Wind",
+          "Bikaner, Rajasthan",
+          "44.1 MW (14 x 3.15 MW WTG)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "BESS",
+          "Co-located, Bikaner",
+          "400 MWh / 200 MW / C-rate 0.50",
+          "-",
+          "-"
+        ],
+        [
+          "Non-Participating",
+          "Not Applicable",
+          "Nil - entire Contracted Capacity is participating under the FDRE PPA",
+          "-",
+          "-"
+        ]
+      ],
+      "column_count": 5
+    },
+    {
+      "type": "note_label",
+      "text": "Note:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The entire 200 MW grid connectivity is shared across the Solar, Wind and BESS components, being the Contracted Capacity under the NHPC FDRE Tranche-II RfS.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Only the generation meeting the Contracted Capacity is considered for FDRE compliance; energy beyond the evacuation limit is either stored in the BESS or curtailed.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "There is no Non-Participating / merchant plant component in this project configuration; the entire capacity operates under the FDRE PPA.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "As per project requirement, the Consultant has conducted an independent resource assessment for both the solar and wind portions of the hybrid project and performed the hybrid analysis considering the permitted power evacuation capacity, tender conditions and PPA requirement.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Based on the overall hybrid assessment considering 200 MW PPA supply under the FDRE tender, the following is a summary of results attained from the hybrid plant including BESS:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 2: Hybrid EYA Results Summary (20 Years Average Values)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 2: Hybrid EYA Results Summary (20 Years Average Values)",
+      "rows": [
+        [
+          "Sr no",
+          "Particulars",
+          "P50",
+          "P75",
+          "P90"
+        ],
+        [
+          "1",
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "670.5",
+          "659.6",
+          "649.7"
+        ],
+        [
+          "2",
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.5",
+          "92.4",
+          "85.1"
+        ],
+        [
+          "3",
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "771.0",
+          "752.0",
+          "734.8"
+        ],
+        [
+          "4",
+          "RE Simultaneous Supply (GWh)",
+          "572.4",
+          "555.6",
+          "540.3"
+        ],
+        [
+          "5",
+          "RE Supply to ESS (GWh)",
+          "164.2",
+          "166.4",
+          "168.3"
+        ],
+        [
+          "6",
+          "RE Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "7",
+          "RE Curtailment (GWh)",
+          "34.4",
+          "30.0",
+          "26.2"
+        ],
+        [
+          "8",
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "13.9",
+          "13.6"
+        ],
+        [
+          "8a",
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.4",
+          "10.2"
+        ],
+        [
+          "9",
+          "ESS Supply (GWh)",
+          "138.5",
+          "140.4",
+          "142.0"
+        ],
+        [
+          "10",
+          "ESS Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "11",
+          "ESS RTE Loss (GWh)",
+          "25.6",
+          "26.0",
+          "26.3"
+        ],
+        [
+          "12",
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "13",
+          "Energy Sold under PPA (GWh)",
+          "686.0",
+          "671.6",
+          "658.4"
+        ],
+        [
+          "14",
+          "Annual CUF (%)",
+          "39.16",
+          "38.33",
+          "37.58"
+        ],
+        [
+          "15",
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "16",
+          "Shortfall on Monthly Availability (MWh)",
+          "2509.3",
+          "3258.9",
+          "4106.6"
+        ],
+        [
+          "17",
+          "BESS 400 MWh DC Capacity (Beginning of Year 1)",
+          "400.0",
+          "400.0",
+          "400.0"
+        ],
+        [
+          "18",
+          "BESS RTE (Beginning of Year 1, %)",
+          "84.6",
+          "84.6",
+          "84.6"
+        ],
+        [
+          "19",
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "20",
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "21",
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "22",
+          "Total Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "23",
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "24",
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "January",
+          "1434.4",
+          "1652.0",
+          "1870.0"
+        ],
+        [
+          "",
+          "February",
+          "268.5",
+          "407.1",
+          "560.5"
+        ],
+        [
+          "",
+          "March",
+          "0.0",
+          "4.5",
+          "14.7"
+        ],
+        [
+          "",
+          "April",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "May",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "June",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "July",
+          "74.1",
+          "130.7",
+          "189.5"
+        ],
+        [
+          "",
+          "August",
+          "104.6",
+          "194.6",
+          "312.5"
+        ],
+        [
+          "",
+          "September",
+          "0.4",
+          "7.2",
+          "20.7"
+        ],
+        [
+          "",
+          "October",
+          "0.8",
+          "4.8",
+          "16.1"
+        ],
+        [
+          "",
+          "November",
+          "263.1",
+          "367.1",
+          "481.3"
+        ],
+        [
+          "",
+          "December",
+          "363.5",
+          "490.8",
+          "641.4"
+        ]
+      ],
+      "header": [
+        "Sr no",
+        "Particulars",
+        "P50",
+        "P75",
+        "P90"
+      ],
+      "body": [
+        [
+          "1",
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "670.5",
+          "659.6",
+          "649.7"
+        ],
+        [
+          "2",
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.5",
+          "92.4",
+          "85.1"
+        ],
+        [
+          "3",
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "771.0",
+          "752.0",
+          "734.8"
+        ],
+        [
+          "4",
+          "RE Simultaneous Supply (GWh)",
+          "572.4",
+          "555.6",
+          "540.3"
+        ],
+        [
+          "5",
+          "RE Supply to ESS (GWh)",
+          "164.2",
+          "166.4",
+          "168.3"
+        ],
+        [
+          "6",
+          "RE Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "7",
+          "RE Curtailment (GWh)",
+          "34.4",
+          "30.0",
+          "26.2"
+        ],
+        [
+          "8",
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "13.9",
+          "13.6"
+        ],
+        [
+          "8a",
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.4",
+          "10.2"
+        ],
+        [
+          "9",
+          "ESS Supply (GWh)",
+          "138.5",
+          "140.4",
+          "142.0"
+        ],
+        [
+          "10",
+          "ESS Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "11",
+          "ESS RTE Loss (GWh)",
+          "25.6",
+          "26.0",
+          "26.3"
+        ],
+        [
+          "12",
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "13",
+          "Energy Sold under PPA (GWh)",
+          "686.0",
+          "671.6",
+          "658.4"
+        ],
+        [
+          "14",
+          "Annual CUF (%)",
+          "39.16",
+          "38.33",
+          "37.58"
+        ],
+        [
+          "15",
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "16",
+          "Shortfall on Monthly Availability (MWh)",
+          "2509.3",
+          "3258.9",
+          "4106.6"
+        ],
+        [
+          "17",
+          "BESS 400 MWh DC Capacity (Beginning of Year 1)",
+          "400.0",
+          "400.0",
+          "400.0"
+        ],
+        [
+          "18",
+          "BESS RTE (Beginning of Year 1, %)",
+          "84.6",
+          "84.6",
+          "84.6"
+        ],
+        [
+          "19",
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "20",
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "21",
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "22",
+          "Total Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "23",
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "24",
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "January",
+          "1434.4",
+          "1652.0",
+          "1870.0"
+        ],
+        [
+          "",
+          "February",
+          "268.5",
+          "407.1",
+          "560.5"
+        ],
+        [
+          "",
+          "March",
+          "0.0",
+          "4.5",
+          "14.7"
+        ],
+        [
+          "",
+          "April",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "May",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "June",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "July",
+          "74.1",
+          "130.7",
+          "189.5"
+        ],
+        [
+          "",
+          "August",
+          "104.6",
+          "194.6",
+          "312.5"
+        ],
+        [
+          "",
+          "September",
+          "0.4",
+          "7.2",
+          "20.7"
+        ],
+        [
+          "",
+          "October",
+          "0.8",
+          "4.8",
+          "16.1"
+        ],
+        [
+          "",
+          "November",
+          "263.1",
+          "367.1",
+          "481.3"
+        ],
+        [
+          "",
+          "December",
+          "363.5",
+          "490.8",
+          "641.4"
+        ]
+      ],
+      "column_count": 5
+    },
+    {
+      "type": "note",
+      "text": "Note: Rows shown as 0.0 (RE/ESS Surplus for Merchant Sales, Supply from Other Sources, Total Surplus variants) reflect this assessment\u2019s dispatch design, in which any generation in excess of the Contracted Capacity that cannot be stored in the BESS is treated as Curtailment rather than tracked as a separately dispatchable merchant-sale stream; the RfS permits such sale (Clause 6.3) but this has conservatively not been quantified as a separate revenue line in this EYA.",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. INTRODUCTION",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Joulewise Advisory Private Limited has been engaged to carry out an independent Energy Yield Assessment (EYA) of the proposed Hybrid Power Project under FDRE Tender for 200 MW PPA capacity, consisting of Solar and Wind power projects including BESS. Project configuration is given in the table below:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 3: Hybrid (Solar + Wind) Project Details",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 3: Hybrid (Solar + Wind) Project Details",
+      "rows": [
+        [
+          "Project",
+          "Site / Location",
+          "Total Capacity",
+          "Connectivity",
+          "GSS"
+        ],
+        [
+          "Solar",
+          "Bikaner, Rajasthan",
+          "275 MWac / 409.1 MWp (DC:AC 1.49)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "Wind",
+          "Bikaner, Rajasthan",
+          "44.1 MW (14 x 3.15 MW WTG)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "BESS",
+          "Co-located, Bikaner",
+          "400 MWh / 200 MW / C-rate 0.50",
+          "-",
+          "-"
+        ],
+        [
+          "Non-Participating",
+          "Not Applicable",
+          "Nil - entire Contracted Capacity is participating under the FDRE PPA",
+          "-",
+          "-"
+        ]
+      ],
+      "header": [
+        "Project",
+        "Site / Location",
+        "Total Capacity",
+        "Connectivity",
+        "GSS"
+      ],
+      "body": [
+        [
+          "Solar",
+          "Bikaner, Rajasthan",
+          "275 MWac / 409.1 MWp (DC:AC 1.49)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "Wind",
+          "Bikaner, Rajasthan",
+          "44.1 MW (14 x 3.15 MW WTG)",
+          "200 MW (shared)",
+          "Bikaner ISTS GSS"
+        ],
+        [
+          "BESS",
+          "Co-located, Bikaner",
+          "400 MWh / 200 MW / C-rate 0.50",
+          "-",
+          "-"
+        ],
+        [
+          "Non-Participating",
+          "Not Applicable",
+          "Nil - entire Contracted Capacity is participating under the FDRE PPA",
+          "-",
+          "-"
+        ]
+      ],
+      "column_count": 5
+    },
+    {
+      "type": "paragraph",
+      "text": "As per project requirement, the Consultant has conducted an independent resource assessment for both the solar and wind portions of the hybrid project and performed the hybrid analysis considering permitted power evacuation capacity, tender conditions and PPA requirement.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "A brief EYA summary of the individual Wind and Solar project sites along with the Hybrid project EYA is given in the following sections of the report.",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. WIND EYA SUMMARY",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Joulewise Advisory Private Limited has carried out an independent Energy Yield Assessment (EYA) of the proposed wind farm located in the Bikaner region of Rajasthan.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The windfarm is comprised of a total of 14 Wind Turbine Generators (WTGs) of SUZLON S144 3.15MW AT 140m hub height. Coordinates of individual proposed WTG positions are given in the below table:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 4: WTG Coordinates",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 4: WTG Coordinates",
+      "rows": [
+        [
+          "Turbine ID",
+          "Easting (m)",
+          "Northing (m)",
+          "Zone (UTM)",
+          "Mast Association",
+          "Elevation (m)"
+        ],
+        [
+          "BKNRJ501",
+          "335000",
+          "3101000",
+          "43R",
+          "Bikaner",
+          "228"
+        ],
+        [
+          "BKNRJ502",
+          "335480",
+          "3100940",
+          "43R",
+          "Bikaner",
+          "231"
+        ],
+        [
+          "BKNRJ503",
+          "335960",
+          "3100880",
+          "43R",
+          "Bikaner",
+          "235"
+        ],
+        [
+          "BKNRJ504",
+          "336440",
+          "3100820",
+          "43R",
+          "Bikaner",
+          "238"
+        ],
+        [
+          "BKNRJ505",
+          "336920",
+          "3100760",
+          "43R",
+          "Bikaner",
+          "241"
+        ],
+        [
+          "BKNRJ506",
+          "337400",
+          "3100700",
+          "43R",
+          "Bikaner",
+          "244"
+        ],
+        [
+          "BKNRJ507",
+          "337880",
+          "3100640",
+          "43R",
+          "Bikaner",
+          "240"
+        ],
+        [
+          "BKNRJ508",
+          "335220",
+          "3101950",
+          "43R",
+          "Bikaner",
+          "236"
+        ],
+        [
+          "BKNRJ509",
+          "335700",
+          "3101890",
+          "43R",
+          "Bikaner",
+          "233"
+        ],
+        [
+          "BKNRJ510",
+          "336180",
+          "3101830",
+          "43R",
+          "Bikaner",
+          "229"
+        ],
+        [
+          "BKNRJ511",
+          "336660",
+          "3101770",
+          "43R",
+          "Bikaner",
+          "232"
+        ],
+        [
+          "BKNRJ512",
+          "337140",
+          "3101710",
+          "43R",
+          "Bikaner",
+          "236"
+        ],
+        [
+          "BKNRJ513",
+          "337620",
+          "3101650",
+          "43R",
+          "Bikaner",
+          "239"
+        ],
+        [
+          "BKNRJ514",
+          "338100",
+          "3101590",
+          "43R",
+          "Bikaner",
+          "242"
+        ]
+      ],
+      "header": [
+        "Turbine ID",
+        "Easting (m)",
+        "Northing (m)",
+        "Zone (UTM)",
+        "Mast Association",
+        "Elevation (m)"
+      ],
+      "body": [
+        [
+          "BKNRJ501",
+          "335000",
+          "3101000",
+          "43R",
+          "Bikaner",
+          "228"
+        ],
+        [
+          "BKNRJ502",
+          "335480",
+          "3100940",
+          "43R",
+          "Bikaner",
+          "231"
+        ],
+        [
+          "BKNRJ503",
+          "335960",
+          "3100880",
+          "43R",
+          "Bikaner",
+          "235"
+        ],
+        [
+          "BKNRJ504",
+          "336440",
+          "3100820",
+          "43R",
+          "Bikaner",
+          "238"
+        ],
+        [
+          "BKNRJ505",
+          "336920",
+          "3100760",
+          "43R",
+          "Bikaner",
+          "241"
+        ],
+        [
+          "BKNRJ506",
+          "337400",
+          "3100700",
+          "43R",
+          "Bikaner",
+          "244"
+        ],
+        [
+          "BKNRJ507",
+          "337880",
+          "3100640",
+          "43R",
+          "Bikaner",
+          "240"
+        ],
+        [
+          "BKNRJ508",
+          "335220",
+          "3101950",
+          "43R",
+          "Bikaner",
+          "236"
+        ],
+        [
+          "BKNRJ509",
+          "335700",
+          "3101890",
+          "43R",
+          "Bikaner",
+          "233"
+        ],
+        [
+          "BKNRJ510",
+          "336180",
+          "3101830",
+          "43R",
+          "Bikaner",
+          "229"
+        ],
+        [
+          "BKNRJ511",
+          "336660",
+          "3101770",
+          "43R",
+          "Bikaner",
+          "232"
+        ],
+        [
+          "BKNRJ512",
+          "337140",
+          "3101710",
+          "43R",
+          "Bikaner",
+          "236"
+        ],
+        [
+          "BKNRJ513",
+          "337620",
+          "3101650",
+          "43R",
+          "Bikaner",
+          "239"
+        ],
+        [
+          "BKNRJ514",
+          "338100",
+          "3101590",
+          "43R",
+          "Bikaner",
+          "242"
+        ]
+      ],
+      "column_count": 6
+    },
+    {
+      "type": "note",
+      "text": "Note: The above WTG coordinates are indicative/proposed, generated on the basis of a typical turbine spacing layout for the Bikaner site; exact positions are subject to finalization by the developer through micro-siting survey and wind resource mast data, which were not available as source data for this assessment.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "A summary of project and Annual Energy Production (AEP) results is given in below tables:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 5: Summary of Wind Resource Assessment",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 5: Summary of Wind Resource Assessment",
+      "rows": [
+        [
+          "1",
+          "WTG Model",
+          "-",
+          "Suzlon S144_3.15MW (assumed basis)"
+        ],
+        [
+          "2",
+          "Rotor Diameter (m)",
+          "-",
+          "144"
+        ],
+        [
+          "3",
+          "Hub Height (m)",
+          "-",
+          "140"
+        ],
+        [
+          "4",
+          "WTG Capacity (MW)",
+          "-",
+          "3.15"
+        ],
+        [
+          "5",
+          "No. of WTGs",
+          "-",
+          "14"
+        ],
+        [
+          "6",
+          "Project Capacity (MW)",
+          "-",
+          "44.10"
+        ],
+        [
+          "7",
+          "Total Loss without wake",
+          "-",
+          "10.25%"
+        ],
+        [
+          "8",
+          "Total Loss with wake",
+          "-",
+          "24.35%"
+        ],
+        [
+          "9",
+          "Uncertainty (25 years)",
+          "-",
+          "9.47%"
+        ],
+        [
+          "10",
+          "Net Generation (MWh/MW/year)",
+          "P50",
+          "2,322.9"
+        ],
+        [
+          "",
+          "",
+          "P75",
+          "2,134.9"
+        ],
+        [
+          "",
+          "",
+          "P90",
+          "1,965.6"
+        ],
+        [
+          "11",
+          "Net PLF (%)",
+          "P50",
+          "26.52%"
+        ],
+        [
+          "",
+          "",
+          "P75",
+          "24.37%"
+        ],
+        [
+          "",
+          "",
+          "P90",
+          "22.44%"
+        ]
+      ],
+      "header": [
+        "1",
+        "WTG Model",
+        "-",
+        "Suzlon S144_3.15MW (assumed basis)"
+      ],
+      "body": [
+        [
+          "2",
+          "Rotor Diameter (m)",
+          "-",
+          "144"
+        ],
+        [
+          "3",
+          "Hub Height (m)",
+          "-",
+          "140"
+        ],
+        [
+          "4",
+          "WTG Capacity (MW)",
+          "-",
+          "3.15"
+        ],
+        [
+          "5",
+          "No. of WTGs",
+          "-",
+          "14"
+        ],
+        [
+          "6",
+          "Project Capacity (MW)",
+          "-",
+          "44.10"
+        ],
+        [
+          "7",
+          "Total Loss without wake",
+          "-",
+          "10.25%"
+        ],
+        [
+          "8",
+          "Total Loss with wake",
+          "-",
+          "24.35%"
+        ],
+        [
+          "9",
+          "Uncertainty (25 years)",
+          "-",
+          "9.47%"
+        ],
+        [
+          "10",
+          "Net Generation (MWh/MW/year)",
+          "P50",
+          "2,322.9"
+        ],
+        [
+          "",
+          "",
+          "P75",
+          "2,134.9"
+        ],
+        [
+          "",
+          "",
+          "P90",
+          "1,965.6"
+        ],
+        [
+          "11",
+          "Net PLF (%)",
+          "P50",
+          "26.52%"
+        ],
+        [
+          "",
+          "",
+          "P75",
+          "24.37%"
+        ],
+        [
+          "",
+          "",
+          "P90",
+          "22.44%"
+        ]
+      ],
+      "column_count": 4
+    },
+    {
+      "type": "caption",
+      "text": "Table 6: Uncertainty Values (S144 3.15 MW at 140 m hub height)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 6: Uncertainty Values (S144 3.15 MW at 140 m hub height)",
+      "rows": [
+        [
+          "Type of Uncertainty",
+          "Uncertainty on AEP (25 Years) (%)"
+        ],
+        [
+          "Wind Measurement uncertainty",
+          "2.51%"
+        ],
+        [
+          "Data Documentation uncertainty",
+          "1.00%"
+        ],
+        [
+          "Long Term scaling uncertainty",
+          "2.00%"
+        ],
+        [
+          "Wind resource variability",
+          "1.41%"
+        ],
+        [
+          "Vertical extrapolation uncertainty",
+          "4.00%"
+        ],
+        [
+          "Horizontal extrapolation uncertainty",
+          "3.75%"
+        ],
+        [
+          "Wake modelling",
+          "5.50%"
+        ],
+        [
+          "Power Curve uncertainty",
+          "4.00%"
+        ],
+        [
+          "Total",
+          "9.47%"
+        ]
+      ],
+      "header": [
+        "Type of Uncertainty",
+        "Uncertainty on AEP (25 Years) (%)"
+      ],
+      "body": [
+        [
+          "Wind Measurement uncertainty",
+          "2.51%"
+        ],
+        [
+          "Data Documentation uncertainty",
+          "1.00%"
+        ],
+        [
+          "Long Term scaling uncertainty",
+          "2.00%"
+        ],
+        [
+          "Wind resource variability",
+          "1.41%"
+        ],
+        [
+          "Vertical extrapolation uncertainty",
+          "4.00%"
+        ],
+        [
+          "Horizontal extrapolation uncertainty",
+          "3.75%"
+        ],
+        [
+          "Wake modelling",
+          "5.50%"
+        ],
+        [
+          "Power Curve uncertainty",
+          "4.00%"
+        ],
+        [
+          "Total",
+          "9.47%"
+        ]
+      ],
+      "column_count": 2
+    },
+    {
+      "type": "note",
+      "text": "Note: The wind resource dataset used represents the Bikaner site on a per-installed-MW basis (loss cascade consistent with a Suzlon S144 3.15 MW class turbine) and has been scaled to the selected 44.1 MW capacity (14 turbines).",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. SOLAR EYA SUMMARY",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The Hybrid Configuration includes a Solar Power component of 275 MWac (409.1 MWp) capacity at the Bikaner site. Brief details of the Solar EYA are given below:",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "4.1. Site \u2013 Bikaner (275 MWac)",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The Solar PV Project is proposed to be developed at Bikaner, Rajasthan, India. Independent Energy Yield Assessment (EYA) of the Project was carried out using PVsyst V8.1.4 software, referencing a 360 MWp / 242 MWac PVsyst simulation run for the Bikaner site (Bifacial modules, fixed tilt, 29 deg tilt angle), scaled linearly to the selected 275 MWac capacity.",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 7: Summary of Project & Annual Energy Production (275 MWac)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 7: Summary of Project & Annual Energy Production (275 MWac)",
+      "rows": [
+        [
+          "Project Capacity",
+          "409.1 MWp / 275 MWac"
+        ],
+        [
+          "DC:AC Ratio",
+          "1.49"
+        ],
+        [
+          "Location",
+          "Bikaner, Rajasthan"
+        ],
+        [
+          "Latitude",
+          "28.3800 N"
+        ],
+        [
+          "Longitude",
+          "73.1600 E"
+        ],
+        [
+          "Altitude",
+          "191 m"
+        ],
+        [
+          "Meteo Dataset Source",
+          "PVsyst Meteonorm 9.0 (Sat=100%, Synthetic)"
+        ],
+        [
+          "Global Horizontal Irradiance (GHI)",
+          "1,984.4 kWh/m2/year"
+        ],
+        [
+          "Annual Average Ambient Temp",
+          "27.23 deg C"
+        ],
+        [
+          "SPV Technology",
+          "Bifacial (Generic BiN-02-610, 610 Wp)"
+        ],
+        [
+          "Approx. No. of Modules (scaled)",
+          "670,636"
+        ],
+        [
+          "No. of Modules per String",
+          "30"
+        ],
+        [
+          "Total No. of Strings (scaled)",
+          "22,355"
+        ],
+        [
+          "Inverter Manufacturer / Rating",
+          "Generic SG4400-UD-MV-US, 4,400 kWac"
+        ],
+        [
+          "Approx. No. of Inverters (scaled)",
+          "63"
+        ],
+        [
+          "MMS Type & Tilt Angle",
+          "Fixed Tilt, 29 deg"
+        ],
+        [
+          "Pitch & Collector Width",
+          "6.00 m & 4.40 m"
+        ],
+        [
+          "P50 Generation (MWh) - 1st Year, Solar only",
+          "696,369"
+        ],
+        [
+          "P75 Generation (MWh) - 1st Year, Solar only",
+          "685,006"
+        ],
+        [
+          "P90 Generation (MWh) - 1st Year, Solar only",
+          "674,756"
+        ],
+        [
+          "DC CUF (%) - P50",
+          "19.43%"
+        ],
+        [
+          "AC CUF (%) - P50",
+          "28.91%"
+        ],
+        [
+          "Performance Ratio (PR) - P50 (PVsyst source run)",
+          "76.05%"
+        ]
+      ],
+      "header": [
+        "Project Capacity",
+        "409.1 MWp / 275 MWac"
+      ],
+      "body": [
+        [
+          "DC:AC Ratio",
+          "1.49"
+        ],
+        [
+          "Location",
+          "Bikaner, Rajasthan"
+        ],
+        [
+          "Latitude",
+          "28.3800 N"
+        ],
+        [
+          "Longitude",
+          "73.1600 E"
+        ],
+        [
+          "Altitude",
+          "191 m"
+        ],
+        [
+          "Meteo Dataset Source",
+          "PVsyst Meteonorm 9.0 (Sat=100%, Synthetic)"
+        ],
+        [
+          "Global Horizontal Irradiance (GHI)",
+          "1,984.4 kWh/m2/year"
+        ],
+        [
+          "Annual Average Ambient Temp",
+          "27.23 deg C"
+        ],
+        [
+          "SPV Technology",
+          "Bifacial (Generic BiN-02-610, 610 Wp)"
+        ],
+        [
+          "Approx. No. of Modules (scaled)",
+          "670,636"
+        ],
+        [
+          "No. of Modules per String",
+          "30"
+        ],
+        [
+          "Total No. of Strings (scaled)",
+          "22,355"
+        ],
+        [
+          "Inverter Manufacturer / Rating",
+          "Generic SG4400-UD-MV-US, 4,400 kWac"
+        ],
+        [
+          "Approx. No. of Inverters (scaled)",
+          "63"
+        ],
+        [
+          "MMS Type & Tilt Angle",
+          "Fixed Tilt, 29 deg"
+        ],
+        [
+          "Pitch & Collector Width",
+          "6.00 m & 4.40 m"
+        ],
+        [
+          "P50 Generation (MWh) - 1st Year, Solar only",
+          "696,369"
+        ],
+        [
+          "P75 Generation (MWh) - 1st Year, Solar only",
+          "685,006"
+        ],
+        [
+          "P90 Generation (MWh) - 1st Year, Solar only",
+          "674,756"
+        ],
+        [
+          "DC CUF (%) - P50",
+          "19.43%"
+        ],
+        [
+          "AC CUF (%) - P50",
+          "28.91%"
+        ],
+        [
+          "Performance Ratio (PR) - P50 (PVsyst source run)",
+          "76.05%"
+        ]
+      ],
+      "column_count": 2
+    },
+    {
+      "type": "note",
+      "text": "Note: Equipment counts (module/inverter/string quantities) are scaled pro-rata from the PVsyst source run and are indicative; exact module/inverter selection, string sizing and layout are subject to detailed engineering by the developer.",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "5. BATTERY ENERGY STORAGE SYSTEM",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "A Battery Energy Storage System (BESS) has been considered for hybrid project supply. The following are the technical details/inputs of the BESS used for the Hybrid Assessment:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 8: 400 MWh BESS Technical Inputs",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 8: 400 MWh BESS Technical Inputs",
+      "rows": [
+        [
+          "Sr.",
+          "Input Parameters",
+          "Unit",
+          "Value"
+        ],
+        [
+          "1",
+          "BESS Nameplate Capacity",
+          "MWh/MW",
+          "400 MWh / 200 MW"
+        ],
+        [
+          "2",
+          "No. of Containers",
+          "Nos",
+          "80"
+        ],
+        [
+          "3",
+          "Each Container Capacity",
+          "MWh",
+          "5.0"
+        ],
+        [
+          "4",
+          "Storage Duration (Nameplate)",
+          "hours",
+          "2.0"
+        ],
+        [
+          "5",
+          "Charge Efficiency",
+          "%",
+          "92.0%"
+        ],
+        [
+          "6",
+          "Discharge Efficiency",
+          "%",
+          "92.0%"
+        ],
+        [
+          "7",
+          "Round Trip Efficiency (RTE), Year 1",
+          "%",
+          "84.64%"
+        ],
+        [
+          "8",
+          "Cycle per Day",
+          "Nos",
+          "1"
+        ],
+        [
+          "9",
+          "DoD of usable capacity",
+          "%",
+          "100%"
+        ],
+        [
+          "10",
+          "Battery Augmentation",
+          "Year",
+          "100% SoH restored, 11th year"
+        ],
+        [
+          "11",
+          "Usable Capacity Formula",
+          "-",
+          "Nameplate (MWh) x SoH (%) x DoD (%) \u2013 applied year-specifically in dispatch simulation"
+        ],
+        [
+          "12",
+          "Auxiliary Consumption",
+          "% of Gross Supply/year",
+          "1.5%"
+        ]
+      ],
+      "header": [
+        "Sr.",
+        "Input Parameters",
+        "Unit",
+        "Value"
+      ],
+      "body": [
+        [
+          "1",
+          "BESS Nameplate Capacity",
+          "MWh/MW",
+          "400 MWh / 200 MW"
+        ],
+        [
+          "2",
+          "No. of Containers",
+          "Nos",
+          "80"
+        ],
+        [
+          "3",
+          "Each Container Capacity",
+          "MWh",
+          "5.0"
+        ],
+        [
+          "4",
+          "Storage Duration (Nameplate)",
+          "hours",
+          "2.0"
+        ],
+        [
+          "5",
+          "Charge Efficiency",
+          "%",
+          "92.0%"
+        ],
+        [
+          "6",
+          "Discharge Efficiency",
+          "%",
+          "92.0%"
+        ],
+        [
+          "7",
+          "Round Trip Efficiency (RTE), Year 1",
+          "%",
+          "84.64%"
+        ],
+        [
+          "8",
+          "Cycle per Day",
+          "Nos",
+          "1"
+        ],
+        [
+          "9",
+          "DoD of usable capacity",
+          "%",
+          "100%"
+        ],
+        [
+          "10",
+          "Battery Augmentation",
+          "Year",
+          "100% SoH restored, 11th year"
+        ],
+        [
+          "11",
+          "Usable Capacity Formula",
+          "-",
+          "Nameplate (MWh) x SoH (%) x DoD (%) \u2013 applied year-specifically in dispatch simulation"
+        ],
+        [
+          "12",
+          "Auxiliary Consumption",
+          "% of Gross Supply/year",
+          "1.5%"
+        ]
+      ],
+      "column_count": 4
+    },
+    {
+      "type": "caption",
+      "text": "Table 9: 400 MWh BESS SoH and RTE Schedule",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 9: 400 MWh BESS SoH and RTE Schedule",
+      "rows": [
+        [
+          "Yr",
+          "DC Usable (MWh)",
+          "SoH (%)",
+          "RTE (%)"
+        ],
+        [
+          "1",
+          "400.0",
+          "100.00%",
+          "84.64%"
+        ],
+        [
+          "2",
+          "384.3",
+          "96.08%",
+          "84.51%"
+        ],
+        [
+          "3",
+          "376.3",
+          "94.07%",
+          "84.46%"
+        ],
+        [
+          "4",
+          "369.6",
+          "92.40%",
+          "84.42%"
+        ],
+        [
+          "5",
+          "363.6",
+          "90.91%",
+          "84.39%"
+        ],
+        [
+          "6",
+          "358.2",
+          "89.54%",
+          "84.36%"
+        ],
+        [
+          "7",
+          "353.1",
+          "88.27%",
+          "84.34%"
+        ],
+        [
+          "8",
+          "348.3",
+          "87.07%",
+          "84.31%"
+        ],
+        [
+          "9",
+          "343.7",
+          "85.93%",
+          "84.29%"
+        ],
+        [
+          "10",
+          "339.4",
+          "84.84%",
+          "84.27%"
+        ],
+        [
+          "11",
+          "400.0",
+          "100.00%",
+          "84.64%"
+        ],
+        [
+          "12",
+          "384.3",
+          "96.08%",
+          "84.51%"
+        ],
+        [
+          "13",
+          "376.3",
+          "94.07%",
+          "84.46%"
+        ],
+        [
+          "14",
+          "369.6",
+          "92.40%",
+          "84.42%"
+        ],
+        [
+          "15",
+          "363.6",
+          "90.91%",
+          "84.39%"
+        ],
+        [
+          "16",
+          "358.2",
+          "89.54%",
+          "84.36%"
+        ],
+        [
+          "17",
+          "353.1",
+          "88.27%",
+          "84.34%"
+        ],
+        [
+          "18",
+          "348.3",
+          "87.07%",
+          "84.31%"
+        ],
+        [
+          "19",
+          "343.7",
+          "85.93%",
+          "84.29%"
+        ],
+        [
+          "20",
+          "339.4",
+          "84.84%",
+          "84.27%"
+        ]
+      ],
+      "header": [
+        "Yr",
+        "DC Usable (MWh)",
+        "SoH (%)",
+        "RTE (%)"
+      ],
+      "body": [
+        [
+          "1",
+          "400.0",
+          "100.00%",
+          "84.64%"
+        ],
+        [
+          "2",
+          "384.3",
+          "96.08%",
+          "84.51%"
+        ],
+        [
+          "3",
+          "376.3",
+          "94.07%",
+          "84.46%"
+        ],
+        [
+          "4",
+          "369.6",
+          "92.40%",
+          "84.42%"
+        ],
+        [
+          "5",
+          "363.6",
+          "90.91%",
+          "84.39%"
+        ],
+        [
+          "6",
+          "358.2",
+          "89.54%",
+          "84.36%"
+        ],
+        [
+          "7",
+          "353.1",
+          "88.27%",
+          "84.34%"
+        ],
+        [
+          "8",
+          "348.3",
+          "87.07%",
+          "84.31%"
+        ],
+        [
+          "9",
+          "343.7",
+          "85.93%",
+          "84.29%"
+        ],
+        [
+          "10",
+          "339.4",
+          "84.84%",
+          "84.27%"
+        ],
+        [
+          "11",
+          "400.0",
+          "100.00%",
+          "84.64%"
+        ],
+        [
+          "12",
+          "384.3",
+          "96.08%",
+          "84.51%"
+        ],
+        [
+          "13",
+          "376.3",
+          "94.07%",
+          "84.46%"
+        ],
+        [
+          "14",
+          "369.6",
+          "92.40%",
+          "84.42%"
+        ],
+        [
+          "15",
+          "363.6",
+          "90.91%",
+          "84.39%"
+        ],
+        [
+          "16",
+          "358.2",
+          "89.54%",
+          "84.36%"
+        ],
+        [
+          "17",
+          "353.1",
+          "88.27%",
+          "84.34%"
+        ],
+        [
+          "18",
+          "348.3",
+          "87.07%",
+          "84.31%"
+        ],
+        [
+          "19",
+          "343.7",
+          "85.93%",
+          "84.29%"
+        ],
+        [
+          "20",
+          "339.4",
+          "84.84%",
+          "84.27%"
+        ]
+      ],
+      "column_count": 4
+    },
+    {
+      "type": "paragraph",
+      "text": "\u00b9 DoD at the system level is provided by the OEM as 100%. This is a commercial construct.",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "6. HYBRID EYA SUMMARY",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "6.1. Methodology",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The study is carried out to understand the revenue potential of the proposed project. A rule-based, day-ahead-aware dispatch simulation is used to model the hybrid plant\u2019s 15-minute generation, BESS charge/discharge behaviour and settlement against the tender\u2019s Firm and Dispatchable RE power supply conditions. Main components of the assessment are as follows:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "A. Objective \u2013 Maximize Revenue Generating Energy",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Revenue generating energy = Energy Supplied under PPA \u2212 1.5 \u00d7 Energy Shortfall under PPA + 1.0 \u00d7 Energy Surplus",
+      "style": "Normal"
+    },
+    {
+      "type": "note_label",
+      "text": "Note:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Since each unit of energy shortfall is penalized at 1.5 times the tariff, the weightage considered for energy shortfall is as per the PPA terms.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "In order to prioritize PPA supply over the surplus, the surplus is given a lower weightage.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "B. Constraints",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Annual basis: (a) Minimum CUF under the PPA \u2013 any supply below the minimum CUF will be penalized as per PPA terms; (b) Maximum CUF under the PPA \u2013 any supply above the maximum CUF will not be purchased under the PPA.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Monthly basis: Minimum monthly availability during the peak hours \u2013 any supply below the minimum monthly availability during peak hours will be penalized as per PPA terms.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Hourly/15-min basis: (a) Supply under PPA cannot be more than the PPA capacity in any time block; (b) Total evacuation, i.e. sum of supply and surplus, cannot be higher than the evacuation capacity.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "C. Inputs",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "First-year 15-minute generation profiles of Solar at P50, P75 and P90 (synthesized from the PVsyst monthly output, scaled to 275 MWac). Using a deration factor of 0.4%/year, hourly/15-min generation profiles are calculated for the rest of the project life.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "First-year 15-minute generation profiles of Wind at P50, P75 and P90 (interpolated from the source hourly resource data, scaled to 44.1 MW), degraded year-on-year at 0.20%/year over the 25-year PPA term.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Profile of BESS including initial capacity, charging and discharging rates, losses in percentage, depth of discharge, State-of-Health schedule for life of the battery, round trip energy schedule. BESS Usable Capacity (MWh) for each year = Nameplate Capacity (400 MWh) x State-of-Health (%) x Depth-of-Discharge (%); this year-specific usable capacity (not the flat nameplate value) is used as the operative energy limit in the dispatch simulation for that year, together with the corresponding year-specific Round-Trip Efficiency.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "A flat Auxiliary Consumption of 1.5% per year is deducted from Gross Supply (Simultaneous Supply + ESS Supply) to arrive at Net Supply under the PPA, representing the hybrid plant\u2019s own station power/parasitic load.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "D. Assessment",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Assessment is carried out at P50, P75 and P90. Energy generated by the solar and wind is distributed among the following components:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Simultaneous Supply \u2013 The energy supplied immediately to the buyer under the PPA is called Simultaneous Supply.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Supply to Energy Storage Solution (ESS) \u2013 A part of the energy generated is supplied to ESS to meet the demand when the generation is unable to meet the peak period demand. A part of this energy is lost due to internal transmission losses and energy conversion losses of the ESS. The rest is used for charging the ESS. The energy that ultimately charges the battery (i.e., after the losses) is termed as Energy for ESS Charging.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Surplus \u2013 The generated energy that is in excess to (i) Simultaneous Supply and Supply to ESS on an hourly basis within contracted capacity, and (ii) upper limit of supply allowed under PPA, is the surplus which is available for sale to other buyers.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Curtailment \u2013 The energy that cannot be evacuated due to the evacuation limit or stored in the ESS is called Curtailment.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Losses \u2013 Losses are the ESS Transmission Loss and ESS Conversion Loss. ESS Transmission Loss is the loss of energy due to transmission of AC power (i) from the generation busbar to the ESS and (ii) from the ESS to the Point of Injection. ESS Conversion Loss is the loss of energy due to (i) conversion AC to DC and (ii) conversion DC to AC and (iii) losses within the ESS.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "The hybrid generation is the sum of the above five components.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Supply",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Energy supply under the PPA has two components:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Simultaneous Supply \u2013 Explained under Generation and Utilization section above.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "ESS Supply \u2013 Energy supplied by the ESS to meet the supply obligations under the PPA.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "6.2. Supply Conditions and Revenue Components",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "The revenue generated from the proposed project is from three components:",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Supply under the Power Purchase Agreement (PPA). As per PPA, the proposed project should meet the following conditions: (a) Annual CUF of the proposed project should be between -15% and +10% of the declared CUF; (b) Monthly availability of the proposed plant should be 90% during the peak hours; (c) Tariff is common for both peak as well as non-peak hours.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Sale of surplus to other buyers. Surplus can be: (a) Unused generation over and above the PPA capacity on the hourly basis; (b) Unused generation over and above the annual CUF + 10% on annual basis.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Penalty for shortfall on the supply as per the PPA supply conditions. This component has a negative impact on the revenue. Penalty is calculated as 1.5 times the tariff for the shortfall energy.",
+      "style": "List Paragraph"
+    },
+    {
+      "type": "paragraph",
+      "text": "Peak hours: 2 hours within 05:00-10:00 and 2 hours within 18:00-23:00 daily (4 hours total), as scheduled by the Buying Entity. This assessment adopts an illustrative schedule of 08:00-10:00 and 18:00-20:00 pending the actual notified schedule.",
+      "style": "Normal"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "6.3. Hybrid Project Results",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Considering the FDRE Tender requirement, permitted power evacuation capacity, BESS utilization, clipping analysis, generation profile and other technical details, a detailed Hybrid Generation analysis has been performed on different probability values of generation of both Wind and Solar energy.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "For Hybridization, year-on-year degraded hourly generation profiles were used for both the Wind (0.20%/year) and Solar (0.40%/year) power plants over the 20-year assessment period, together with a year-specific BESS usable capacity (Nameplate x SoH x DoD) and Round-Trip Efficiency, and a flat 1.5%/year Auxiliary Consumption deduction.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Following table provides the 20-year average generation values used for assessment:",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 13: Hybrid EYA Results Summary (20 Years Average Values)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 13: Hybrid EYA Results Summary (20 Years Average Values)",
+      "rows": [
+        [
+          "Sr no",
+          "Particulars",
+          "P50",
+          "P75",
+          "P90"
+        ],
+        [
+          "1",
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "670.5",
+          "659.6",
+          "649.7"
+        ],
+        [
+          "2",
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.5",
+          "92.4",
+          "85.1"
+        ],
+        [
+          "3",
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "771.0",
+          "752.0",
+          "734.8"
+        ],
+        [
+          "4",
+          "RE Simultaneous Supply (GWh)",
+          "572.4",
+          "555.6",
+          "540.3"
+        ],
+        [
+          "5",
+          "RE Supply to ESS (GWh)",
+          "164.2",
+          "166.4",
+          "168.3"
+        ],
+        [
+          "6",
+          "RE Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "7",
+          "RE Curtailment (GWh)",
+          "34.4",
+          "30.0",
+          "26.2"
+        ],
+        [
+          "8",
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "13.9",
+          "13.6"
+        ],
+        [
+          "8a",
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.4",
+          "10.2"
+        ],
+        [
+          "9",
+          "ESS Supply (GWh)",
+          "138.5",
+          "140.4",
+          "142.0"
+        ],
+        [
+          "10",
+          "ESS Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "11",
+          "ESS RTE Loss (GWh)",
+          "25.6",
+          "26.0",
+          "26.3"
+        ],
+        [
+          "12",
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "13",
+          "Energy Sold under PPA (GWh)",
+          "686.0",
+          "671.6",
+          "658.4"
+        ],
+        [
+          "14",
+          "Annual CUF (%)",
+          "39.16",
+          "38.33",
+          "37.58"
+        ],
+        [
+          "15",
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "16",
+          "Shortfall on Monthly Availability (MWh)",
+          "2509.3",
+          "3258.9",
+          "4106.6"
+        ],
+        [
+          "17",
+          "BESS 400 MWh DC Capacity (Beginning of Year 1)",
+          "400.0",
+          "400.0",
+          "400.0"
+        ],
+        [
+          "18",
+          "BESS RTE (Beginning of Year 1, %)",
+          "84.6",
+          "84.6",
+          "84.6"
+        ],
+        [
+          "19",
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "20",
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "21",
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "22",
+          "Total Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "23",
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "24",
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "January",
+          "1434.4",
+          "1652.0",
+          "1870.0"
+        ],
+        [
+          "",
+          "February",
+          "268.5",
+          "407.1",
+          "560.5"
+        ],
+        [
+          "",
+          "March",
+          "0.0",
+          "4.5",
+          "14.7"
+        ],
+        [
+          "",
+          "April",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "May",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "June",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "July",
+          "74.1",
+          "130.7",
+          "189.5"
+        ],
+        [
+          "",
+          "August",
+          "104.6",
+          "194.6",
+          "312.5"
+        ],
+        [
+          "",
+          "September",
+          "0.4",
+          "7.2",
+          "20.7"
+        ],
+        [
+          "",
+          "October",
+          "0.8",
+          "4.8",
+          "16.1"
+        ],
+        [
+          "",
+          "November",
+          "263.1",
+          "367.1",
+          "481.3"
+        ],
+        [
+          "",
+          "December",
+          "363.5",
+          "490.8",
+          "641.4"
+        ]
+      ],
+      "header": [
+        "Sr no",
+        "Particulars",
+        "P50",
+        "P75",
+        "P90"
+      ],
+      "body": [
+        [
+          "1",
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "670.5",
+          "659.6",
+          "649.7"
+        ],
+        [
+          "2",
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.5",
+          "92.4",
+          "85.1"
+        ],
+        [
+          "3",
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "771.0",
+          "752.0",
+          "734.8"
+        ],
+        [
+          "4",
+          "RE Simultaneous Supply (GWh)",
+          "572.4",
+          "555.6",
+          "540.3"
+        ],
+        [
+          "5",
+          "RE Supply to ESS (GWh)",
+          "164.2",
+          "166.4",
+          "168.3"
+        ],
+        [
+          "6",
+          "RE Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "7",
+          "RE Curtailment (GWh)",
+          "34.4",
+          "30.0",
+          "26.2"
+        ],
+        [
+          "8",
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "13.9",
+          "13.6"
+        ],
+        [
+          "8a",
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.4",
+          "10.2"
+        ],
+        [
+          "9",
+          "ESS Supply (GWh)",
+          "138.5",
+          "140.4",
+          "142.0"
+        ],
+        [
+          "10",
+          "ESS Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "11",
+          "ESS RTE Loss (GWh)",
+          "25.6",
+          "26.0",
+          "26.3"
+        ],
+        [
+          "12",
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "13",
+          "Energy Sold under PPA (GWh)",
+          "686.0",
+          "671.6",
+          "658.4"
+        ],
+        [
+          "14",
+          "Annual CUF (%)",
+          "39.16",
+          "38.33",
+          "37.58"
+        ],
+        [
+          "15",
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "16",
+          "Shortfall on Monthly Availability (MWh)",
+          "2509.3",
+          "3258.9",
+          "4106.6"
+        ],
+        [
+          "17",
+          "BESS 400 MWh DC Capacity (Beginning of Year 1)",
+          "400.0",
+          "400.0",
+          "400.0"
+        ],
+        [
+          "18",
+          "BESS RTE (Beginning of Year 1, %)",
+          "84.6",
+          "84.6",
+          "84.6"
+        ],
+        [
+          "19",
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "20",
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "21",
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "22",
+          "Total Surplus - Power available for Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "23",
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "24",
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "January",
+          "1434.4",
+          "1652.0",
+          "1870.0"
+        ],
+        [
+          "",
+          "February",
+          "268.5",
+          "407.1",
+          "560.5"
+        ],
+        [
+          "",
+          "March",
+          "0.0",
+          "4.5",
+          "14.7"
+        ],
+        [
+          "",
+          "April",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "May",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "June",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "",
+          "July",
+          "74.1",
+          "130.7",
+          "189.5"
+        ],
+        [
+          "",
+          "August",
+          "104.6",
+          "194.6",
+          "312.5"
+        ],
+        [
+          "",
+          "September",
+          "0.4",
+          "7.2",
+          "20.7"
+        ],
+        [
+          "",
+          "October",
+          "0.8",
+          "4.8",
+          "16.1"
+        ],
+        [
+          "",
+          "November",
+          "263.1",
+          "367.1",
+          "481.3"
+        ],
+        [
+          "",
+          "December",
+          "363.5",
+          "490.8",
+          "641.4"
+        ]
+      ],
+      "column_count": 5
+    },
+    {
+      "type": "paragraph",
+      "text": "The Hybrid EYA Results Summary above (Table 13) reproduces Table 2 of the Executive Summary, presented here in accordance with the standard EYA report structure.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Considering the FDRE Tender requirement, permitted power evacuation capacity, BESS utilization and other technical details, a detailed hybrid generation analysis has been performed on different probability values of generation of both Solar and Wind energy. The following are the monthly results for each probability case (Year 1):",
+      "style": "Normal"
+    },
+    {
+      "type": "caption",
+      "text": "Table 14: P50 Monthly Energy Settlement (Year 1)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 14: P50 Monthly Energy Settlement (Year 1)",
+      "rows": [
+        [
+          "Month",
+          "RE Gen (MWh)",
+          "Simult. Supply (MWh)",
+          "ESS Charge-In (MWh)",
+          "ESS RTE Loss (MWh)",
+          "ESS Supply (MWh)",
+          "Curtail- ment (MWh)",
+          "Tx Loss (MWh)",
+          "Aux Consum. (MWh)",
+          "Gross Supply (MWh)",
+          "Net PPA Supply (MWh)",
+          "Req. Peak Energy (MWh)",
+          "Actual Peak Supply (MWh)",
+          "Peak Avail (%)"
+        ],
+        [
+          "January",
+          "60506",
+          "41603",
+          "15902",
+          "2443",
+          "13367",
+          "3001",
+          "1099",
+          "825",
+          "54970",
+          "53046",
+          "22320",
+          "21769",
+          "97.5"
+        ],
+        [
+          "February",
+          "61615",
+          "43361",
+          "13714",
+          "2106",
+          "11641",
+          "4540",
+          "1100",
+          "825",
+          "55002",
+          "53077",
+          "20160",
+          "20292",
+          "100.7"
+        ],
+        [
+          "March",
+          "72631",
+          "52793",
+          "13932",
+          "2140",
+          "11796",
+          "5906",
+          "1292",
+          "969",
+          "64589",
+          "62328",
+          "22320",
+          "22719",
+          "101.8"
+        ],
+        [
+          "April",
+          "73849",
+          "56057",
+          "11996",
+          "1843",
+          "10123",
+          "5797",
+          "1324",
+          "993",
+          "66180",
+          "63864",
+          "21600",
+          "22170",
+          "102.6"
+        ],
+        [
+          "May",
+          "73959",
+          "59530",
+          "11844",
+          "1819",
+          "9989",
+          "2586",
+          "1390",
+          "1043",
+          "69519",
+          "67086",
+          "22320",
+          "22713",
+          "101.8"
+        ],
+        [
+          "June",
+          "73281",
+          "60609",
+          "10927",
+          "1678",
+          "9230",
+          "1746",
+          "1397",
+          "1048",
+          "69839",
+          "67395",
+          "21600",
+          "21946",
+          "101.6"
+        ],
+        [
+          "July",
+          "68846",
+          "56383",
+          "12463",
+          "1914",
+          "10660",
+          "0",
+          "1341",
+          "1006",
+          "67043",
+          "64696",
+          "22320",
+          "22367",
+          "100.2"
+        ],
+        [
+          "August",
+          "62752",
+          "48657",
+          "14095",
+          "2165",
+          "11928",
+          "0",
+          "1212",
+          "909",
+          "60585",
+          "58464",
+          "22320",
+          "22321",
+          "100.0"
+        ],
+        [
+          "September",
+          "64680",
+          "48296",
+          "13444",
+          "2065",
+          "11351",
+          "2940",
+          "1193",
+          "895",
+          "59646",
+          "57559",
+          "21600",
+          "21846",
+          "101.1"
+        ],
+        [
+          "October",
+          "65661",
+          "47655",
+          "14215",
+          "2183",
+          "12048",
+          "3791",
+          "1194",
+          "896",
+          "59703",
+          "57614",
+          "22320",
+          "22722",
+          "101.8"
+        ],
+        [
+          "November",
+          "59392",
+          "42789",
+          "14614",
+          "2245",
+          "12318",
+          "1989",
+          "1102",
+          "827",
+          "55106",
+          "53177",
+          "21600",
+          "21715",
+          "100.5"
+        ],
+        [
+          "December",
+          "61634",
+          "44638",
+          "15379",
+          "2362",
+          "13014",
+          "1617",
+          "1153",
+          "865",
+          "57653",
+          "55635",
+          "22320",
+          "22308",
+          "99.9"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "798807",
+          "602370",
+          "162525",
+          "24964",
+          "137465",
+          "33912",
+          "14797",
+          "11098",
+          "739835",
+          "713941",
+          "262800",
+          "264887",
+          ""
+        ]
+      ],
+      "header": [
+        "Month",
+        "RE Gen (MWh)",
+        "Simult. Supply (MWh)",
+        "ESS Charge-In (MWh)",
+        "ESS RTE Loss (MWh)",
+        "ESS Supply (MWh)",
+        "Curtail- ment (MWh)",
+        "Tx Loss (MWh)",
+        "Aux Consum. (MWh)",
+        "Gross Supply (MWh)",
+        "Net PPA Supply (MWh)",
+        "Req. Peak Energy (MWh)",
+        "Actual Peak Supply (MWh)",
+        "Peak Avail (%)"
+      ],
+      "body": [
+        [
+          "January",
+          "60506",
+          "41603",
+          "15902",
+          "2443",
+          "13367",
+          "3001",
+          "1099",
+          "825",
+          "54970",
+          "53046",
+          "22320",
+          "21769",
+          "97.5"
+        ],
+        [
+          "February",
+          "61615",
+          "43361",
+          "13714",
+          "2106",
+          "11641",
+          "4540",
+          "1100",
+          "825",
+          "55002",
+          "53077",
+          "20160",
+          "20292",
+          "100.7"
+        ],
+        [
+          "March",
+          "72631",
+          "52793",
+          "13932",
+          "2140",
+          "11796",
+          "5906",
+          "1292",
+          "969",
+          "64589",
+          "62328",
+          "22320",
+          "22719",
+          "101.8"
+        ],
+        [
+          "April",
+          "73849",
+          "56057",
+          "11996",
+          "1843",
+          "10123",
+          "5797",
+          "1324",
+          "993",
+          "66180",
+          "63864",
+          "21600",
+          "22170",
+          "102.6"
+        ],
+        [
+          "May",
+          "73959",
+          "59530",
+          "11844",
+          "1819",
+          "9989",
+          "2586",
+          "1390",
+          "1043",
+          "69519",
+          "67086",
+          "22320",
+          "22713",
+          "101.8"
+        ],
+        [
+          "June",
+          "73281",
+          "60609",
+          "10927",
+          "1678",
+          "9230",
+          "1746",
+          "1397",
+          "1048",
+          "69839",
+          "67395",
+          "21600",
+          "21946",
+          "101.6"
+        ],
+        [
+          "July",
+          "68846",
+          "56383",
+          "12463",
+          "1914",
+          "10660",
+          "0",
+          "1341",
+          "1006",
+          "67043",
+          "64696",
+          "22320",
+          "22367",
+          "100.2"
+        ],
+        [
+          "August",
+          "62752",
+          "48657",
+          "14095",
+          "2165",
+          "11928",
+          "0",
+          "1212",
+          "909",
+          "60585",
+          "58464",
+          "22320",
+          "22321",
+          "100.0"
+        ],
+        [
+          "September",
+          "64680",
+          "48296",
+          "13444",
+          "2065",
+          "11351",
+          "2940",
+          "1193",
+          "895",
+          "59646",
+          "57559",
+          "21600",
+          "21846",
+          "101.1"
+        ],
+        [
+          "October",
+          "65661",
+          "47655",
+          "14215",
+          "2183",
+          "12048",
+          "3791",
+          "1194",
+          "896",
+          "59703",
+          "57614",
+          "22320",
+          "22722",
+          "101.8"
+        ],
+        [
+          "November",
+          "59392",
+          "42789",
+          "14614",
+          "2245",
+          "12318",
+          "1989",
+          "1102",
+          "827",
+          "55106",
+          "53177",
+          "21600",
+          "21715",
+          "100.5"
+        ],
+        [
+          "December",
+          "61634",
+          "44638",
+          "15379",
+          "2362",
+          "13014",
+          "1617",
+          "1153",
+          "865",
+          "57653",
+          "55635",
+          "22320",
+          "22308",
+          "99.9"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "798807",
+          "602370",
+          "162525",
+          "24964",
+          "137465",
+          "33912",
+          "14797",
+          "11098",
+          "739835",
+          "713941",
+          "262800",
+          "264887",
+          ""
+        ]
+      ],
+      "column_count": 14
+    },
+    {
+      "type": "caption",
+      "text": "Table 15: P75 Monthly Energy Settlement (Year 1)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 15: P75 Monthly Energy Settlement (Year 1)",
+      "rows": [
+        [
+          "Month",
+          "RE Gen (MWh)",
+          "Simult. Supply (MWh)",
+          "ESS Charge-In (MWh)",
+          "ESS RTE Loss (MWh)",
+          "ESS Supply (MWh)",
+          "Curtail- ment (MWh)",
+          "Tx Loss (MWh)",
+          "Aux Consum. (MWh)",
+          "Gross Supply (MWh)",
+          "Net PPA Supply (MWh)",
+          "Req. Peak Energy (MWh)",
+          "Actual Peak Supply (MWh)",
+          "Peak Avail (%)"
+        ],
+        [
+          "January",
+          "59072",
+          "40476",
+          "16000",
+          "2458",
+          "13454",
+          "2596",
+          "1079",
+          "809",
+          "53930",
+          "52043",
+          "22320",
+          "21653",
+          "97.0"
+        ],
+        [
+          "February",
+          "60073",
+          "42081",
+          "13932",
+          "2140",
+          "11823",
+          "4060",
+          "1078",
+          "809",
+          "53904",
+          "52017",
+          "20160",
+          "20254",
+          "100.5"
+        ],
+        [
+          "March",
+          "70950",
+          "51543",
+          "14139",
+          "2172",
+          "11971",
+          "5268",
+          "1270",
+          "953",
+          "63513",
+          "61290",
+          "22320",
+          "22690",
+          "101.7"
+        ],
+        [
+          "April",
+          "72105",
+          "54844",
+          "12201",
+          "1874",
+          "10299",
+          "5060",
+          "1303",
+          "977",
+          "65143",
+          "62863",
+          "21600",
+          "22128",
+          "102.4"
+        ],
+        [
+          "May",
+          "72142",
+          "58047",
+          "12115",
+          "1861",
+          "10221",
+          "1981",
+          "1365",
+          "1024",
+          "68268",
+          "65878",
+          "22320",
+          "22661",
+          "101.5"
+        ],
+        [
+          "June",
+          "71362",
+          "58941",
+          "11224",
+          "1724",
+          "9483",
+          "1198",
+          "1369",
+          "1026",
+          "68423",
+          "66029",
+          "21600",
+          "21891",
+          "101.3"
+        ],
+        [
+          "July",
+          "66753",
+          "53922",
+          "12831",
+          "1971",
+          "10974",
+          "0",
+          "1298",
+          "973",
+          "64896",
+          "62625",
+          "22320",
+          "22321",
+          "100.0"
+        ],
+        [
+          "August",
+          "61156",
+          "46763",
+          "14393",
+          "2211",
+          "12178",
+          "0",
+          "1179",
+          "884",
+          "58942",
+          "56879",
+          "22320",
+          "22303",
+          "99.9"
+        ],
+        [
+          "September",
+          "63303",
+          "47208",
+          "13656",
+          "2098",
+          "11524",
+          "2439",
+          "1175",
+          "881",
+          "58732",
+          "56676",
+          "21600",
+          "21810",
+          "101.0"
+        ],
+        [
+          "October",
+          "64368",
+          "46674",
+          "14376",
+          "2208",
+          "12184",
+          "3318",
+          "1177",
+          "883",
+          "58858",
+          "56798",
+          "22320",
+          "22695",
+          "101.7"
+        ],
+        [
+          "November",
+          "57947",
+          "41538",
+          "14825",
+          "2277",
+          "12500",
+          "1585",
+          "1081",
+          "811",
+          "54038",
+          "52146",
+          "21600",
+          "21675",
+          "100.3"
+        ],
+        [
+          "December",
+          "59925",
+          "43040",
+          "15646",
+          "2403",
+          "13241",
+          "1239",
+          "1126",
+          "844",
+          "56281",
+          "54311",
+          "22320",
+          "22273",
+          "99.8"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "779157",
+          "585076",
+          "165339",
+          "25396",
+          "139851",
+          "28742",
+          "14499",
+          "10874",
+          "724927",
+          "699554",
+          "262800",
+          "264354",
+          ""
+        ]
+      ],
+      "header": [
+        "Month",
+        "RE Gen (MWh)",
+        "Simult. Supply (MWh)",
+        "ESS Charge-In (MWh)",
+        "ESS RTE Loss (MWh)",
+        "ESS Supply (MWh)",
+        "Curtail- ment (MWh)",
+        "Tx Loss (MWh)",
+        "Aux Consum. (MWh)",
+        "Gross Supply (MWh)",
+        "Net PPA Supply (MWh)",
+        "Req. Peak Energy (MWh)",
+        "Actual Peak Supply (MWh)",
+        "Peak Avail (%)"
+      ],
+      "body": [
+        [
+          "January",
+          "59072",
+          "40476",
+          "16000",
+          "2458",
+          "13454",
+          "2596",
+          "1079",
+          "809",
+          "53930",
+          "52043",
+          "22320",
+          "21653",
+          "97.0"
+        ],
+        [
+          "February",
+          "60073",
+          "42081",
+          "13932",
+          "2140",
+          "11823",
+          "4060",
+          "1078",
+          "809",
+          "53904",
+          "52017",
+          "20160",
+          "20254",
+          "100.5"
+        ],
+        [
+          "March",
+          "70950",
+          "51543",
+          "14139",
+          "2172",
+          "11971",
+          "5268",
+          "1270",
+          "953",
+          "63513",
+          "61290",
+          "22320",
+          "22690",
+          "101.7"
+        ],
+        [
+          "April",
+          "72105",
+          "54844",
+          "12201",
+          "1874",
+          "10299",
+          "5060",
+          "1303",
+          "977",
+          "65143",
+          "62863",
+          "21600",
+          "22128",
+          "102.4"
+        ],
+        [
+          "May",
+          "72142",
+          "58047",
+          "12115",
+          "1861",
+          "10221",
+          "1981",
+          "1365",
+          "1024",
+          "68268",
+          "65878",
+          "22320",
+          "22661",
+          "101.5"
+        ],
+        [
+          "June",
+          "71362",
+          "58941",
+          "11224",
+          "1724",
+          "9483",
+          "1198",
+          "1369",
+          "1026",
+          "68423",
+          "66029",
+          "21600",
+          "21891",
+          "101.3"
+        ],
+        [
+          "July",
+          "66753",
+          "53922",
+          "12831",
+          "1971",
+          "10974",
+          "0",
+          "1298",
+          "973",
+          "64896",
+          "62625",
+          "22320",
+          "22321",
+          "100.0"
+        ],
+        [
+          "August",
+          "61156",
+          "46763",
+          "14393",
+          "2211",
+          "12178",
+          "0",
+          "1179",
+          "884",
+          "58942",
+          "56879",
+          "22320",
+          "22303",
+          "99.9"
+        ],
+        [
+          "September",
+          "63303",
+          "47208",
+          "13656",
+          "2098",
+          "11524",
+          "2439",
+          "1175",
+          "881",
+          "58732",
+          "56676",
+          "21600",
+          "21810",
+          "101.0"
+        ],
+        [
+          "October",
+          "64368",
+          "46674",
+          "14376",
+          "2208",
+          "12184",
+          "3318",
+          "1177",
+          "883",
+          "58858",
+          "56798",
+          "22320",
+          "22695",
+          "101.7"
+        ],
+        [
+          "November",
+          "57947",
+          "41538",
+          "14825",
+          "2277",
+          "12500",
+          "1585",
+          "1081",
+          "811",
+          "54038",
+          "52146",
+          "21600",
+          "21675",
+          "100.3"
+        ],
+        [
+          "December",
+          "59925",
+          "43040",
+          "15646",
+          "2403",
+          "13241",
+          "1239",
+          "1126",
+          "844",
+          "56281",
+          "54311",
+          "22320",
+          "22273",
+          "99.8"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "779157",
+          "585076",
+          "165339",
+          "25396",
+          "139851",
+          "28742",
+          "14499",
+          "10874",
+          "724927",
+          "699554",
+          "262800",
+          "264354",
+          ""
+        ]
+      ],
+      "column_count": 14
+    },
+    {
+      "type": "caption",
+      "text": "Table 16: P90 Monthly Energy Settlement (Year 1)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "Table 16: P90 Monthly Energy Settlement (Year 1)",
+      "rows": [
+        [
+          "Month",
+          "RE Gen (MWh)",
+          "Simult. Supply (MWh)",
+          "ESS Charge-In (MWh)",
+          "ESS RTE Loss (MWh)",
+          "ESS Supply (MWh)",
+          "Curtail- ment (MWh)",
+          "Tx Loss (MWh)",
+          "Aux Consum. (MWh)",
+          "Gross Supply (MWh)",
+          "Net PPA Supply (MWh)",
+          "Req. Peak Energy (MWh)",
+          "Actual Peak Supply (MWh)",
+          "Peak Avail (%)"
+        ],
+        [
+          "January",
+          "57779",
+          "39453",
+          "16088",
+          "2471",
+          "13532",
+          "2238",
+          "1060",
+          "795",
+          "52985",
+          "51131",
+          "22320",
+          "21547",
+          "96.5"
+        ],
+        [
+          "February",
+          "58683",
+          "40914",
+          "14123",
+          "2169",
+          "11982",
+          "3645",
+          "1058",
+          "793",
+          "52897",
+          "51045",
+          "20160",
+          "20210",
+          "100.2"
+        ],
+        [
+          "March",
+          "69434",
+          "50417",
+          "14327",
+          "2201",
+          "12129",
+          "4690",
+          "1251",
+          "938",
+          "62545",
+          "60356",
+          "22320",
+          "22654",
+          "101.5"
+        ],
+        [
+          "April",
+          "70533",
+          "53692",
+          "12394",
+          "1904",
+          "10463",
+          "4447",
+          "1283",
+          "962",
+          "64156",
+          "61910",
+          "21600",
+          "22089",
+          "102.3"
+        ],
+        [
+          "May",
+          "70504",
+          "56665",
+          "12369",
+          "1900",
+          "10438",
+          "1470",
+          "1342",
+          "1007",
+          "67102",
+          "64754",
+          "22320",
+          "22613",
+          "101.3"
+        ],
+        [
+          "June",
+          "69632",
+          "57386",
+          "11501",
+          "1767",
+          "9718",
+          "744",
+          "1342",
+          "1007",
+          "67105",
+          "64756",
+          "21600",
+          "21840",
+          "101.1"
+        ],
+        [
+          "July",
+          "64866",
+          "51729",
+          "13137",
+          "2018",
+          "11235",
+          "0",
+          "1259",
+          "945",
+          "62964",
+          "60761",
+          "22320",
+          "22258",
+          "99.7"
+        ],
+        [
+          "August",
+          "59717",
+          "45096",
+          "14621",
+          "2246",
+          "12371",
+          "0",
+          "1149",
+          "862",
+          "57467",
+          "55455",
+          "22320",
+          "22254",
+          "99.7"
+        ],
+        [
+          "September",
+          "62062",
+          "46206",
+          "13850",
+          "2127",
+          "11682",
+          "2006",
+          "1158",
+          "868",
+          "57888",
+          "55862",
+          "21600",
+          "21769",
+          "100.8"
+        ],
+        [
+          "October",
+          "63202",
+          "45762",
+          "14523",
+          "2231",
+          "12307",
+          "2916",
+          "1161",
+          "871",
+          "58070",
+          "56037",
+          "22320",
+          "22664",
+          "101.5"
+        ],
+        [
+          "November",
+          "56645",
+          "40376",
+          "15018",
+          "2307",
+          "12668",
+          "1251",
+          "1061",
+          "796",
+          "53043",
+          "51187",
+          "21600",
+          "21642",
+          "100.2"
+        ],
+        [
+          "December",
+          "58384",
+          "41598",
+          "15879",
+          "2439",
+          "13438",
+          "908",
+          "1101",
+          "826",
+          "55035",
+          "53109",
+          "22320",
+          "22235",
+          "99.6"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "761440",
+          "569293",
+          "167830",
+          "25779",
+          "141964",
+          "24316",
+          "14225",
+          "10669",
+          "711257",
+          "686363",
+          "262800",
+          "263774",
+          ""
+        ]
+      ],
+      "header": [
+        "Month",
+        "RE Gen (MWh)",
+        "Simult. Supply (MWh)",
+        "ESS Charge-In (MWh)",
+        "ESS RTE Loss (MWh)",
+        "ESS Supply (MWh)",
+        "Curtail- ment (MWh)",
+        "Tx Loss (MWh)",
+        "Aux Consum. (MWh)",
+        "Gross Supply (MWh)",
+        "Net PPA Supply (MWh)",
+        "Req. Peak Energy (MWh)",
+        "Actual Peak Supply (MWh)",
+        "Peak Avail (%)"
+      ],
+      "body": [
+        [
+          "January",
+          "57779",
+          "39453",
+          "16088",
+          "2471",
+          "13532",
+          "2238",
+          "1060",
+          "795",
+          "52985",
+          "51131",
+          "22320",
+          "21547",
+          "96.5"
+        ],
+        [
+          "February",
+          "58683",
+          "40914",
+          "14123",
+          "2169",
+          "11982",
+          "3645",
+          "1058",
+          "793",
+          "52897",
+          "51045",
+          "20160",
+          "20210",
+          "100.2"
+        ],
+        [
+          "March",
+          "69434",
+          "50417",
+          "14327",
+          "2201",
+          "12129",
+          "4690",
+          "1251",
+          "938",
+          "62545",
+          "60356",
+          "22320",
+          "22654",
+          "101.5"
+        ],
+        [
+          "April",
+          "70533",
+          "53692",
+          "12394",
+          "1904",
+          "10463",
+          "4447",
+          "1283",
+          "962",
+          "64156",
+          "61910",
+          "21600",
+          "22089",
+          "102.3"
+        ],
+        [
+          "May",
+          "70504",
+          "56665",
+          "12369",
+          "1900",
+          "10438",
+          "1470",
+          "1342",
+          "1007",
+          "67102",
+          "64754",
+          "22320",
+          "22613",
+          "101.3"
+        ],
+        [
+          "June",
+          "69632",
+          "57386",
+          "11501",
+          "1767",
+          "9718",
+          "744",
+          "1342",
+          "1007",
+          "67105",
+          "64756",
+          "21600",
+          "21840",
+          "101.1"
+        ],
+        [
+          "July",
+          "64866",
+          "51729",
+          "13137",
+          "2018",
+          "11235",
+          "0",
+          "1259",
+          "945",
+          "62964",
+          "60761",
+          "22320",
+          "22258",
+          "99.7"
+        ],
+        [
+          "August",
+          "59717",
+          "45096",
+          "14621",
+          "2246",
+          "12371",
+          "0",
+          "1149",
+          "862",
+          "57467",
+          "55455",
+          "22320",
+          "22254",
+          "99.7"
+        ],
+        [
+          "September",
+          "62062",
+          "46206",
+          "13850",
+          "2127",
+          "11682",
+          "2006",
+          "1158",
+          "868",
+          "57888",
+          "55862",
+          "21600",
+          "21769",
+          "100.8"
+        ],
+        [
+          "October",
+          "63202",
+          "45762",
+          "14523",
+          "2231",
+          "12307",
+          "2916",
+          "1161",
+          "871",
+          "58070",
+          "56037",
+          "22320",
+          "22664",
+          "101.5"
+        ],
+        [
+          "November",
+          "56645",
+          "40376",
+          "15018",
+          "2307",
+          "12668",
+          "1251",
+          "1061",
+          "796",
+          "53043",
+          "51187",
+          "21600",
+          "21642",
+          "100.2"
+        ],
+        [
+          "December",
+          "58384",
+          "41598",
+          "15879",
+          "2439",
+          "13438",
+          "908",
+          "1101",
+          "826",
+          "55035",
+          "53109",
+          "22320",
+          "22235",
+          "99.6"
+        ],
+        [
+          "ANNUAL TOTAL",
+          "761440",
+          "569293",
+          "167830",
+          "25779",
+          "141964",
+          "24316",
+          "14225",
+          "10669",
+          "711257",
+          "686363",
+          "262800",
+          "263774",
+          ""
+        ]
+      ],
+      "column_count": 14
+    },
+    {
+      "type": "paragraph",
+      "text": "Annexure 1: Yearly Results",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "P50 \u2013 Yearly Results (20 Years)",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 1-10",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 1",
+          "Yr 2",
+          "Yr 3",
+          "Yr 4",
+          "Yr 5",
+          "Yr 6",
+          "Yr 7",
+          "Yr 8",
+          "Yr 9",
+          "Yr 10"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "696.4",
+          "693.6",
+          "690.8",
+          "688.0",
+          "685.3",
+          "682.6",
+          "679.8",
+          "677.1",
+          "674.4",
+          "671.7"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "102.4",
+          "102.2",
+          "102.0",
+          "101.8",
+          "101.6",
+          "101.4",
+          "101.2",
+          "101.0",
+          "100.8",
+          "100.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "798.8",
+          "795.8",
+          "792.8",
+          "789.9",
+          "786.9",
+          "784.0",
+          "781.0",
+          "778.1",
+          "775.2",
+          "772.3"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "602.4",
+          "595.8",
+          "591.3",
+          "587.4",
+          "583.8",
+          "580.4",
+          "577.1",
+          "573.8",
+          "570.8",
+          "568.2"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "162.5",
+          "162.7",
+          "162.9",
+          "162.9",
+          "162.9",
+          "162.9",
+          "162.8",
+          "162.7",
+          "162.5",
+          "162.2"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "33.9",
+          "37.3",
+          "38.6",
+          "39.5",
+          "40.2",
+          "40.7",
+          "41.2",
+          "41.6",
+          "41.9",
+          "41.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.8",
+          "14.7",
+          "14.6",
+          "14.5",
+          "14.4",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.2",
+          "14.1"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "11.1",
+          "11.0",
+          "10.9",
+          "10.9",
+          "10.8",
+          "10.8",
+          "10.7",
+          "10.7",
+          "10.6",
+          "10.6"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "137.5",
+          "137.4",
+          "137.5",
+          "137.5",
+          "137.4",
+          "137.4",
+          "137.3",
+          "137.1",
+          "136.9",
+          "136.7"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.0",
+          "25.2",
+          "25.3",
+          "25.4",
+          "25.4",
+          "25.5",
+          "25.5",
+          "25.5",
+          "25.5",
+          "25.5"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "713.9",
+          "707.6",
+          "703.3",
+          "699.5",
+          "696.0",
+          "692.6",
+          "689.3",
+          "686.0",
+          "683.0",
+          "680.2"
+        ],
+        [
+          "Annual CUF (%)",
+          "40.75",
+          "40.39",
+          "40.14",
+          "39.93",
+          "39.72",
+          "39.53",
+          "39.35",
+          "39.16",
+          "38.98",
+          "38.82"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "563.1",
+          "866.3",
+          "1070.5",
+          "1332.4",
+          "1697.6",
+          "2078.6",
+          "2488.2",
+          "2917.8",
+          "3354.9",
+          "3817.2"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 1",
+        "Yr 2",
+        "Yr 3",
+        "Yr 4",
+        "Yr 5",
+        "Yr 6",
+        "Yr 7",
+        "Yr 8",
+        "Yr 9",
+        "Yr 10"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "696.4",
+          "693.6",
+          "690.8",
+          "688.0",
+          "685.3",
+          "682.6",
+          "679.8",
+          "677.1",
+          "674.4",
+          "671.7"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "102.4",
+          "102.2",
+          "102.0",
+          "101.8",
+          "101.6",
+          "101.4",
+          "101.2",
+          "101.0",
+          "100.8",
+          "100.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "798.8",
+          "795.8",
+          "792.8",
+          "789.9",
+          "786.9",
+          "784.0",
+          "781.0",
+          "778.1",
+          "775.2",
+          "772.3"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "602.4",
+          "595.8",
+          "591.3",
+          "587.4",
+          "583.8",
+          "580.4",
+          "577.1",
+          "573.8",
+          "570.8",
+          "568.2"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "162.5",
+          "162.7",
+          "162.9",
+          "162.9",
+          "162.9",
+          "162.9",
+          "162.8",
+          "162.7",
+          "162.5",
+          "162.2"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "33.9",
+          "37.3",
+          "38.6",
+          "39.5",
+          "40.2",
+          "40.7",
+          "41.2",
+          "41.6",
+          "41.9",
+          "41.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.8",
+          "14.7",
+          "14.6",
+          "14.5",
+          "14.4",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.2",
+          "14.1"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "11.1",
+          "11.0",
+          "10.9",
+          "10.9",
+          "10.8",
+          "10.8",
+          "10.7",
+          "10.7",
+          "10.6",
+          "10.6"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "137.5",
+          "137.4",
+          "137.5",
+          "137.5",
+          "137.4",
+          "137.4",
+          "137.3",
+          "137.1",
+          "136.9",
+          "136.7"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.0",
+          "25.2",
+          "25.3",
+          "25.4",
+          "25.4",
+          "25.5",
+          "25.5",
+          "25.5",
+          "25.5",
+          "25.5"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "713.9",
+          "707.6",
+          "703.3",
+          "699.5",
+          "696.0",
+          "692.6",
+          "689.3",
+          "686.0",
+          "683.0",
+          "680.2"
+        ],
+        [
+          "Annual CUF (%)",
+          "40.75",
+          "40.39",
+          "40.14",
+          "39.93",
+          "39.72",
+          "39.53",
+          "39.35",
+          "39.16",
+          "38.98",
+          "38.82"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "563.1",
+          "866.3",
+          "1070.5",
+          "1332.4",
+          "1697.6",
+          "2078.6",
+          "2488.2",
+          "2917.8",
+          "3354.9",
+          "3817.2"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 11-20",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 11",
+          "Yr 12",
+          "Yr 13",
+          "Yr 14",
+          "Yr 15",
+          "Yr 16",
+          "Yr 17",
+          "Yr 18",
+          "Yr 19",
+          "Yr 20"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "669.0",
+          "666.3",
+          "663.7",
+          "661.0",
+          "658.4",
+          "655.7",
+          "653.1",
+          "650.5",
+          "647.9",
+          "645.3"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.4",
+          "100.2",
+          "100.0",
+          "99.8",
+          "99.6",
+          "99.4",
+          "99.2",
+          "99.0",
+          "98.8",
+          "98.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "769.4",
+          "766.5",
+          "763.7",
+          "760.8",
+          "758.0",
+          "755.1",
+          "752.3",
+          "749.5",
+          "746.7",
+          "743.9"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "580.6",
+          "574.0",
+          "569.7",
+          "565.8",
+          "562.3",
+          "559.0",
+          "555.8",
+          "552.8",
+          "549.9",
+          "547.3"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "166.1",
+          "166.1",
+          "166.1",
+          "166.0",
+          "165.9",
+          "165.8",
+          "165.6",
+          "165.4",
+          "165.1",
+          "164.8"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "22.8",
+          "26.4",
+          "27.9",
+          "29.0",
+          "29.8",
+          "30.4",
+          "30.9",
+          "31.3",
+          "31.7",
+          "31.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.1",
+          "14.0",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.8",
+          "13.7"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.8",
+          "10.7",
+          "10.6",
+          "10.6",
+          "10.5",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "140.5",
+          "140.3",
+          "140.2",
+          "140.1",
+          "139.9",
+          "139.8",
+          "139.6",
+          "139.4",
+          "139.1",
+          "138.8"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.5",
+          "25.7",
+          "25.8",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "695.8",
+          "689.3",
+          "685.1",
+          "681.2",
+          "677.7",
+          "674.3",
+          "671.1",
+          "667.9",
+          "664.9",
+          "662.1"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.71",
+          "39.34",
+          "39.10",
+          "38.88",
+          "38.68",
+          "38.49",
+          "38.31",
+          "38.12",
+          "37.95",
+          "37.79"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "942.6",
+          "1386.6",
+          "1830.0",
+          "2278.8",
+          "2732.4",
+          "3198.8",
+          "3668.6",
+          "4158.2",
+          "4646.0",
+          "5158.0"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 11",
+        "Yr 12",
+        "Yr 13",
+        "Yr 14",
+        "Yr 15",
+        "Yr 16",
+        "Yr 17",
+        "Yr 18",
+        "Yr 19",
+        "Yr 20"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "669.0",
+          "666.3",
+          "663.7",
+          "661.0",
+          "658.4",
+          "655.7",
+          "653.1",
+          "650.5",
+          "647.9",
+          "645.3"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "100.4",
+          "100.2",
+          "100.0",
+          "99.8",
+          "99.6",
+          "99.4",
+          "99.2",
+          "99.0",
+          "98.8",
+          "98.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "769.4",
+          "766.5",
+          "763.7",
+          "760.8",
+          "758.0",
+          "755.1",
+          "752.3",
+          "749.5",
+          "746.7",
+          "743.9"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "580.6",
+          "574.0",
+          "569.7",
+          "565.8",
+          "562.3",
+          "559.0",
+          "555.8",
+          "552.8",
+          "549.9",
+          "547.3"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "166.1",
+          "166.1",
+          "166.1",
+          "166.0",
+          "165.9",
+          "165.8",
+          "165.6",
+          "165.4",
+          "165.1",
+          "164.8"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "22.8",
+          "26.4",
+          "27.9",
+          "29.0",
+          "29.8",
+          "30.4",
+          "30.9",
+          "31.3",
+          "31.7",
+          "31.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.1",
+          "14.0",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.8",
+          "13.7"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.8",
+          "10.7",
+          "10.6",
+          "10.6",
+          "10.5",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "140.5",
+          "140.3",
+          "140.2",
+          "140.1",
+          "139.9",
+          "139.8",
+          "139.6",
+          "139.4",
+          "139.1",
+          "138.8"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.5",
+          "25.7",
+          "25.8",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9",
+          "25.9"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "695.8",
+          "689.3",
+          "685.1",
+          "681.2",
+          "677.7",
+          "674.3",
+          "671.1",
+          "667.9",
+          "664.9",
+          "662.1"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.71",
+          "39.34",
+          "39.10",
+          "38.88",
+          "38.68",
+          "38.49",
+          "38.31",
+          "38.12",
+          "37.95",
+          "37.79"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "942.6",
+          "1386.6",
+          "1830.0",
+          "2278.8",
+          "2732.4",
+          "3198.8",
+          "3668.6",
+          "4158.2",
+          "4646.0",
+          "5158.0"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Monthly Shortage (20-year average)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Monthly Shortage (MWh)",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ],
+        [
+          "20-yr Average",
+          "1434.4",
+          "268.5",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "74.1",
+          "104.6",
+          "0.4",
+          "0.8",
+          "263.1",
+          "363.5"
+        ]
+      ],
+      "header": [
+        "Monthly Shortage (MWh)",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "body": [
+        [
+          "20-yr Average",
+          "1434.4",
+          "268.5",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "74.1",
+          "104.6",
+          "0.4",
+          "0.8",
+          "263.1",
+          "363.5"
+        ]
+      ],
+      "column_count": 13
+    },
+    {
+      "type": "paragraph",
+      "text": "P75 \u2013 Yearly Results (20 Years)",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 1-10",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 1",
+          "Yr 2",
+          "Yr 3",
+          "Yr 4",
+          "Yr 5",
+          "Yr 6",
+          "Yr 7",
+          "Yr 8",
+          "Yr 9",
+          "Yr 10"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "685.0",
+          "682.3",
+          "679.5",
+          "676.8",
+          "674.1",
+          "671.4",
+          "668.7",
+          "666.1",
+          "663.4",
+          "660.7"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "94.2",
+          "94.0",
+          "93.8",
+          "93.6",
+          "93.4",
+          "93.2",
+          "93.0",
+          "92.8",
+          "92.7",
+          "92.5"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "779.2",
+          "776.2",
+          "773.3",
+          "770.4",
+          "767.5",
+          "764.6",
+          "761.8",
+          "758.9",
+          "756.0",
+          "753.2"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "585.1",
+          "578.5",
+          "574.2",
+          "570.3",
+          "566.8",
+          "563.5",
+          "560.3",
+          "557.2",
+          "554.4",
+          "551.8"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "165.3",
+          "165.4",
+          "165.4",
+          "165.4",
+          "165.3",
+          "165.2",
+          "165.0",
+          "164.7",
+          "164.4",
+          "164.1"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "28.7",
+          "32.3",
+          "33.7",
+          "34.7",
+          "35.4",
+          "36.0",
+          "36.4",
+          "36.9",
+          "37.3",
+          "37.3"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.5",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.1",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.9",
+          "13.8"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.9",
+          "10.8",
+          "10.7",
+          "10.6",
+          "10.6",
+          "10.5",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.4"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "139.9",
+          "139.7",
+          "139.6",
+          "139.5",
+          "139.4",
+          "139.3",
+          "139.1",
+          "138.9",
+          "138.6",
+          "138.3"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.4",
+          "25.6",
+          "25.7",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "699.6",
+          "693.1",
+          "688.8",
+          "685.0",
+          "681.5",
+          "678.2",
+          "675.0",
+          "671.7",
+          "668.7",
+          "665.9"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.93",
+          "39.56",
+          "39.32",
+          "39.10",
+          "38.90",
+          "38.71",
+          "38.53",
+          "38.34",
+          "38.17",
+          "38.01"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "730.7",
+          "1095.3",
+          "1475.9",
+          "1917.3",
+          "2368.3",
+          "2837.3",
+          "3313.6",
+          "3814.4",
+          "4309.5",
+          "4809.8"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 1",
+        "Yr 2",
+        "Yr 3",
+        "Yr 4",
+        "Yr 5",
+        "Yr 6",
+        "Yr 7",
+        "Yr 8",
+        "Yr 9",
+        "Yr 10"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "685.0",
+          "682.3",
+          "679.5",
+          "676.8",
+          "674.1",
+          "671.4",
+          "668.7",
+          "666.1",
+          "663.4",
+          "660.7"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "94.2",
+          "94.0",
+          "93.8",
+          "93.6",
+          "93.4",
+          "93.2",
+          "93.0",
+          "92.8",
+          "92.7",
+          "92.5"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "779.2",
+          "776.2",
+          "773.3",
+          "770.4",
+          "767.5",
+          "764.6",
+          "761.8",
+          "758.9",
+          "756.0",
+          "753.2"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "585.1",
+          "578.5",
+          "574.2",
+          "570.3",
+          "566.8",
+          "563.5",
+          "560.3",
+          "557.2",
+          "554.4",
+          "551.8"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "165.3",
+          "165.4",
+          "165.4",
+          "165.4",
+          "165.3",
+          "165.2",
+          "165.0",
+          "164.7",
+          "164.4",
+          "164.1"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "28.7",
+          "32.3",
+          "33.7",
+          "34.7",
+          "35.4",
+          "36.0",
+          "36.4",
+          "36.9",
+          "37.3",
+          "37.3"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.5",
+          "14.4",
+          "14.3",
+          "14.2",
+          "14.1",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.9",
+          "13.8"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.9",
+          "10.8",
+          "10.7",
+          "10.6",
+          "10.6",
+          "10.5",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.4"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "139.9",
+          "139.7",
+          "139.6",
+          "139.5",
+          "139.4",
+          "139.3",
+          "139.1",
+          "138.9",
+          "138.6",
+          "138.3"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.4",
+          "25.6",
+          "25.7",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8",
+          "25.8"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "699.6",
+          "693.1",
+          "688.8",
+          "685.0",
+          "681.5",
+          "678.2",
+          "675.0",
+          "671.7",
+          "668.7",
+          "665.9"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.93",
+          "39.56",
+          "39.32",
+          "39.10",
+          "38.90",
+          "38.71",
+          "38.53",
+          "38.34",
+          "38.17",
+          "38.01"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "730.7",
+          "1095.3",
+          "1475.9",
+          "1917.3",
+          "2368.3",
+          "2837.3",
+          "3313.6",
+          "3814.4",
+          "4309.5",
+          "4809.8"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 11-20",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 11",
+          "Yr 12",
+          "Yr 13",
+          "Yr 14",
+          "Yr 15",
+          "Yr 16",
+          "Yr 17",
+          "Yr 18",
+          "Yr 19",
+          "Yr 20"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "658.1",
+          "655.5",
+          "652.8",
+          "650.2",
+          "647.6",
+          "645.0",
+          "642.5",
+          "639.9",
+          "637.3",
+          "634.8"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "92.3",
+          "92.1",
+          "91.9",
+          "91.7",
+          "91.5",
+          "91.4",
+          "91.2",
+          "91.0",
+          "90.8",
+          "90.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "750.4",
+          "747.6",
+          "744.8",
+          "742.0",
+          "739.2",
+          "736.4",
+          "733.6",
+          "730.9",
+          "728.1",
+          "725.4"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "563.3",
+          "557.0",
+          "552.7",
+          "548.9",
+          "545.4",
+          "542.1",
+          "539.1",
+          "536.2",
+          "533.5",
+          "531.0"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "168.7",
+          "168.5",
+          "168.4",
+          "168.3",
+          "168.1",
+          "167.9",
+          "167.6",
+          "167.3",
+          "166.9",
+          "166.5"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "18.4",
+          "22.0",
+          "23.6",
+          "24.8",
+          "25.7",
+          "26.4",
+          "26.9",
+          "27.3",
+          "27.8",
+          "27.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.7",
+          "13.7",
+          "13.6",
+          "13.5",
+          "13.5",
+          "13.4"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.6",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1",
+          "10.1"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "142.7",
+          "142.4",
+          "142.2",
+          "142.0",
+          "141.8",
+          "141.6",
+          "141.3",
+          "141.0",
+          "140.7",
+          "140.3"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.9",
+          "26.1",
+          "26.2",
+          "26.2",
+          "26.2",
+          "26.3",
+          "26.2",
+          "26.2",
+          "26.2",
+          "26.2"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "681.3",
+          "674.9",
+          "670.6",
+          "666.7",
+          "663.1",
+          "659.8",
+          "656.7",
+          "653.5",
+          "650.5",
+          "647.8"
+        ],
+        [
+          "Annual CUF (%)",
+          "38.89",
+          "38.52",
+          "38.27",
+          "38.05",
+          "37.85",
+          "37.66",
+          "37.48",
+          "37.30",
+          "37.13",
+          "36.97"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "1280.2",
+          "1977.3",
+          "2517.5",
+          "3037.1",
+          "3555.6",
+          "4091.9",
+          "4625.6",
+          "5162.3",
+          "5745.8",
+          "6512.3"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 11",
+        "Yr 12",
+        "Yr 13",
+        "Yr 14",
+        "Yr 15",
+        "Yr 16",
+        "Yr 17",
+        "Yr 18",
+        "Yr 19",
+        "Yr 20"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "658.1",
+          "655.5",
+          "652.8",
+          "650.2",
+          "647.6",
+          "645.0",
+          "642.5",
+          "639.9",
+          "637.3",
+          "634.8"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "92.3",
+          "92.1",
+          "91.9",
+          "91.7",
+          "91.5",
+          "91.4",
+          "91.2",
+          "91.0",
+          "90.8",
+          "90.6"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "750.4",
+          "747.6",
+          "744.8",
+          "742.0",
+          "739.2",
+          "736.4",
+          "733.6",
+          "730.9",
+          "728.1",
+          "725.4"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "563.3",
+          "557.0",
+          "552.7",
+          "548.9",
+          "545.4",
+          "542.1",
+          "539.1",
+          "536.2",
+          "533.5",
+          "531.0"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "168.7",
+          "168.5",
+          "168.4",
+          "168.3",
+          "168.1",
+          "167.9",
+          "167.6",
+          "167.3",
+          "166.9",
+          "166.5"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "18.4",
+          "22.0",
+          "23.6",
+          "24.8",
+          "25.7",
+          "26.4",
+          "26.9",
+          "27.3",
+          "27.8",
+          "27.9"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.7",
+          "13.7",
+          "13.6",
+          "13.5",
+          "13.5",
+          "13.4"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.6",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1",
+          "10.1"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "142.7",
+          "142.4",
+          "142.2",
+          "142.0",
+          "141.8",
+          "141.6",
+          "141.3",
+          "141.0",
+          "140.7",
+          "140.3"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.9",
+          "26.1",
+          "26.2",
+          "26.2",
+          "26.2",
+          "26.3",
+          "26.2",
+          "26.2",
+          "26.2",
+          "26.2"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "681.3",
+          "674.9",
+          "670.6",
+          "666.7",
+          "663.1",
+          "659.8",
+          "656.7",
+          "653.5",
+          "650.5",
+          "647.8"
+        ],
+        [
+          "Annual CUF (%)",
+          "38.89",
+          "38.52",
+          "38.27",
+          "38.05",
+          "37.85",
+          "37.66",
+          "37.48",
+          "37.30",
+          "37.13",
+          "36.97"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "1280.2",
+          "1977.3",
+          "2517.5",
+          "3037.1",
+          "3555.6",
+          "4091.9",
+          "4625.6",
+          "5162.3",
+          "5745.8",
+          "6512.3"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Monthly Shortage (20-year average)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Monthly Shortage (MWh)",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ],
+        [
+          "20-yr Average",
+          "1652.0",
+          "407.1",
+          "4.5",
+          "0.0",
+          "0.0",
+          "0.0",
+          "130.7",
+          "194.6",
+          "7.2",
+          "4.8",
+          "367.1",
+          "490.8"
+        ]
+      ],
+      "header": [
+        "Monthly Shortage (MWh)",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "body": [
+        [
+          "20-yr Average",
+          "1652.0",
+          "407.1",
+          "4.5",
+          "0.0",
+          "0.0",
+          "0.0",
+          "130.7",
+          "194.6",
+          "7.2",
+          "4.8",
+          "367.1",
+          "490.8"
+        ]
+      ],
+      "column_count": 13
+    },
+    {
+      "type": "paragraph",
+      "text": "P90 \u2013 Yearly Results (20 Years)",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 1-10",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 1",
+          "Yr 2",
+          "Yr 3",
+          "Yr 4",
+          "Yr 5",
+          "Yr 6",
+          "Yr 7",
+          "Yr 8",
+          "Yr 9",
+          "Yr 10"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "674.8",
+          "672.1",
+          "669.4",
+          "666.7",
+          "664.0",
+          "661.4",
+          "658.7",
+          "656.1",
+          "653.5",
+          "650.8"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "86.7",
+          "86.5",
+          "86.3",
+          "86.2",
+          "86.0",
+          "85.8",
+          "85.6",
+          "85.5",
+          "85.3",
+          "85.1"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "761.4",
+          "758.6",
+          "755.7",
+          "752.9",
+          "750.0",
+          "747.2",
+          "744.4",
+          "741.6",
+          "738.8",
+          "736.0"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "569.3",
+          "562.9",
+          "558.6",
+          "554.8",
+          "551.4",
+          "548.1",
+          "545.1",
+          "542.1",
+          "539.3",
+          "536.9"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "167.8",
+          "167.7",
+          "167.6",
+          "167.4",
+          "167.2",
+          "167.0",
+          "166.8",
+          "166.5",
+          "166.1",
+          "165.7"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "24.3",
+          "28.0",
+          "29.5",
+          "30.6",
+          "31.4",
+          "32.0",
+          "32.5",
+          "32.9",
+          "33.3",
+          "33.4"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.8",
+          "13.7",
+          "13.6",
+          "13.6",
+          "13.5"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.6",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "142.0",
+          "141.6",
+          "141.5",
+          "141.3",
+          "141.1",
+          "140.9",
+          "140.6",
+          "140.3",
+          "140.0",
+          "139.6"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.8",
+          "26.0",
+          "26.0",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "686.4",
+          "679.9",
+          "675.6",
+          "671.7",
+          "668.2",
+          "664.9",
+          "661.7",
+          "658.6",
+          "655.6",
+          "652.9"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.18",
+          "38.81",
+          "38.56",
+          "38.34",
+          "38.14",
+          "37.95",
+          "37.77",
+          "37.59",
+          "37.42",
+          "37.26"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "986.6",
+          "1561.2",
+          "2095.7",
+          "2610.1",
+          "3132.0",
+          "3667.4",
+          "4202.1",
+          "4740.9",
+          "5276.4",
+          "5864.3"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 1",
+        "Yr 2",
+        "Yr 3",
+        "Yr 4",
+        "Yr 5",
+        "Yr 6",
+        "Yr 7",
+        "Yr 8",
+        "Yr 9",
+        "Yr 10"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "674.8",
+          "672.1",
+          "669.4",
+          "666.7",
+          "664.0",
+          "661.4",
+          "658.7",
+          "656.1",
+          "653.5",
+          "650.8"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "86.7",
+          "86.5",
+          "86.3",
+          "86.2",
+          "86.0",
+          "85.8",
+          "85.6",
+          "85.5",
+          "85.3",
+          "85.1"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "761.4",
+          "758.6",
+          "755.7",
+          "752.9",
+          "750.0",
+          "747.2",
+          "744.4",
+          "741.6",
+          "738.8",
+          "736.0"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "569.3",
+          "562.9",
+          "558.6",
+          "554.8",
+          "551.4",
+          "548.1",
+          "545.1",
+          "542.1",
+          "539.3",
+          "536.9"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "167.8",
+          "167.7",
+          "167.6",
+          "167.4",
+          "167.2",
+          "167.0",
+          "166.8",
+          "166.5",
+          "166.1",
+          "165.7"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "24.3",
+          "28.0",
+          "29.5",
+          "30.6",
+          "31.4",
+          "32.0",
+          "32.5",
+          "32.9",
+          "33.3",
+          "33.4"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "14.2",
+          "14.1",
+          "14.0",
+          "13.9",
+          "13.8",
+          "13.8",
+          "13.7",
+          "13.6",
+          "13.6",
+          "13.5"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.7",
+          "10.6",
+          "10.5",
+          "10.4",
+          "10.4",
+          "10.3",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "142.0",
+          "141.6",
+          "141.5",
+          "141.3",
+          "141.1",
+          "140.9",
+          "140.6",
+          "140.3",
+          "140.0",
+          "139.6"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "25.8",
+          "26.0",
+          "26.0",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1",
+          "26.1"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "686.4",
+          "679.9",
+          "675.6",
+          "671.7",
+          "668.2",
+          "664.9",
+          "661.7",
+          "658.6",
+          "655.6",
+          "652.9"
+        ],
+        [
+          "Annual CUF (%)",
+          "39.18",
+          "38.81",
+          "38.56",
+          "38.34",
+          "38.14",
+          "37.95",
+          "37.77",
+          "37.59",
+          "37.42",
+          "37.26"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "986.6",
+          "1561.2",
+          "2095.7",
+          "2610.1",
+          "3132.0",
+          "3667.4",
+          "4202.1",
+          "4740.9",
+          "5276.4",
+          "5864.3"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Years 11-20",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Particulars",
+          "Yr 11",
+          "Yr 12",
+          "Yr 13",
+          "Yr 14",
+          "Yr 15",
+          "Yr 16",
+          "Yr 17",
+          "Yr 18",
+          "Yr 19",
+          "Yr 20"
+        ],
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "648.2",
+          "645.7",
+          "643.1",
+          "640.5",
+          "637.9",
+          "635.4",
+          "632.8",
+          "630.3",
+          "627.8",
+          "625.3"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "85.0",
+          "84.8",
+          "84.6",
+          "84.5",
+          "84.3",
+          "84.1",
+          "84.0",
+          "83.8",
+          "83.6",
+          "83.4"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "733.2",
+          "730.4",
+          "727.7",
+          "725.0",
+          "722.2",
+          "719.5",
+          "716.8",
+          "714.1",
+          "711.4",
+          "708.7"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "547.4",
+          "541.4",
+          "537.3",
+          "533.5",
+          "530.1",
+          "527.0",
+          "524.1",
+          "521.3",
+          "518.7",
+          "516.4"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "171.1",
+          "170.7",
+          "170.4",
+          "170.2",
+          "169.9",
+          "169.6",
+          "169.3",
+          "168.8",
+          "168.3",
+          "167.8"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "14.8",
+          "18.4",
+          "20.0",
+          "21.3",
+          "22.2",
+          "22.9",
+          "23.4",
+          "23.9",
+          "24.4",
+          "24.5"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "13.8",
+          "13.7",
+          "13.6",
+          "13.5",
+          "13.5",
+          "13.4",
+          "13.3",
+          "13.3",
+          "13.2",
+          "13.2"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.4",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1",
+          "10.1",
+          "10.0",
+          "10.0",
+          "9.9",
+          "9.9"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "144.7",
+          "144.2",
+          "143.9",
+          "143.6",
+          "143.3",
+          "143.0",
+          "142.7",
+          "142.3",
+          "141.9",
+          "141.4"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "26.3",
+          "26.4",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.4",
+          "26.4"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "667.8",
+          "661.6",
+          "657.3",
+          "653.4",
+          "649.9",
+          "646.6",
+          "643.5",
+          "640.4",
+          "637.5",
+          "634.8"
+        ],
+        [
+          "Annual CUF (%)",
+          "38.12",
+          "37.76",
+          "37.52",
+          "37.29",
+          "37.09",
+          "36.90",
+          "36.73",
+          "36.55",
+          "36.38",
+          "36.23"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "1752.5",
+          "2634.4",
+          "3255.8",
+          "3857.5",
+          "4453.7",
+          "5043.5",
+          "5633.4",
+          "6283.8",
+          "7095.5",
+          "7984.8"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "header": [
+        "Particulars",
+        "Yr 11",
+        "Yr 12",
+        "Yr 13",
+        "Yr 14",
+        "Yr 15",
+        "Yr 16",
+        "Yr 17",
+        "Yr 18",
+        "Yr 19",
+        "Yr 20"
+      ],
+      "body": [
+        [
+          "Solar 275 MW Net Gen at 33 kV (GWh)",
+          "648.2",
+          "645.7",
+          "643.1",
+          "640.5",
+          "637.9",
+          "635.4",
+          "632.8",
+          "630.3",
+          "627.8",
+          "625.3"
+        ],
+        [
+          "Wind 44.1 MW Net Gen at 33 kV (GWh)",
+          "85.0",
+          "84.8",
+          "84.6",
+          "84.5",
+          "84.3",
+          "84.1",
+          "84.0",
+          "83.8",
+          "83.6",
+          "83.4"
+        ],
+        [
+          "Hybrid Net Gen at 33 kV (GWh)",
+          "733.2",
+          "730.4",
+          "727.7",
+          "725.0",
+          "722.2",
+          "719.5",
+          "716.8",
+          "714.1",
+          "711.4",
+          "708.7"
+        ],
+        [
+          "RE Simultaneous Supply (GWh)",
+          "547.4",
+          "541.4",
+          "537.3",
+          "533.5",
+          "530.1",
+          "527.0",
+          "524.1",
+          "521.3",
+          "518.7",
+          "516.4"
+        ],
+        [
+          "RE Supply to ESS (GWh)",
+          "171.1",
+          "170.7",
+          "170.4",
+          "170.2",
+          "169.9",
+          "169.6",
+          "169.3",
+          "168.8",
+          "168.3",
+          "167.8"
+        ],
+        [
+          "RE Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "RE Curtailment (GWh)",
+          "14.8",
+          "18.4",
+          "20.0",
+          "21.3",
+          "22.2",
+          "22.9",
+          "23.4",
+          "23.9",
+          "24.4",
+          "24.5"
+        ],
+        [
+          "RE Transmission Loss (GWh)",
+          "13.8",
+          "13.7",
+          "13.6",
+          "13.5",
+          "13.5",
+          "13.4",
+          "13.3",
+          "13.3",
+          "13.2",
+          "13.2"
+        ],
+        [
+          "Auxiliary Consumption (GWh)",
+          "10.4",
+          "10.3",
+          "10.2",
+          "10.2",
+          "10.1",
+          "10.1",
+          "10.0",
+          "10.0",
+          "9.9",
+          "9.9"
+        ],
+        [
+          "ESS Supply (GWh)",
+          "144.7",
+          "144.2",
+          "143.9",
+          "143.6",
+          "143.3",
+          "143.0",
+          "142.7",
+          "142.3",
+          "141.9",
+          "141.4"
+        ],
+        [
+          "ESS Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "ESS RTE Loss (GWh)",
+          "26.3",
+          "26.4",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.5",
+          "26.4",
+          "26.4"
+        ],
+        [
+          "Supply from Other Sources (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Energy Sold under PPA (GWh)",
+          "667.8",
+          "661.6",
+          "657.3",
+          "653.4",
+          "649.9",
+          "646.6",
+          "643.5",
+          "640.4",
+          "637.5",
+          "634.8"
+        ],
+        [
+          "Annual CUF (%)",
+          "38.12",
+          "37.76",
+          "37.52",
+          "37.29",
+          "37.09",
+          "36.90",
+          "36.73",
+          "36.55",
+          "36.38",
+          "36.23"
+        ],
+        [
+          "Shortfall on Annual Availability (MWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Shortfall on Monthly Availability (MWh)",
+          "1752.5",
+          "2634.4",
+          "3255.8",
+          "3857.5",
+          "4453.7",
+          "5043.5",
+          "5633.4",
+          "6283.8",
+          "7095.5",
+          "7984.8"
+        ],
+        [
+          "BESS 400 MWh DC Capacity (Beg. of Year, MWh)",
+          "400.0",
+          "384.3",
+          "376.3",
+          "369.6",
+          "363.6",
+          "358.2",
+          "353.1",
+          "348.3",
+          "343.7",
+          "339.4"
+        ],
+        [
+          "BESS RTE (Beg. of Year, %)",
+          "84.6",
+          "84.5",
+          "84.5",
+          "84.4",
+          "84.4",
+          "84.4",
+          "84.3",
+          "84.3",
+          "84.3",
+          "84.3"
+        ],
+        [
+          "Total Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total Simultaneous Supply Peak (MW)",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0",
+          "200.0"
+        ],
+        [
+          "Total ESS Supply Peak (MW)",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0",
+          "180.0"
+        ],
+        [
+          "Total Surplus - Merchant Sales (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen Over Contract Cap) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ],
+        [
+          "Total Surplus (Gen within Contract Capacity) (GWh)",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0",
+          "0.0"
+        ]
+      ],
+      "column_count": 11
+    },
+    {
+      "type": "paragraph",
+      "text": "Monthly Shortage (20-year average)",
+      "style": "Normal"
+    },
+    {
+      "type": "table",
+      "caption": "",
+      "rows": [
+        [
+          "Monthly Shortage (MWh)",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ],
+        [
+          "20-yr Average",
+          "1870.0",
+          "560.5",
+          "14.7",
+          "0.0",
+          "0.0",
+          "0.0",
+          "189.5",
+          "312.5",
+          "20.7",
+          "16.1",
+          "481.3",
+          "641.4"
+        ]
+      ],
+      "header": [
+        "Monthly Shortage (MWh)",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "body": [
+        [
+          "20-yr Average",
+          "1870.0",
+          "560.5",
+          "14.7",
+          "0.0",
+          "0.0",
+          "0.0",
+          "189.5",
+          "312.5",
+          "20.7",
+          "16.1",
+          "481.3",
+          "641.4"
+        ]
+      ],
+      "column_count": 13
+    },
+    {
+      "type": "note",
+      "text": "Note: Wind energy generation was initially estimated at the 220 kV grid interconnection level, which inherently includes losses associated with transmission lines and power transformers. The generation was subsequently adjusted to the 33 kV level by excluding the transmission and transformer losses. In contrast, the solar generation was directly estimated at the 33 kV level. The solar energy available at the 33 kV level was then considered as the input for battery charging, and a rule-based dispatch approach was employed to determine the optimal battery charging and estimate the overall hybrid energy generation.",
+      "style": "Normal"
+    },
+    {
+      "type": "paragraph",
+      "text": "Note on methodology: (i) Solar 15-minute generation shape is synthetic (sunrise/sunset-based, inverter-capped), scaled to reproduce the PVsyst-reported monthly energy exactly; P75/P90 monthly shapes are derived by applying the uniform annual P75/P90-to-P50 ratio, as no monthly P75/P90 split was available from the source PVsyst report. (ii) Wind per-MW basis assumes 1 WTG = 3.15 MW; per-MW yield is scaled to the selected 44.1 MW capacity. (iii) Solar degradation of 0.4%/year and Wind degradation of 0.20%/year are applied year-on-year over the 20-year assessment. (iv) BESS: 400 MWh is the Nameplate Capacity; the Usable Capacity applied in the dispatch simulation for each year = Nameplate x SoH (%) x DoD (%), together with the corresponding year-specific Round-Trip Efficiency (84.64% in Year 1, degrading per the SoH schedule); SoH schedule assumes battery augmentation restoring 100% SoH in Year 11. (v) A flat Auxiliary Consumption of 1.5%/year is deducted from Gross Supply to arrive at Net Supply under the PPA. (vi) Monthly Peak Availability is assessed on an ENERGY-RATIO basis (Actual Peak-Hour Energy Supplied / Required Peak-Hour Energy per month) consistent with the RfS provision that shortfall is calculated at the end of each month.",
+      "style": "Normal"
+    }
+  ]
+}

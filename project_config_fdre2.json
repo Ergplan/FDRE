@@ -1,0 +1,297 @@
+{
+  "name": "FDRE_2_Rajasthan_Portfolio",
+  "nodes": [
+    {
+      "name": "Fatehgarh_4S2",
+      "interconnection_limit_mw": 30.0,
+      "state": "Rajasthan",
+      "gss": "Fatehgarh 4S2"
+    },
+    {
+      "name": "Bikaner_III",
+      "interconnection_limit_mw": 150.0,
+      "state": "Rajasthan",
+      "gss": "Bikaner III"
+    },
+    {
+      "name": "Bikaner_II",
+      "interconnection_limit_mw": 100.0,
+      "state": "Rajasthan",
+      "gss": "Bikaner II"
+    }
+  ],
+  "generators": [
+    {
+      "name": "Barmer_Wind_S144",
+      "technology": "wind",
+      "node": "Fatehgarh_4S2",
+      "ac_mw": 31.5,
+      "dc_mwp": 0.0,
+      "cuf": 0.34,
+      "degradation_per_year": 0.002,
+      "availability": 1.0,
+      "capex_cr_per_mw": 6.5,
+      "opex_lakh_per_mw_year": 11.0,
+      "merchant_price_factor": 1.0,
+      "notes": "10 x S144 3.15 MW WTGs; total loss with wake 24.35% in uploaded configuration."
+    },
+    {
+      "name": "Bikaner_III_Solar",
+      "technology": "solar",
+      "node": "Bikaner_III",
+      "ac_mw": 240.0,
+      "dc_mwp": 360.0,
+      "cuf": 0.275,
+      "degradation_per_year": 0.005,
+      "availability": 1.0,
+      "capex_cr_per_mw": 3.1,
+      "opex_lakh_per_mw_year": 5.5,
+      "merchant_price_factor": 0.85,
+      "notes": "TOPCon bifacial, 1.5 DC/AC, 360 MWp / 240 MWac."
+    },
+    {
+      "name": "Bikaner_II_Solar",
+      "technology": "solar",
+      "node": "Bikaner_II",
+      "ac_mw": 60.0,
+      "dc_mwp": 90.0,
+      "cuf": 0.275,
+      "degradation_per_year": 0.005,
+      "availability": 1.0,
+      "capex_cr_per_mw": 3.1,
+      "opex_lakh_per_mw_year": 5.5,
+      "merchant_price_factor": 0.85,
+      "notes": "TOPCon bifacial, 1.5 DC/AC, 90 MWp / 60 MWac."
+    }
+  ],
+  "bess": [
+    {
+      "name": "Bikaner_III_BESS",
+      "node": "Bikaner_III",
+      "power_mw": 135.0,
+      "energy_mwh": 540.0,
+      "usable_mwh_at_poi": 500.0,
+      "rte": 0.8668,
+      "availability": 1.0,
+      "charge_power_mw": null,
+      "discharge_power_mw": null,
+      "capex_cr_per_mwh": 1.1,
+      "pcs_capex_cr_per_mw": 0.3,
+      "opex_lakh_per_mwh_year": 1.2,
+      "soh_curve": [
+        1.0,
+        0.9565017894833441,
+        0.9342020739653115,
+        0.9151142516288887,
+        0.8979994493897403,
+        0.8820776360466184,
+        0.8673029274112142,
+        0.8533082499770579,
+        0.8400018353675324,
+        0.8272001468294026,
+        1.0,
+        0.9565017894833441,
+        0.9342020739653115,
+        0.9151142516288887,
+        0.8979994493897403,
+        0.8820776360466184,
+        0.8673029274112142,
+        0.8533082499770579,
+        0.8400018353675324,
+        0.8272001468294026
+      ],
+      "rte_curve": [
+        0.8668,
+        0.8668,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8668,
+        0.8668,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8557
+      ],
+      "augmentation_years": [
+        11
+      ],
+      "notes": "Project table: 540 MWh / 135 MW C/4; BESS spec states 600 MWh nameplate, 560 MWh DC usable, 500 MWh at PoI."
+    },
+    {
+      "name": "Bikaner_II_BESS",
+      "node": "Bikaner_II",
+      "power_mw": 50.0,
+      "energy_mwh": 200.0,
+      "usable_mwh_at_poi": 200.0,
+      "rte": 0.8668,
+      "availability": 1.0,
+      "charge_power_mw": null,
+      "discharge_power_mw": null,
+      "capex_cr_per_mwh": 1.1,
+      "pcs_capex_cr_per_mw": 0.3,
+      "opex_lakh_per_mwh_year": 1.2,
+      "soh_curve": [
+        1.0,
+        0.9565017894833441,
+        0.9342020739653115,
+        0.9151142516288887,
+        0.8979994493897403,
+        0.8820776360466184,
+        0.8673029274112142,
+        0.8533082499770579,
+        0.8400018353675324,
+        0.8272001468294026,
+        1.0,
+        0.9565017894833441,
+        0.9342020739653115,
+        0.9151142516288887,
+        0.8979994493897403,
+        0.8820776360466184,
+        0.8673029274112142,
+        0.8533082499770579,
+        0.8400018353675324,
+        0.8272001468294026
+      ],
+      "rte_curve": [
+        0.8668,
+        0.8668,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8668,
+        0.8668,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8612,
+        0.8557,
+        0.8557,
+        0.8557,
+        0.8557
+      ],
+      "augmentation_years": [
+        11
+      ],
+      "notes": "Project table: 200 MWh / 50 MW C/4; BESS spec states 234.82 MWh nameplate, 217.94 MWh DC usable, 200 MWh at PoI."
+    }
+  ],
+  "tender": {
+    "tender_name": "NHPC FDRE Tranche-II",
+    "contracted_capacity_mw": 200.0,
+    "declared_annual_cuf": 0.4,
+    "ppa_years": 25,
+    "min_project_mw": 50.0,
+    "project_mw_multiple": 10.0,
+    "max_bidder_capacity_mw": 600.0,
+    "peak_availability_floor": 0.9,
+    "cuf_lower_tolerance": 0.15,
+    "cuf_upper_multiplier": 1.1,
+    "penalty_multiplier": 1.5,
+    "psm_charge_rs_per_kwh": 0.02,
+    "trading_margin_rs_per_kwh": 0.07,
+    "success_charge_lakh_per_mw": 1.0,
+    "success_charge_gst": 0.18,
+    "external_green_limit_fraction": 0.05,
+    "allow_external_green_purchase": false,
+    "external_green_price_rs_per_kwh": 4.5,
+    "ppa_non_peak_take_fraction": 1.0,
+    "reserve_ppa_cap_for_future_peak": true,
+    "peak_schedule_mode": "fixed",
+    "morning_window": [
+      5,
+      10
+    ],
+    "evening_window": [
+      18,
+      23
+    ],
+    "fixed_morning_peak_hours": [
+      7,
+      8
+    ],
+    "fixed_evening_peak_hours": [
+      19,
+      20
+    ],
+    "cuf_hours_per_year": 8766,
+    "first_contract_year_relief": false,
+    "hard_monthly_peak_compliance": true,
+    "hard_annual_cuf_compliance": true
+  },
+  "finance": {
+    "target_equity_irr": 0.14,
+    "min_dscr": 1.1,
+    "debt_fraction": 0.75,
+    "interest_rate": 0.0875,
+    "debt_tenor_years": 18,
+    "construction_months": 24,
+    "construction_drawdown": [
+      0.45,
+      0.55
+    ],
+    "discount_rate": 0.1,
+    "tax_rate": 0.25168,
+    "tax_wdv_rate": 0.4,
+    "tax_depreciable_basis_fraction": 0.95,
+    "book_depreciation_years": 25,
+    "residual_value_fraction": 0.05,
+    "receivable_days": 60.0,
+    "working_capital_interest_rate": 0.095,
+    "opex_escalation": 0.035,
+    "insurance_percent_hard_capex": 0.0035,
+    "admin_opex_cr_year": 5.0,
+    "land_and_development_cr": 90.0,
+    "transmission_lump_sum_cr": 180.0,
+    "owner_costs_cr": 60.0,
+    "contingency_percent": 0.03,
+    "default_solar_capex_cr_per_mw_ac": 3.1,
+    "default_wind_capex_cr_per_mw": 6.5,
+    "default_bess_capex_cr_per_mwh": 1.1,
+    "default_bess_pcs_capex_cr_per_mw": 0.3,
+    "default_solar_opex_lakh_per_mw_year": 5.5,
+    "default_wind_opex_lakh_per_mw_year": 11.0,
+    "default_bess_opex_lakh_per_mwh_year": 1.2,
+    "bess_augmentation_schedule": [
+      {
+        "year": 11,
+        "energy_replacement_fraction": 1.0,
+        "cost_cr_per_mwh": 0.75
+      }
+    ],
+    "terminal_value_cr": 0.0,
+    "hard_compliance_required": true
+  },
+  "simulation": {
+    "seed": 42,
+    "solar_variability": 0.1,
+    "wind_variability": 0.25,
+    "merchant_price_rs_per_kwh": 3.25,
+    "merchant_escalation": 0.02,
+    "merchant_curtailment_haircut": 0.08,
+    "circular_soc_iterations": 3,
+    "initial_soc_fraction": 0.5,
+    "use_custom_profiles": false
+  },
+  "metadata": {
+    "source_files": [
+      "PROJECT CONFIGURATION_FDRE 2.docx",
+      "RFS.pdf"
+    ],
+    "model_scope": "Hourly bid-screening and sizing optimizer; replace synthetic profiles with measured P50/P90/Pxx traces before investment approval."
+  }
+}
