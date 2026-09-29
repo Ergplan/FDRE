@@ -86,6 +86,7 @@ export const DEFAULT_FINANCE = {
   receivableDays: 45,
   sellSurplus: false,
   surplusPrice: 2.5,
+  extraExportMw: 0, // export capacity for surplus on top of the plant capacity (only used when selling)
   shortfallPenalty: 0,
   solarDegradation: 0.005,
   windDegradation: 0,
@@ -355,6 +356,14 @@ export function simulate(ctx, sizes, opts = {}) {
   let tDischarge = 0;
   let tExcess = 0;
   let tCurtail = 0;
+  let sCharge = 0;
+  let sExport = 0;
+  let sCurtail = 0;
+  let cuBatteryFull = 0;
+  let cuBatteryPower = 0;
+  let cuNoStorage = 0;
+  const sell = Boolean(ctx.sellSurplus);
+  const extraExport = Math.max(0, ctx.extraExportMw || 0);
   let tUnmet = 0;
   let aboveCap = 0;
   for (let t = 0; t < HOURS; t += 1) {
@@ -381,9 +390,16 @@ export function simulate(ctx, sizes, opts = {}) {
     }
     const delivered = direct + dis;
     const rest = surplus - ch;
-    const room = plantMw - delivered;
-    const ex = rest < room ? rest : room > 0 ? room : 0;
+    // Surplus the customer and the battery cannot take is sold only if surplus sales are on,
+    // through spare plant capacity plus any extra export capacity; the rest is curtailed.
+    const room = sell ? Math.max(0, plantMw - delivered) + extraExport : 0;
+    const ex = rest < room ? rest : room;
     const cu = rest - ex;
+    if (cu > 1e-9) {
+      if (E <= 0 || B <= 0) cuNoStorage += cu;
+      else if (ch >= B - 1e-9) cuBatteryPower += cu;
+      else cuBatteryFull += cu;
+    }
     const m = MONTH_OF_HOUR[t];
     mDemand[m] += d;
     mDelivered[m] += delivered;
@@ -392,6 +408,9 @@ export function simulate(ctx, sizes, opts = {}) {
     tSolarGen += s;
     tWindGen += w;
     const shareS = g > 0 ? s / g : 0;
+    sCharge += ch * shareS;
+    sExport += ex * shareS;
+    sCurtail += cu * shareS;
     tSolarDirect += direct * shareS;
     tWindDirect += direct * (1 - shareS);
     tCharge += ch;
@@ -429,6 +448,14 @@ export function simulate(ctx, sizes, opts = {}) {
     dischargeMWh: tDischarge,
     excessMWh: tExcess,
     curtailMWh: tCurtail,
+    curtailReasons: { batteryFull: cuBatteryFull, batteryPower: cuBatteryPower, noStorage: cuNoStorage },
+    // where each technology's output went (surplus flows split by the hour's solar/wind share)
+    byTech: {
+      solar: { direct: tSolarDirect, charge: sCharge, export: sExport, curtail: sCurtail },
+      wind: { direct: tWindDirect, charge: tCharge - sCharge, export: tExcess - sExport, curtail: tCurtail - sCurtail },
+    },
+    sellSurplus: sell,
+    exportLimitMw: sell ? plantMw + extraExport : 0,
     unmetMWh: tUnmet,
     demandAboveCapMWh: aboveCap,
     cycles: usable > 0 ? tDischarge / usable : 0,
@@ -966,8 +993,8 @@ export function runFinancialModel(ctx, sizes, { costs, fin, bess, dfrTarget, tar
   };
 }
 
-export function buildContext({ demand, solarCf, windCf, plantMw, bess, lossPct = 0 }) {
-  return { demand, solarCf, windCf, plantMw, bess, lossPct };
+export function buildContext({ demand, solarCf, windCf, plantMw, bess, lossPct = 0, sellSurplus = false, extraExportMw = 0 }) {
+  return { demand, solarCf, windCf, plantMw, bess, lossPct, sellSurplus, extraExportMw };
 }
 
 export function buildModel({ inputs, costs, fin, bess, vars, objective = "lcoe", gridPoints = 11 }) {

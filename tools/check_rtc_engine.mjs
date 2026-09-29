@@ -30,6 +30,20 @@ assert.ok(Math.abs(r.deliveredMWh - (r.solarDirectMWh + r.windDirectMWh + r.disc
 assert.ok(r.dischargeMWh <= r.chargeMWh * DEFAULT_BESS.rte + 600, "BESS discharge bounded by RTE");
 console.log(`simulate: ${simMs.toFixed(2)} ms, DFR ${(r.dfr * 100).toFixed(2)}%, cycles ${r.cycles.toFixed(0)}`);
 
+// surplus: curtailed unless sold; selling exports through spare plant capacity + extra export MW
+const reasons = r.curtailReasons;
+assert.ok(Math.abs(reasons.batteryFull + reasons.batteryPower + reasons.noStorage - r.curtailMWh) < 1e-3, "curtailment reasons add up");
+assert.equal(r.excessMWh, 0, "no export when surplus sales are off");
+const ctxSell = buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: DEFAULT_BESS, sellSurplus: true, extraExportMw: 100 });
+const rs = simulate(ctxSell, { solarMw: 500, windMw: 350, bessMw: 150, bessMwh: 600 });
+assert.ok(rs.excessMWh > 0 && rs.curtailMWh < r.curtailMWh, "selling with export capacity converts curtailment into exports");
+assert.ok(Math.abs(rs.excessMWh + rs.curtailMWh - r.curtailMWh) < 1e-3, "sold + curtailed = surplus");
+assert.ok(Math.abs(rs.deliveredMWh - r.deliveredMWh) < 1e-6, "selling surplus never changes supply to the customer");
+const bt = r.byTech;
+assert.ok(Math.abs(bt.solar.direct + bt.solar.charge + bt.solar.export + bt.solar.curtail - r.solarGenMWh) < 1e-2, "solar flows add up");
+assert.ok(Math.abs(bt.wind.direct + bt.wind.charge + bt.wind.export + bt.wind.curtail - r.windGenMWh) < 1e-2, "wind flows add up");
+console.log(`surplus: ${(r.curtailMWh / 1000).toFixed(1)} MU curtailed when not sold; with sales + 100 MW extra export ${(rs.excessMWh / 1000).toFixed(1)} MU sold, ${(rs.curtailMWh / 1000).toFixed(1)} MU curtailed`);
+
 // monotonicity: more storage never reduces DFR
 const r2 = simulate(ctx, { solarMw: 500, windMw: 350, bessMw: 150, bessMwh: 900 });
 assert.ok(r2.dfr >= r.dfr - 1e-9, "DFR monotone in MWh");

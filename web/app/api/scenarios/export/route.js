@@ -6,7 +6,7 @@ import { fieldsFor, MODULE_LABEL } from "@/lib/summaryFields";
 export const dynamic = "force-dynamic";
 
 const RTC_LINES = [
-  ["Demand (MU)", "demandMu"], ["Delivered (MU)", "deliveredMu"], ["DFR", "dfr", "pct"], ["Surplus exported (MU)", "excessMu"],
+  ["Demand (MU)", "demandMu"], ["Delivered (MU)", "deliveredMu"], ["DFR", "dfr", "pct"], ["Surplus sold (MU)", "excessMu"], ["Curtailed (MU)", "curtailMu"],
   ["Shortfall vs target (MU)", "shortfallMu"], ["Tariff (Rs/kWh)", "tariff"], ["Energy revenue", "energyRevenue"],
   ["Surplus revenue", "surplusRevenue"], ["Shortfall penalty", "penalty"], ["Total revenue", "revenue"], ["O&M", "om"],
   ["Insurance", "insurance"], ["Other fixed", "other"], ["EBITDA", "ebitda"], ["Book depreciation", "bookDep"],

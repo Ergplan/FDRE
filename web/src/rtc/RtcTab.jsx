@@ -4,9 +4,9 @@ import * as E from "./engine";
 import SaveDialog from "../scenarios/SaveDialog";
 import OptimizerTheatre from "./Theatre";
 import FinanceView from "./FinanceView";
-import { Answer, Alternatives, DispatchStory } from "./results";
+import { Answer, Alternatives, DispatchStory, EnergyFlow } from "./results";
 import { BessChapter, CHAPTERS, DfrChapter, EnergyChapter, ResourceChapter, TypeChapter, chapterSummary } from "./chapters";
-import { SelectBox, nf, pf } from "./ui";
+import { Section, SelectBox, nf, pf } from "./ui";
 
 // ---------------------------------------------------------------- state
 
@@ -121,8 +121,8 @@ export default function RtcTab({ initialScenario = null }) {
     [inputs.annualEnergyMu, d.hourShape, d.monthShape, d.demandUpload],
   );
   const ctx = useMemo(
-    () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct }),
-    [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct],
+    () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
+    [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct, d.fin.sellSurplus, d.fin.extraExportMw],
   );
   const sizes = useMemo(() => Object.fromEntries(Object.entries(d.vars).map(([k, v]) => [k, v.value])), [d.vars]);
   const sim = useMemo(() => E.simulate(ctx, sizes, { hourly: true }), [ctx, sizes]);
@@ -207,7 +207,7 @@ export default function RtcTab({ initialScenario = null }) {
     };
     worker.postMessage({
       id,
-      ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct },
+      ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct, sellSurplus: ctx.sellSurplus, extraExportMw: ctx.extraExportMw },
       modelInput: { inputs: state.inputs, costs: state.costs, fin: state.fin, bess: state.bess, vars: state.vars, objective: state.objective, gridPoints: state.gridPoints },
     });
   }
@@ -390,6 +390,9 @@ export default function RtcTab({ initialScenario = null }) {
         </div>
       )}
       <DispatchStory sim={sim} inputs={inputs} sizes={sizes} />
+      <Section index="E" title="Where the energy goes" note="Every MWh generated in year 1: to the customer, through the battery, sold, or curtailed">
+        <EnergyFlow sim={sim} inputs={inputs} fin={d.fin} />
+      </Section>
       <div className="story-divider"><span>Financial model · {state.fin.years} years</span></div>
       <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} />
       <Alternatives opt={opt} sizes={sizes} target={inputs.dfrTarget} applySizes={applySizes} />

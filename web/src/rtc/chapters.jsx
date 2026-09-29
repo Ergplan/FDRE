@@ -226,9 +226,22 @@ export function DfrChapter({ state, patch, lockProps, maxDfr, sim }) {
         <SelectBox label="Measured over" value={inputs.dfrBasis} onChange={(v) => patch("inputs", { dfrBasis: v })} {...lockProps("dfrBasis")} options={[["annual", "The year (annual energy)"], ["monthly", "Every month"]]} />
         <SelectBox label="Design check" value={inputs.designCheck} onChange={(v) => patch("inputs", { designCheck: v })} {...lockProps("designCheck")} options={[["lifetime", "Year 1 + most degraded year"], ["year1", "Year 1 only"]]} hint="Degraded: worst solar, wind and battery year" />
         <Field label="Shortfall penalty" unit="₹/kWh" value={fin.shortfallPenalty} onChange={(v) => patch("fin", { shortfallPenalty: v })} {...lockProps("fin.shortfallPenalty")} step={0.05} min={0} hint="On energy below DFR × demand" />
-        <SwitchBox label="Sell surplus energy" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })} {...lockProps("fin.sellSurplus")} hint="Otherwise surplus is curtailed" />
-        <Field label="Surplus price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} {...lockProps("fin.surplusPrice")} disabled={!fin.sellSurplus} step={0.05} min={0} />
       </div>
+      <Group title="What happens to surplus" note="Energy the customer cannot take and the battery cannot store">
+        <p className="chapter-lead small">
+          To hold the DFR through nights and lean-wind months, the plant is built bigger than the average need, so on sunny and windy hours it makes more than the customer and the battery can absorb.
+          That surplus is <b>curtailed</b> (inverters and turbines back down; no revenue) unless you <b>sell</b> it. Selling uses the plant capacity the customer is not using at that hour, plus any extra export capacity you have.
+        </p>
+        <div className="rtc-grid rtc-grid-4">
+          <SwitchBox label="Sell surplus energy" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })} {...lockProps("fin.sellSurplus")} hint={fin.sellSurplus ? "Surplus is exported and paid" : "All surplus is curtailed"} />
+          <Field label="Surplus price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} {...lockProps("fin.surplusPrice")} disabled={!fin.sellSurplus} step={0.05} min={0} hint="Exchange / DISCOM / third party" />
+          <Field label="Extra export capacity" unit="MW" value={fin.extraExportMw || 0} onChange={(v) => patch("fin", { extraExportMw: v })} {...lockProps("fin.extraExportMw")} disabled={!fin.sellSurplus} step={5} min={0} hint={`On top of the ${nf(inputs.plantCapacityMw)} MW plant capacity`} />
+          <div className="rtc-stat-pair stacked">
+            <Stat label="Sold · year 1" value={`${nf(sim.excessMWh / 1000, 1)} MU`} detail={fin.sellSurplus ? `₹${nf((sim.excessMWh * fin.surplusPrice) / 1e4, 0)} cr / yr` : "sales off"} />
+            <Stat label="Curtailed · year 1" value={`${nf(sim.curtailMWh / 1000, 1)} MU`} detail={`${pf(sim.curtailMWh / Math.max(1, sim.solarGenMWh + sim.windGenMWh), 1)} of generation`} />
+          </div>
+        </div>
+      </Group>
     </>
   );
 }
