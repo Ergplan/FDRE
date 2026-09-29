@@ -27,7 +27,7 @@ export async function getProfile(id) {
 
 function checkValues(values) {
   if (!Array.isArray(values) || values.length !== 8760) throw new HttpError(400, "values must be 8760 hourly capacity factors.");
-  for (const v of values) if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1.0001) throw new HttpError(400, "values must be numbers between 0 and 1.");
+  for (const v of values) if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1.3001) throw new HttpError(400, "values must be capacity factors between 0 and 1.3.");
 }
 
 export async function createProfile(user, body) {

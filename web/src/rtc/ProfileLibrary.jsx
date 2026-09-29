@@ -94,7 +94,17 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
     setError("");
     setPreview(null);
     try {
-      const text = await file.text();
+      let text;
+      if (/\.xlsx$/i.test(file.name)) {
+        // Excel workbooks (e.g. PVsyst hourly exports) are converted to CSV on the server
+        const buf = new Uint8Array(await file.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+        const { csv } = await api("/api/profiles/convert", { method: "POST", body: JSON.stringify({ data: btoa(bin) }) });
+        text = csv;
+      } else {
+        text = await file.text();
+      }
       const parsed = E.parseAnyProfile(text, { kind: "cf", referenceMw: state[`${kind}RefMw`] || null });
       setPreview({ ...parsed, fileName: file.name });
       setSaveName(parsed.name || file.name.replace(/\.[^.]+$/, ""));
@@ -225,11 +235,11 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
       {tab === "upload" && (
         <div className="upload-pane">
           <div className="upload-drop-row">
-            <button type="button" className="secondary" disabled={locked} onClick={() => fileRef.current?.click()}><Upload size={14} /> Choose CSV</button>
-            <input ref={fileRef} type="file" accept=".csv,.txt" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+            <button type="button" className="secondary" disabled={locked} onClick={() => fileRef.current?.click()}><Upload size={14} /> Choose CSV or Excel</button>
+            <input ref={fileRef} type="file" accept=".csv,.txt,.xlsx" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
             <button type="button" className="secondary" onClick={() => downloadText(`rtc_${kind}_template.csv`, E.profileTemplateCsv(kind))}><Download size={14} /> 8760 template</button>
             <p className="rtc-note">
-              Accepted: SCADA / meter exports with a date column (15-min or hourly, even part of a year: e.g. SLDC/RLDC blockwise “Actual Generation (MW)”), or a plain 8760 / 35040 list of capacity factors or MW.
+              Accepted: PVsyst / EYA hourly files (.xlsx or .csv, e.g. Date, Time, E_Grid (MW) with an “AC, 300, MW” header line), SCADA / meter exports with a date column (15-min or hourly, even part of a year: e.g. SLDC/RLDC blockwise “Actual Generation (MW)”), or a plain 8760 / 35040 list of capacity factors or MW.
               Plant capacity comes from the CUF column, the reference MW above, or the output peak.
             </p>
           </div>
@@ -250,7 +260,12 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
                 <div><span>Monthly CUF</span><MonthBars values={preview.monthlyCuf} color={color} /></div>
               </div>
               {preview.issues?.length > 0 && <ul className="upload-issues">{preview.issues.map((i) => <li key={i}>{i}</li>)}</ul>}
-              {preview.negativeShare > 0 && <p className="rtc-note">{pf(preview.negativeShare, 1)} of readings were negative (auxiliary consumption) and set to zero; {preview.filledHours ? `${nf(preview.filledHours)} hours without data were filled with the same month and hour average.` : ""}</p>}
+              {(preview.notes?.length > 0 || preview.filledHours > 0) && (
+                <ul className="upload-notes">
+                  {(preview.notes || []).map((n) => <li key={n}>{n}</li>)}
+                  {preview.filledHours > 0 && <li>{nf(preview.filledHours)} hours without data were filled with the same month and hour average.</li>}
+                </ul>
+              )}
               <div className="upload-save">
                 <label>Library name<input value={saveName} onChange={(e) => setSaveName(e.target.value)} maxLength={200} /></label>
                 <label>Site<input value={saveSite} onChange={(e) => setSaveSite(e.target.value)} placeholder="e.g. Patoda, Beed" maxLength={200} /></label>

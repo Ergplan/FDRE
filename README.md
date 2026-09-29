@@ -76,9 +76,12 @@ It reads as a story. Six chapters sit in a vertical rail, each with its own icon
    8760 / 35040 lists. They are converted to 8760 hourly capacity factors (capacity from the
    CUF column or a reference MW, negatives clipped, readings above capacity dropped, gaps
    filled from the same month and hour), graded Validated / Use with care / Rejected, and can
-   be saved to the library for the team. Built-in wind profiles for 8 Maharashtra (WRPC)
-   plants and a validated Beed-cluster average are in `web/db/seed/profiles/`. Rebuild them
-   with `node tools/build_profile_library.mjs <scada-folder> <out.json>`.
+   be saved to the library for the team. Excel workbooks (`.xlsx`, e.g. PVsyst hourly
+   exports with an "AC, 300, MW" header line) are converted on the server. Built-in profiles
+   live in `web/db/seed/profiles/`: 8 Maharashtra (WRPC) wind plants plus a validated
+   Beed-cluster average (`node tools/build_profile_library.mjs <scada-folder> <out.json>`),
+   and the Beed 300 MWac / 450 MWp fixed-tilt PVsyst solar profile at 33 kV
+   (`node tools/build_solar_seed.mjs <file.xlsx> <out.json> <seedKey>`).
 6. **Battery storage**: a 2-hour or 4-hour discharge duration (energy = power × hours, so
    the optimizer sizes only MW), plus cost, efficiency, SoC window, fade and augmentation.
 

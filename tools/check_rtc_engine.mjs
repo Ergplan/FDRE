@@ -99,4 +99,18 @@ assert.throws(() => parseProfileCsv("1\n2\n3"));
   assert.ok(p.negativeShare > 0 && p.values.every((v) => v >= 0), "negatives clipped");
   assert.ok(p.coverage < 0.1 && p.values[0] >= 0 && p.quality === "suspect", "partial year flagged and filled");
 }
+// PVsyst-style yield file: metadata lines, stated AC capacity, output above nameplate kept,
+// night-time negative auxiliary load does not fail the file
+{
+  const rows = ["Beed, Maharashtra", "Fixed Tilt", "AC,300,MW", "DC,450,MWp", "Date,Time,E_Grid (MW)"];
+  for (let d = 0; d < 365; d += 1) {
+    const date = new Date(Date.UTC(1990, 0, 1 + d)).toISOString().slice(0, 10);
+    for (let h = 0; h < 24; h += 1) rows.push(`${date},${String(h).padStart(2, "0")}:00,${h >= 7 && h <= 17 ? (h === 12 ? 340 : 200) : -0.33}`);
+  }
+  const p = parseDatedProfile(rows.join("\n"));
+  assert.equal(p.capacityMw, 300, "AC capacity read from the header lines");
+  assert.equal(p.quality, "validated", "night negatives and above-nameplate output are acceptable for modelled files");
+  assert.ok(Math.max(...p.values) > 1.1, "output above nameplate is kept");
+  assert.ok(p.name.startsWith("Beed"), "title from metadata");
+}
 console.log("RTC engine checks passed");

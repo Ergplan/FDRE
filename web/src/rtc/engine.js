@@ -6,6 +6,8 @@
 //   1 MWh x 1 Rs/kWh = Rs 1,000 = 1e-4 cr.
 
 export const HOURS = 8760;
+/** Capacity factors may exceed 1 when a plant's output exceeds its stated AC capacity (PVsyst). */
+export const MAX_CF = 1.3;
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const RS_CR_PER_MWH_AT_1RS = 1e-4;
@@ -236,7 +238,7 @@ export function synthWindCf({ targetCuf = 0.33, seed = 23 } = {}) {
 export function applyMonthlyScale(cf, monthScale) {
   if (!monthScale || monthScale.every((v) => Math.abs(v - 1) < 1e-9)) return cf;
   const out = new Float64Array(HOURS);
-  for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(1, cf[t] * monthScale[MONTH_OF_HOUR[t]]);
+  for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(MAX_CF, cf[t] * monthScale[MONTH_OF_HOUR[t]]);
   return out;
 }
 
@@ -295,10 +297,10 @@ export function parseProfileCsv(text, { kind = "cf", referenceMw = null } = {}) 
   const max = Math.max(...out);
   if (max > 1.5) {
     const ref = Number(referenceMw) > 0 ? Number(referenceMw) : max;
-    for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(1, out[t] / ref);
+    for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(MAX_CF, out[t] / ref);
     return { values: out, note: `MW values normalised by ${ref.toFixed(1)} MW → CUF ${(mean(out) * 100).toFixed(1)}%` };
   }
-  for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(1, out[t]);
+  for (let t = 0; t < HOURS; t += 1) out[t] = Math.min(MAX_CF, out[t]);
   return { values: out, note: `capacity factors, CUF ${(mean(out) * 100).toFixed(1)}%` };
 }
 
@@ -351,8 +353,22 @@ function parseDateTime(dateStr, timeStr) {
  * Returns null when the file has no recognisable date column (caller falls back to 8760 lists).
  */
 export function parseDatedProfile(text, { referenceMw = null } = {}) {
-  const lines = String(text).split(/\r?\n/).filter((l) => l.trim());
+  let lines = String(text).split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 48) return null;
+  // PVsyst / EYA exports start with metadata lines (site, "AC,300,MW", "DC,450,MWp") before the header
+  let headerAt = lines.slice(0, 40).findIndex((l) => /(^|,|")\s*(date|timestamp|datetime)\b/i.test(l));
+  if (headerAt < 0) headerAt = 0;
+  const metaLines = lines.slice(0, headerAt).map(splitCsvLine);
+  let metaAc = null;
+  let metaDc = null;
+  for (const c of metaLines) {
+    const k = String(c[0] || "").trim().toLowerCase();
+    const v = Number(c[1]);
+    if (k === "ac" && v > 0) metaAc = v;
+    if (k === "dc" && v > 0) metaDc = v;
+  }
+  const metaTitle = metaLines.map((c) => c.find((x) => x && x.trim()) || "").filter((t) => t && !/^(ac|dc)$/i.test(t.trim())).join(" · ");
+  lines = lines.slice(headerAt);
   const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase());
   const find = (re, not) => header.findIndex((h, i) => re.test(h) && i !== not);
   const dateCol = find(/date|day|timestamp|datetime/);
@@ -404,15 +420,27 @@ export function parseDatedProfile(text, { referenceMw = null } = {}) {
   const sorted = (arr) => [...arr].sort((a, b) => a - b);
   let capacityMw = Number(referenceMw) > 0 ? Number(referenceMw) : null;
   let capacitySource = "given";
+  if (!capacityMw && metaAc) { capacityMw = metaAc; capacitySource = `AC capacity stated in the file${metaDc ? ` (DC ${metaDc.toFixed(1)} MWp, DC/AC ${(metaDc / metaAc).toFixed(2)})` : ""}`; }
+  // Measured data (a CUF column, or no stated AC capacity) gets the strict 110% rule; modelled
+  // yield files that state their AC capacity in the header (PVsyst) may exceed nameplate.
+  const scada = cufCol >= 0 || !metaAc;
   if (!capacityMw && implied.length > 20) { capacityMw = sorted(implied)[implied.length >> 1]; capacitySource = "implied by the CUF column"; }
   if (!capacityMw) { const v = sorted(raw.map((r) => r[1])); capacityMw = v[Math.floor(v.length * 0.995)] || 1; capacitySource = "99.5th percentile of output (no capacity given)"; }
 
+  // Output above nameplate: SCADA readings > 110% of capacity are errors; modelled (PVsyst)
+  // output may exceed the contracted AC figure when inverter capacity is higher, so it is
+  // kept up to 130% and dropped only beyond that.
+  const hardCap = scada ? 1.1 : 1.3;
   let negatives = 0;
+  let negEnergy = 0;
+  let posEnergy = 0;
   let invalid = 0;
+  let aboveNameplate = 0;
   for (const [h, mw0] of raw) {
     let mw = mw0;
-    if (mw < 0) { negatives += 1; mw = 0; }
-    if (mw > capacityMw * 1.1) { invalid += 1; continue; }
+    if (mw < 0) { negatives += 1; negEnergy -= mw; mw = 0; } else posEnergy += mw;
+    if (mw > capacityMw * hardCap) { invalid += 1; continue; }
+    if (mw > capacityMw * 1.001) aboveNameplate += 1;
     sum[h] += mw;
     cnt[h] += 1;
   }
@@ -425,7 +453,7 @@ export function parseDatedProfile(text, { referenceMw = null } = {}) {
   let covered = 0;
   for (let t = 0; t < HOURS; t += 1) {
     if (!cnt[t]) continue;
-    const v = Math.min(1, sum[t] / cnt[t] / capacityMw);
+    const v = Math.min(MAX_CF, sum[t] / cnt[t] / capacityMw);
     cf[t] = v;
     have[t] = 1;
     covered += 1;
@@ -448,17 +476,25 @@ export function parseDatedProfile(text, { referenceMw = null } = {}) {
   const cuf = mean(cf);
   const issues = [];
   let quality = "validated";
-  if (invalidShare > 0.05) { quality = "rejected"; issues.push(`${(invalidShare * 100).toFixed(1)}% of readings exceed 110% of the ${capacityMw.toFixed(1)} MW capacity (wrong capacity, unit or capacity change)`); }
-  if (negShare > 0.15) { quality = "rejected"; issues.push(`${(negShare * 100).toFixed(0)}% of readings are negative`); }
+  if (invalidShare > 0.05) { quality = "rejected"; issues.push(`${(invalidShare * 100).toFixed(1)}% of readings exceed ${Math.round(hardCap * 100)}% of the ${capacityMw.toFixed(1)} MW capacity (wrong capacity, unit or capacity change)`); }
+  // small negative night readings (auxiliary load) are normal; large negative energy is not
+  const negEnergyShare = posEnergy > 0 ? negEnergy / posEnergy : 1;
+  if (negEnergyShare > 0.05) { quality = "rejected"; issues.push(`negative readings amount to ${(negEnergyShare * 100).toFixed(0)}% of the generated energy (${(negShare * 100).toFixed(0)}% of readings)`); }
   if (quality !== "rejected") {
     if (coverage < 0.5) { quality = "suspect"; issues.push(`only ${(coverage * 100).toFixed(0)}% of the year has data`); }
     if (cuf < 0.12) { quality = "suspect"; issues.push(`very low CUF ${(cuf * 100).toFixed(1)}% (infirm / commissioning power or curtailment?)`); }
     if (monthsMissing.length >= 3) { quality = "suspect"; issues.push(`no data for ${monthsMissing.join(", ")} (filled with the average day)`); }
   }
+  const notes = [];
+  if (!scada && aboveNameplate > 0) {
+    notes.push(`${aboveNameplate} readings are above the ${capacityMw.toFixed(0)} MW nameplate (inverter AC above the stated capacity); kept, so capacity factors reach ${(Math.max(...cf) * 100).toFixed(0)}%`);
+  }
+  if (negShare > 0) notes.push(`${(negShare * 100).toFixed(1)}% of readings were negative (night-time auxiliary consumption) and set to zero`);
   const monthly = monthlyMeans(cf);
   return {
     values: cf,
-    name,
+    name: name || metaTitle,
+    notes,
     capacityMw,
     capacitySource,
     from: first,
