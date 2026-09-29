@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
-import { SkipForward, X } from "lucide-react";
+import { FastForward, SkipForward, X } from "lucide-react";
 
-// Optimizer "theatre": while the worker searches, an isometric 3D cost surface
-// (levelised ₹/kWh over solar MW × wind MW, best storage at each point) is built cell by cell,
-// the least-cost point is marked, and then the overlay hands over to the result.
+// Optimizer "theatre": while the worker searches, an isometric 3D surface over solar MW × wind MW
+// (best storage at each point) is built cell by cell: the 25-year tariff in tariff mode, the
+// levelised cost otherwise. While the HiGHS LP solves on the engine, its live log scrolls in a
+// console, a scan plane sweeps the surface, and its optimum is marked when it arrives. Then the
+// least-cost point is marked and the overlay hands over to the result.
 //
 // `feed` is a ref filled by the parent from worker messages:
-//   { axes: { solarGrid, windGrid, total }, cells: [...], done: bool, result, error }
+//   { axes: { solarGrid, windGrid, total }, cells: [...], tcells: [...], tariffMode,
+//     highs: { active, lines, progress, done, result, error, startedAt }, done, result, error }
 
 const VIRIDIS = ["#440154", "#482878", "#3e4989", "#31688e", "#26828e", "#1f9e89", "#35b779", "#6ece58", "#b5de2b", "#fde725"];
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -33,10 +36,13 @@ function positions(n) {
   return Array.from({ length: n }, (_, i) => i / (n - 1));
 }
 
-export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
+const clockOf = (ms) => `${String(Math.floor(ms / 60000)).padStart(2, "0")}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
+
+export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
-  const [status, setStatus] = useState({ shown: 0, total: 0, phase: "build", evals: 0 });
+  const consoleRef = useRef(null);
+  const [status, setStatus] = useState({ shown: 0, total: 0, phase: "build", evals: 0, screened: 0, mapped: 0, highs: null });
   const finishRef = useRef(onFinish);
   finishRef.current = onFinish;
   const skipRef = useRef(false);
@@ -57,6 +63,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
     const flashes = new Map();
 
     const resize = () => {
+      if (!wrapRef.current) return; // observer can fire after the overlay closes
       const w = wrapRef.current.clientWidth;
       const h = Math.max(360, Math.min(600, Math.round(w * 0.58)));
       const dpr = window.devicePixelRatio || 1;
@@ -67,7 +74,10 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
       ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
-    window.addEventListener("resize", resize);
+    // the stage narrows when the HiGHS console opens beside it
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+    if (ro) ro.observe(wrapRef.current);
+    else window.addEventListener("resize", resize);
 
     const frame = (now) => {
       const f = feed.current;
@@ -85,7 +95,8 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
       const nW = axes.windGrid.length;
       const total = nS * nW;
       const paced = skipRef.current ? total : Math.floor(total * Math.min(1, Math.max(0, (elapsed - 500) / buildMs)));
-      const shown = Math.min(f.cells.length, paced);
+      const src = f.tariffMode ? f.tcells : f.cells;
+      const shown = Math.min(src.length, paced);
 
       // value grid (null until revealed)
       const V = Array.from({ length: nS }, () => new Array(nW).fill(null));
@@ -93,11 +104,11 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
       let fMax = -Infinity;
       let anyMax = -Infinity;
       for (let k = 0; k < shown; k += 1) {
-        const c = f.cells[k];
+        const c = src[k];
         V[c.si][c.wi] = c;
-        if (Number.isFinite(c.lcoe)) {
-          anyMax = Math.max(anyMax, c.lcoe);
-          if (c.feasible) { fMin = Math.min(fMin, c.lcoe); fMax = Math.max(fMax, c.lcoe); }
+        if (Number.isFinite(c.z)) {
+          anyMax = Math.max(anyMax, c.z);
+          if (c.feasible) { fMin = Math.min(fMin, c.z); fMax = Math.max(fMax, c.z); }
         }
         if (!flashes.has(k)) flashes.set(k, now);
       }
@@ -106,7 +117,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
       const targetHi = Number.isFinite(fMax) ? Math.max(fMax * 1.06, targetLo + 0.2) : targetLo + 1;
       zLo = zLo === null ? targetLo : zLo + (targetLo - zLo) * 0.12;
       zHi = zHi === null ? targetHi : zHi + (targetHi - zHi) * 0.12;
-      const zOf = (c) => (c.feasible && Number.isFinite(c.lcoe) ? c.lcoe : zHi);
+      const zOf = (c) => (c.feasible && Number.isFinite(c.z) ? c.z : zHi);
       const hOf = (z) => Math.max(0, Math.min(1, (z - zLo) / Math.max(1e-6, zHi - zLo)));
 
       // camera: slow sway around the vertical axis
@@ -158,7 +169,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
 
       // freshly computed points flash
       for (let k = Math.max(0, shown - 24); k < shown; k += 1) {
-        const c = f.cells[k];
+        const c = src[k];
         const age = now - (flashes.get(k) || now);
         if (age > 700) continue;
         const [x, y] = proj(uPos[Math.min(c.si, uPos.length - 1)], vPos[Math.min(c.wi, vPos.length - 1)], hOf(zOf(c)));
@@ -171,19 +182,27 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
 
       drawColorbar(ctx2d, W, H, zLo, zHi);
 
+      // HiGHS: scan plane while it solves, its optimum once it is back
+      const hs = f.highs;
+      const sMin0 = axes.solarGrid[0];
+      const sMax0 = axes.solarGrid[nS - 1];
+      const wMin0 = axes.windGrid[0];
+      const wMax0 = axes.windGrid[nW - 1];
+      const uvOf = (z) => [nS <= 1 ? 0.5 : (z.solarMw - sMin0) / Math.max(1e-9, sMax0 - sMin0), nW <= 1 ? 0.5 : (z.windMw - wMin0) / Math.max(1e-9, wMax0 - wMin0)];
+      if (hs?.active && !hs.done && !foundAt && shown >= total) drawScan(ctx2d, proj, (elapsed / 2600) % 1);
+      if (hs?.done && hs.result?.sizes && Number.isFinite(hs.result.tariff) && !foundAt) {
+        const [u, v] = uvOf(hs.result.sizes);
+        drawHighsMark(ctx2d, proj, u, v, hOf(hs.result.tariff), hs.result, now);
+      }
+
       // phase control
-      const built = shown >= total && f.cells.length >= total;
+      const built = shown >= total && src.length >= total;
       if (!foundAt && f.done && f.result && built && (elapsed >= minMs || skipRef.current)) foundAt = now;
       if (foundAt) {
         const k = now - foundAt;
         const best = f.result.best;
-        const sMin = axes.solarGrid[0];
-        const sMax = axes.solarGrid[nS - 1];
-        const wMin = axes.windGrid[0];
-        const wMax = axes.windGrid[nW - 1];
-        const u = nS <= 1 ? 0.5 : (best.sizes.solarMw - sMin) / Math.max(1e-9, sMax - sMin);
-        const v = nW <= 1 ? 0.5 : (best.sizes.windMw - wMin) / Math.max(1e-9, wMax - wMin);
-        drawFound(ctx2d, proj, u, v, hOf(best.lcoe), best, Math.min(1, k / 600), now);
+        const [u, v] = uvOf(best.sizes);
+        drawFound(ctx2d, proj, u, v, hOf(Number.isFinite(best.tariff) ? best.tariff : best.lcoe), best, Math.min(1, k / 600), now);
         if (!finished && k > (skipRef.current ? 700 : FOUND_MS) + FADE_MS) {
           finished = true;
           finishRef.current?.();
@@ -197,25 +216,67 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
 
       if (now - lastStatus > 100) {
         lastStatus = now;
-        setStatus({ shown, total, phase: foundAt ? "found" : built && !f.done ? "refine" : f.done && built ? "confirm" : "build", evals: f.progress?.evals || 0 });
+        setStatus({
+          shown,
+          total,
+          phase: foundAt ? "found" : built && !f.done ? "refine" : f.done && built ? "confirm" : "build",
+          evals: f.progress?.evals || 0,
+          screened: f.cells.length,
+          mapped: f.tcells.length,
+          highs: hs?.active ? {
+            lines: hs.lines.slice(-40),
+            count: hs.lines.length,
+            lpInfo: hs.lines.find((l) => /^LP:/.test(l.msg))?.msg,
+            elapsed: (hs.endedAt || now) - hs.startedAt,
+            progress: hs.progress,
+            done: hs.done,
+            error: hs.error,
+            result: hs.result,
+          } : null,
+        });
       }
       if (!finished) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      if (ro) ro.disconnect();
+      else window.removeEventListener("resize", resize);
     };
   }, [feed]);
 
-  const pct = status.total ? Math.round((status.shown / status.total) * 100) : 0;
-  const steps = [
+  const tariffMode = Boolean(feed.current?.tariffMode);
+  const hs = status.highs;
+  const total = status.total || 0;
+  let pct;
+  if (!tariffMode) pct = total ? Math.round((status.shown / total) * 100) : 0;
+  else {
+    const screen = total ? status.screened / total : 0;
+    const map = total ? status.mapped / total : 0;
+    const lp = hs ? (hs.done ? 1 : 1 - Math.exp(-hs.elapsed / 45000)) : map >= 1 ? 1 : 0;
+    pct = Math.round(12 * screen + 18 * map + 62 * lp + (status.phase === "confirm" ? 6 : 0));
+  }
+  const lpInfo = hs?.lpInfo;
+  const steps = tariffMode ? [
+    ["Loaded 8,760-hour demand, solar and wind profiles", true],
+    [`Screening ${status.screened}/${total || "…"} solar × wind mixes, cheapest battery at each`, status.screened > 0],
+    [`25-year tariff at every mix · ${status.mapped}/${total || "…"} full financial models (DFR checked in every year)`, status.mapped > 0],
+    hs
+      ? [hs.error ? `HiGHS not used (${hs.error}); continuing with the search` : hs.done && hs.result ? `HiGHS LP optimum ₹${Number(hs.result.tariff).toFixed(4)}/kWh${Number.isFinite(hs.result.lowerBound) ? ` · nothing can beat ₹${hs.result.lowerBound.toFixed(4)}` : ""} · ${clockOf(hs.elapsed)}` : `HiGHS solving the sizing LP for the global optimum · ${clockOf(hs.elapsed)}`, true]
+      : ["HiGHS LP skipped (search only)", status.mapped >= total && total > 0],
+    ["Exact 25-year model around the optimum (pattern search + neighbourhood check)", Boolean(hs?.done) || (!hs && status.phase !== "build")],
+    ["Least-tariff design found", status.phase === "found"],
+  ] : [
     ["Loaded 8,760-hour demand, solar and wind profiles", true],
     [`Building the cost surface · ${status.shown}/${status.total || "…"} solar × wind mixes`, status.shown > 0],
     ["Bisecting battery energy for the cheapest feasible storage at every mix", status.shown > 0],
     ["Refining around the minimum with a pattern search", status.phase !== "build"],
     ["Least-cost design found", status.phase === "found"],
   ];
+  useEffect(() => {
+    const el = consoleRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [hs?.count]);
 
   return (
     <div className="theatre" role="dialog" aria-modal="true" aria-label="Optimizing">
@@ -224,15 +285,30 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
           <div>
             <span className="theatre-brand"><img src="/brand/joulewise-logo-dark.png" alt="Joulewise" /></span>
             <span className="rtc-index">OPTIMIZING</span>
-            <h2>Searching for the least-cost mix</h2>
+            <h2>{tariffMode ? "Solving for the least 25-year tariff" : "Searching for the least-cost mix"}</h2>
           </div>
           <div className="theatre-actions">
+            {hs && !hs.done && onSkipHighs && <button type="button" className="rtc-reset" onClick={onSkipHighs} title="Stop waiting for HiGHS and finish with the search results"><FastForward size={13} /> Continue without HiGHS</button>}
             <button type="button" className="rtc-reset" onClick={() => { skipRef.current = true; }}><SkipForward size={13} /> Skip animation</button>
             {onCancel && <button type="button" className="rtc-reset" onClick={onCancel}><X size={13} /> Cancel</button>}
           </div>
         </header>
-        <div className="theatre-stage" ref={wrapRef}>
-          <canvas ref={canvasRef} />
+        <div className={`theatre-stage ${hs && status.phase !== "found" ? "with-console" : ""}`}>
+          <div className="theatre-canvas" ref={wrapRef}><canvas ref={canvasRef} /></div>
+          {hs && status.phase !== "found" && (
+            <aside className={`highs-console ${hs.done ? "is-done" : ""}`} aria-live="polite">
+              <header>
+                <span><i className={hs.done ? "" : "pulse"} /> HiGHS {hs.done ? (hs.error ? "· not used" : "· optimal") : "· solving"}</span>
+                <b>{clockOf(hs.elapsed)}</b>
+              </header>
+              {lpInfo && <p className="highs-size">{lpInfo.replace(/^LP: /, "")}</p>}
+              {hs.progress?.lambda && <p className="highs-lambda">Dinkelbach {hs.progress.iteration} · λ ₹{Number(hs.progress.lambda).toFixed(4)}/kWh{hs.progress.lowerBound ? ` · bound ₹${Number(hs.progress.lowerBound).toFixed(4)}` : ""}</p>}
+              <div className="highs-lines" ref={consoleRef}>
+                {hs.lines.map((l, i) => <div key={hs.count - hs.lines.length + i} className={l.stage === "highs" ? "hl" : ""}>{l.msg}</div>)}
+                {!hs.done && <div className="cursor">▍</div>}
+              </div>
+            </aside>
+          )}
         </div>
         <div className="theatre-foot">
           <ol className="theatre-log">
@@ -366,7 +442,7 @@ function drawFound(g, proj, u, v, h, best, k, now) {
     `Solar   ${nf(best.sizes.solarMw)} MW`,
     `Wind    ${nf(best.sizes.windMw)} MW`,
     `BESS    ${nf(best.sizes.bessMw)} MW · ${nf(best.sizes.bessMwh)} MWh`,
-    `LCOE    ₹${best.lcoe.toFixed(3)}/kWh`,
+    Number.isFinite(best.tariff) ? `Tariff  ₹${best.tariff.toFixed(3)}/kWh · 25 yr` : `LCOE    ₹${best.lcoe.toFixed(3)}/kWh`,
   ];
   g.font = "500 12px 'JetBrains Mono', monospace";
   const bw = Math.max(...lines.map((l) => g.measureText(l).width)) + 24;
@@ -381,6 +457,42 @@ function drawFound(g, proj, u, v, h, best, k, now) {
   g.fillStyle = "#f4f4f1";
   g.textAlign = "left";
   lines.forEach((l, i) => g.fillText(l, bx + 12, by + 22 + i * 18));
+  g.restore();
+}
+
+function drawScan(g, proj, phase) {
+  // a translucent plane sweeping up and down the value axis
+  const h = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+  const pts = [proj(0, 0, h), proj(1, 0, h), proj(1, 1, h), proj(0, 1, h)];
+  g.save();
+  g.beginPath();
+  pts.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y)));
+  g.closePath();
+  g.fillStyle = "rgba(90,180,232,0.07)";
+  g.fill();
+  g.strokeStyle = "rgba(90,180,232,0.55)";
+  g.lineWidth = 1;
+  g.stroke();
+  g.restore();
+}
+
+function drawHighsMark(g, proj, u, v, h, res, now) {
+  const [x, y] = proj(u, v, h);
+  g.save();
+  const s = 7 + 2 * Math.sin(now / 200);
+  g.beginPath();
+  g.moveTo(x, y - s);
+  g.lineTo(x + s, y);
+  g.lineTo(x, y + s);
+  g.lineTo(x - s, y);
+  g.closePath();
+  g.strokeStyle = "#5ab4e8";
+  g.lineWidth = 1.6;
+  g.stroke();
+  g.font = "500 11px 'JetBrains Mono', monospace";
+  g.fillStyle = "#5ab4e8";
+  g.textAlign = "left";
+  g.fillText(`HiGHS optimum ₹${res.tariff.toFixed(3)}`, x + 12, y + 4);
   g.restore();
 }
 

@@ -56,10 +56,10 @@ wind CSV are not bundled here; see `react_demo/README.md` for the current input 
 
 ## Round the Clock (RTC) tab
 
-The dashboard opens on **Round the Clock**, a least-cost sizing workspace for firm RE supply
+The dashboard opens on **Round the Clock**, a least-tariff sizing workspace for firm RE supply
 (default case: 2,455 MU/yr, 285 MW plant capacity, 85% DFR, Beed, Maharashtra; capex solar
 ₹3.5 cr/MW, wind ₹6.5 cr/MW, BESS ₹1.2 cr/MWh). Its engine (`web/src/rtc/engine.js`) runs in
-the browser and does not need the Python service.
+the browser; only the HiGHS sizing LP (below) runs in the Python service.
 
 It reads as a story. Six chapters sit in a vertical rail, each with its own icon and colour:
 
@@ -77,27 +77,61 @@ It reads as a story. Six chapters sit in a vertical rail, each with its own icon
    CUF column or a reference MW, negatives clipped, readings above capacity dropped, gaps
    filled from the same month and hour), graded Validated / Use with care / Rejected, and can
    be saved to the library for the team. Excel workbooks (`.xlsx`, e.g. PVsyst hourly
-   exports with an "AC, 300, MW" header line) are converted on the server. Built-in profiles
-   live in `web/db/seed/profiles/`: 8 Maharashtra (WRPC) wind plants plus a validated
+   exports with an "AC, 300, MW" header line) are converted on the server. Wind plants below
+   25% PLF are kept out of the library (the build tool drops them, the server refuses to save
+   them, and built-in rows that are no longer shipped are removed at start-up). Built-in
+   profiles live in `web/db/seed/profiles/`: 4 Maharashtra (WRPC) wind plants plus a validated
    Beed-cluster average (`node tools/build_profile_library.mjs <scada-folder> <out.json>`),
    and the Beed 300 MWac / 450 MWp fixed-tilt PVsyst solar profile at 33 kV
    (`node tools/build_solar_seed.mjs <file.xlsx> <out.json> <seedKey>`).
 6. **Battery storage**: a 2-hour or 4-hour discharge duration (energy = power × hours, so
    the optimizer sizes only MW), plus cost, efficiency, SoC window, fade and augmentation.
 
-**Optimize** opens a full-screen animation. An isometric 3D cost surface (₹/kWh over
-solar MW × wind MW, with the cheapest feasible battery at each point) builds for about seven
-seconds while the optimizer runs in a Web Worker. Mixes that miss the DFR show as a red
-plateau. The least-cost point is then marked, the animation fades, and the answer is
-revealed. Below the answer are the dispatch (Day / Month / Year toggle; the Day view uses the
-[Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library,
-vendored in `web/vendor/`), the full 25-year financial model (P&L, cash flow, debt, DSCR,
-IRRs, tariff solved for the target equity IRR or fixed by lock, CSV export) and the
-explorable alternatives. Every input has a lock toggle. Save the case to the database from
-the header.
+**Optimize least tariff** minimises the 25-year tariff at the target equity IRR, with the DFR
+required in every PPA year (solar/wind degradation, battery fade and augmentation, demand
+growth). It runs in four steps, shown in a full-screen animation:
 
-Engine checks: `node tools/check_rtc_engine.mjs`. The synthetic profiles are for screening
-only, so upload bankable 8760 profiles before bidding.
+1. **Screening** (Web Worker): a grid of solar × wind mixes, with battery power searched and
+   the smallest battery that holds the DFR found by bisection.
+2. **Tariff map**: the full 25-year financial model (hourly dispatch every year, debt, tax,
+   working capital) for the best design at every grid point. This is the isometric surface
+   in the animation (mixes that miss the DFR form a red plateau) and the **Tariff for every
+   solar and wind size** heatmap afterwards.
+3. **HiGHS** (`fdre_rtc_lp.py`, engine route `/api/rtc/lp`): a linear programme with hourly
+   dispatch for year 1 and every year that can bind the DFR (70k variables and 105k
+   constraints for the default case). Its objective is the equity-IRR tariff. The equity NPV
+   is linear in the design, with tax timed by the screening design's loss carry-forward, so
+   the tariff (cost ÷ energy) is solved exactly by Dinkelbach iterations. HiGHS proves a lower
+   bound: no design in the ranges can beat it under that model. It also reports what one more
+   point of DFR costs. The solve takes about 45 s for the default case, and its log streams
+   into the animation. **Continue without HiGHS** skips it; without the engine the search
+   runs alone. Settings → Solver chooses between the two.
+4. **Exact refinement**: the rounded HiGHS optimum and the best screening designs are priced
+   with the exact 25-year model, then refined by pattern search and a neighbourhood check.
+
+For the default case HiGHS moves the answer from the search's local optimum (695 / 460 / 400 MW
+at ₹5.6562/kWh) to 675 MW solar, 475 MW wind and 395 MW / 1,580 MWh battery at ₹5.6535/kWh,
+against a proven floor of ₹5.6522. The least levelised cost and least capital cost objectives
+remain available and use the search only.
+
+The answer is then revealed. Below it are:
+
+- the dispatch, with a Day / Month / Year toggle. The Day view uses the
+  [Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library,
+  vendored in `web/vendor/`.
+- the full 25-year financial model: P&L, cash flow, debt, DSCR and IRRs, with the tariff
+  solved for the target equity IRR or fixed by lock, and CSV export.
+- **What ageing does to the tariff**: the same plant solved without ageing, with generation
+  degradation, and with battery fade plus augmentation.
+- the tariff map.
+- the lowest-tariff alternatives.
+- the optimizer log, including HiGHS's own output.
+
+Every input has a lock toggle. Save the case to the database from the header.
+
+Engine checks: `node tools/check_rtc_engine.mjs` and `python -m pytest tests/test_rtc_lp.py`.
+The synthetic profiles are for screening only, so upload bankable 8760 profiles before
+bidding.
 
 ## Streamlit Application
 

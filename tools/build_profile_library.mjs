@@ -2,10 +2,11 @@
 //   node tools/build_profile_library.mjs <folder with *_blockwise_*.csv and _index.csv> <out.json> [region]
 // Each plant is converted with the same parser users get in the app (parseDatedProfile):
 // 8760 hourly capacity factors, gap-filled, with a quality grade. A cluster average of the
-// validated plants is added. Rejected plants are listed without values.
+// validated plants is added. Rejected plants are listed without values. Plants below the
+// minimum plant load factor (MIN_WIND_PLF, 25%) are left out of the library.
 import fs from "node:fs";
 import path from "node:path";
-import { HOURS, mean, monthlyMeans, parseDatedProfile } from "../web/src/rtc/engine.js";
+import { HOURS, MIN_WIND_PLF, mean, monthlyMeans, parseDatedProfile } from "../web/src/rtc/engine.js";
 
 const [dir, out, region = "Maharashtra (WRPC)"] = process.argv.slice(2);
 if (!dir || !out) { console.error("usage: node tools/build_profile_library.mjs <dir> <out.json> [region]"); process.exit(1); }
@@ -23,6 +24,10 @@ for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".csv") && !x.start
   const meta = index[f] || {};
   const p = parseDatedProfile(fs.readFileSync(path.join(dir, f), "utf8"), { referenceMw: meta.capacity || null });
   const site = siteOf(p.name || f);
+  if (p.cuf < MIN_WIND_PLF) {
+    console.log(`dropped   ${(p.name || f).padEnd(26)} CUF ${(p.cuf * 100).toFixed(1)}%  below the ${MIN_WIND_PLF * 100}% PLF minimum`);
+    continue;
+  }
   entries.push({
     seedKey: `wind:wrpc:${meta.id || f}`,
     kind: "wind",

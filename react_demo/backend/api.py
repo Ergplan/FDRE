@@ -6,16 +6,18 @@ import sys
 import base64
 import io
 import json
+import queue
 import re
+import threading
 import zipfile
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping, Literal
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -27,6 +29,7 @@ import fdre_enterprise_engine as E
 import fdre_eya as YA
 import fdre_wind_eya as WYA
 import fdre_tender_rag as TRAG
+import fdre_rtc_lp as RLP
 
 WIND_SAMPLE_PATH = pathlib.Path("/Users/rachitagarwal/Downloads/Wind Generation Bikaner.csv")
 DIST_DIR = ROOT / "react_demo" / "dist"
@@ -928,6 +931,65 @@ if DIST_DIR.exists():
 
 if REPORT_ASSET_DIR.exists():
     app.mount("/report_assets", StaticFiles(directory=REPORT_ASSET_DIR), name="report_assets")
+
+
+# at most two HiGHS sizing runs at a time per engine process (about 250 MB each while solving)
+_RTC_LP_SLOTS = threading.Semaphore(2)
+
+
+@app.post("/api/rtc/lp")
+async def rtc_lp(request: Request) -> StreamingResponse:
+    """Round-the-clock sizing LP (HiGHS). Streams NDJSON: log lines, progress, then the result."""
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Body must be JSON") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Body must be a JSON object")
+    events: queue.Queue = queue.Queue()
+
+    def work() -> None:
+        try:
+            if not _RTC_LP_SLOTS.acquire(blocking=False):
+                events.put({"type": "log", "t": 0, "stage": "highs", "msg": "Another HiGHS run is in progress on this server; waiting for a free slot"})
+                _RTC_LP_SLOTS.acquire()
+            try:
+                result = RLP.solve(
+                    payload,
+                    on_log=lambda line: events.put({"type": "log", **line}),
+                    on_progress=lambda p: events.put({"type": "progress", **p}),
+                )
+            finally:
+                _RTC_LP_SLOTS.release()
+            result.pop("log", None)  # already streamed line by line
+            events.put({"type": "result", "result": result})
+        except RLP.LpInputError as exc:
+            events.put({"type": "error", "error": str(exc)})
+        except Exception as exc:  # report solver failures to the browser instead of a dropped stream
+            events.put({"type": "error", "error": f"HiGHS run failed: {exc}"})
+        finally:
+            events.put(None)
+
+    threading.Thread(target=work, daemon=True).start()
+
+    def finite(value: Any) -> Any:  # JSON has no Infinity/NaN: send null instead
+        if isinstance(value, float):
+            return value if math.isfinite(value) else None
+        if isinstance(value, dict):
+            return {k: finite(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [finite(v) for v in value]
+        return value
+
+    def stream():
+        while True:
+            item = events.get()
+            if item is None:
+                break
+            yield json.dumps(finite(item), default=float) + "\n"
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson",
+                             headers={"cache-control": "no-cache, no-transform", "x-accel-buffering": "no"})
 
 
 @app.get("/{path:path}", include_in_schema=False)

@@ -46,6 +46,7 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
+  const lowPlf = kind === "wind" && Boolean(preview) && preview.cuf < E.MIN_WIND_PLF;
   const [saveName, setSaveName] = useState("");
   const [saveSite, setSaveSite] = useState("");
   const fileRef = useRef(null);
@@ -270,11 +271,12 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
                 <label>Library name<input value={saveName} onChange={(e) => setSaveName(e.target.value)} maxLength={200} /></label>
                 <label>Site<input value={saveSite} onChange={(e) => setSaveSite(e.target.value)} placeholder="e.g. Patoda, Beed" maxLength={200} /></label>
                 <button type="button" className="secondary" disabled={locked || preview.quality === "rejected"} onClick={usePreview}>Use for this case</button>
-                <button type="button" className="primary" disabled={locked || preview.quality === "rejected" || !saveName.trim() || busy === "save"} onClick={savePreview}>
+                <button type="button" className="primary" disabled={locked || preview.quality === "rejected" || lowPlf || !saveName.trim() || busy === "save"} title={lowPlf ? `Wind profiles below ${E.MIN_WIND_PLF * 100}% PLF are not kept in the library` : undefined} onClick={savePreview}>
                   {busy === "save" ? <Loader2 className="spin" size={14} /> : <Save size={14} />} Save to library & use
                 </button>
               </div>
               {preview.quality === "rejected" && <p className="issue-bad">This file failed the quality checks and cannot be used. Check the capacity (reference MW) or the units and upload again.</p>}
+              {lowPlf && preview.quality !== "rejected" && <p className="issue-warn">PLF {pf(preview.cuf, 1)} is below the {pf(E.MIN_WIND_PLF, 0)} minimum for the wind library. You can still use it for this case, but it cannot be saved to the library.</p>}
             </div>
           )}
         </div>

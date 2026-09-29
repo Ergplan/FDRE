@@ -27,7 +27,7 @@ function CountUp({ value, format, duration = 1400, play }) {
 
 // ---------------------------------------------------------------- the answer
 
-export function Answer({ sizes, sim, finance, capex, inputs, revealKey, optimized, targetIrr }) {
+export function Answer({ sizes, sim, finance, capex, inputs, revealKey, optimized, targetIrr, highs }) {
   const play = revealKey > 0;
   const ok = sim.dfr >= inputs.dfrTarget - 1e-6;
   const dur = sizes.bessMw > 0 ? sizes.bessMwh / sizes.bessMw : 0;
@@ -76,6 +76,13 @@ export function Answer({ sizes, sim, finance, capex, inputs, revealKey, optimize
           <strong>{nf(finance.minDscr, 2)}<em>× · yr {finance.payback ?? "–"}</em></strong>
         </div>
       </div>
+      {optimized && highs && (
+        <p className={`answer-cert ${highs.ok ? "" : "warn"}`}>
+          {highs.ok
+            ? <>HiGHS solved the sizing LP ({nf(highs.model?.columns)} variables, {nf(highs.model?.rows)} constraints, years {highs.years?.join(", ")}) in {nf(highs.seconds, 1)} s: {Number.isFinite(highs.lowerBound) ? <>no design in the allowed ranges can have a 25-year tariff below <b>₹{nf(highs.lowerBound, 4)}/kWh</b> under the LP's linear tax model.</> : <>its optimum was ₹{nf(highs.tariff, 4)}/kWh.</>} The answer above is the exact financial model's best design next to that optimum.{Number.isFinite(highs.dfrPricePerPoint) ? ` Each extra percentage point of DFR would add ≈ ₹${nf(highs.dfrPricePerPoint, 3)}/kWh.` : ""}</>
+            : <>HiGHS was not used ({highs.error}); the answer comes from the search alone.</>}
+        </p>
+      )}
     </section>
   );
 }
@@ -369,10 +376,33 @@ export function Alternatives({ opt, sizes, target, applySizes }) {
     <Section
       index="X"
       title="Explore alternatives"
-      note={`${nf(opt.evals)} designs evaluated in ${nf(opt.ms / 1000, 1)} s`}
+      note={opt.tariffRanked?.length ? `Lowest 25-year tariffs that meet the DFR in every year · ${nf(opt.stats?.tariffEvals)} full financial models, ${nf(opt.evals)} screening designs` : `${nf(opt.evals)} designs evaluated in ${nf(opt.ms / 1000, 1)} s`}
       actions={<button type="button" className="secondary" onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"} solution space</button>}
     >
       {open && <LiveChart option={scatter} height={400} onEvents={events} />}
+      {opt.tariffRanked?.length ? (
+        <div className="table-wrap" style={{ marginTop: open ? 16 : 0 }}>
+          <table>
+            <thead><tr><th>#</th><th className="num">Solar MW</th><th className="num">Wind MW</th><th className="num">Battery MW</th><th className="num">Battery MWh</th><th className="num">25-yr tariff ₹/kWh</th><th className="num">Lowest yearly DFR</th><th className="num">Capex ₹ cr</th><th className="num">Augmentation ₹ cr</th><th /></tr></thead>
+            <tbody>
+              {opt.tariffRanked.slice(0, 10).map((a, i) => (
+                <tr key={i} className={same(a.sizes) ? "selected" : ""}>
+                  <td>{i + 1}</td>
+                  <td className="num">{nf(a.sizes.solarMw)}</td>
+                  <td className="num">{nf(a.sizes.windMw)}</td>
+                  <td className="num">{nf(a.sizes.bessMw)}</td>
+                  <td className="num">{nf(a.sizes.bessMwh)}</td>
+                  <td className="num">{nf(a.tariff, 4)}</td>
+                  <td className="num">{pf(a.minDfr, 2)} <small className="muted">yr {a.worstYear}</small></td>
+                  <td className="num">{nf(a.capexCr, 0)}</td>
+                  <td className="num">{nf(a.augCapexCr, 0)}</td>
+                  <td className="lib-actions">{same(a.sizes) ? <span className="pill pass">loaded</span> : <button type="button" className="rtc-link" onClick={() => applySizes(a.sizes)}>Load</button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
       <div className="table-wrap" style={{ marginTop: open ? 16 : 0 }}>
         <table>
           <thead><tr><th>#</th><th className="num">Solar MW</th><th className="num">Wind MW</th><th className="num">Battery MW</th><th className="num">Battery MWh</th><th className="num">DFR yr 1</th><th className="num">DFR check</th><th className="num">LCOE ₹/kWh</th><th className="num">Capex ₹ cr</th><th /></tr></thead>
@@ -394,6 +424,7 @@ export function Alternatives({ opt, sizes, target, applySizes }) {
           </tbody>
         </table>
       </div>
+      )}
       {opt.previous && !same(opt.previous) && (
         <div className="panel-actions left-actions"><button type="button" className="secondary" onClick={() => applySizes(opt.previous)}><RotateCcw size={14} /> Restore the design from before the run</button></div>
       )}
@@ -403,7 +434,7 @@ export function Alternatives({ opt, sizes, target, applySizes }) {
 
 // ---------------------------------------------------------------- optimizer log
 
-const LOG_STAGES = [["all", "All"], ["setup", "Setup"], ["grid", "Surface"], ["refine", "Refine"], ["verify", "Verify"], ["result", "Result"]];
+const LOG_STAGES = [["all", "All"], ["setup", "Setup"], ["grid", "Surface"], ["refine", "Refine"], ["highs", "HiGHS"], ["highs-log", "HiGHS output"], ["tariff", "Tariff"], ["verify", "Verify"], ["result", "Result"]];
 
 export function SolverLog({ opt }) {
   const [stage, setStage] = useState("all");
@@ -442,6 +473,8 @@ export function SolverLog({ opt }) {
         <Stat label="Full-year dispatches" value={nf(st.dispatches)} detail="8,760 hours each" />
         <Stat label="Hours simulated" value={`${nf((st.simulatedHours || 0) / 1e6, 1)} M`} detail={`${nf(st.simMs / Math.max(1, st.dispatches), 2)} ms per dispatch`} />
         <Stat label="Run time" value={`${nf((st.ms || 0) / 1000, 2)} s`} detail={`${nf(st.gridPoints)} surface points · ${st.starts} refine starts`} />
+        {st.tariffEvals > 0 && <Stat label="25-year models" value={nf(st.tariffEvals)} detail={`${nf(st.tariffMs / Math.max(1, st.tariffEvals), 1)} ms each`} />}
+        {opt.highs?.ok && <Stat label="HiGHS LP" value={`${nf(opt.highs.seconds, 1)} s`} detail={`${nf(opt.highs.model?.columns)} variables${Number.isFinite(opt.highs.lowerBound) ? ` · lower bound ₹${nf(opt.highs.lowerBound, 4)}` : ""}`} />}
       </div>
       {open && (
         <>
@@ -456,7 +489,7 @@ export function SolverLog({ opt }) {
           </div>
           <div className="solver-log" role="log">
             {rows.map((l, i) => (
-              <div key={i} className={`log-line log-${l.stage} ${/best so far|✓|adopted/.test(l.msg) ? "log-hi" : ""} ${/misses DFR|does NOT/.test(l.msg) ? "log-lo" : ""}`}>
+              <div key={i} className={`log-line log-${l.stage} ${/best so far|✓|adopted|^Optimal after/.test(l.msg) ? "log-hi" : ""} ${/misses DFR|does NOT|unavailable/.test(l.msg) ? "log-lo" : ""}`}>
                 <span className="log-t">{String(l.t).padStart(5)} ms</span>
                 <span className="log-s">{l.stage}</span>
                 <span className="log-m">{l.msg}</span>
@@ -467,4 +500,107 @@ export function SolverLog({ opt }) {
       )}
     </Section>
   );
+}
+
+// ---------------------------------------------------------------- ageing: what degradation and augmentation cost
+
+export function AgeingImpact({ ctx, sizes, costs, fin, bess, dfrTarget, finance }) {
+  const b = useMemo(() => E.tariffAgeingBreakdown(ctx, sizes, { costs, fin, bess, dfrTarget }), [ctx, sizes, costs, fin, bess, dfrTarget]);
+  const steps = [
+    { label: "Plant that never ages", value: b.ideal.tariff, base: 0, color: DATA_COLORS.muted },
+    { label: "+ solar and wind degradation", value: b.genImpact, base: b.ideal.tariff, color: DATA_COLORS.solar },
+    { label: bess.augmentation === "none" ? "+ battery fade (no augmentation)" : "+ battery fade and augmentation", value: b.bessImpact, base: b.gen.tariff, color: DATA_COLORS.bess },
+    { label: "25-year tariff", value: b.all.tariff, base: 0, color: DATA_COLORS.signal },
+  ];
+  const lo = Math.min(b.ideal.tariff, b.all.tariff) * 0.97;
+  const option = {
+    animation: false,
+    grid: { left: 60, right: 20, top: 24, bottom: 56 },
+    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, formatter: (ps) => { const st = steps[ps[0].dataIndex]; return `${st.label}<br/><b>${st.base ? (st.value >= 0 ? "+" : "") : ""}₹${st.value.toFixed(4)}/kWh</b>`; } },
+    xAxis: { type: "category", data: steps.map((st) => st.label), axisLabel: { interval: 0, width: 130, overflow: "break" } },
+    yAxis: { type: "value", name: "₹/kWh", min: Number(lo.toFixed(2)), scale: true },
+    series: [
+      { type: "bar", stack: "w", silent: true, itemStyle: { color: "transparent" }, data: steps.map((st) => (st.base ? Math.min(st.base, st.base + st.value) : lo)) },
+      {
+        type: "bar", stack: "w", barWidth: "46%",
+        data: steps.map((st) => ({ value: st.base ? Math.abs(st.value) : st.value - lo, itemStyle: { color: st.color } })),
+        label: { show: true, position: "top", color: "#f4f4f1", fontFamily: "JetBrains Mono, monospace", fontSize: 11, formatter: (p) => { const st = steps[p.dataIndex]; return st.base ? `${st.value >= 0 ? "+" : "−"}₹${Math.abs(st.value).toFixed(3)}` : `₹${st.value.toFixed(3)}`; } },
+      },
+    ],
+  };
+  const lostMu = b.ideal.deliveredMu - b.all.deliveredMu;
+  return (
+    <Section index="G" title="What ageing does to the tariff" note="The same plant solved three times with the full 25-year model: without ageing, with solar and wind degradation, and with battery fade plus augmentation as set in the Battery chapter">
+      <div className="rtc-stats flush-top">
+        <Stat label="Tariff without ageing" value={`₹${nf(b.ideal.tariff, 3)}`} detail={`lowest yearly DFR ${pf(b.ideal.minDfr, 2)}`} />
+        <Stat label="Generation degradation" value={`${b.genImpact >= 0 ? "+" : "−"}₹${nf(Math.abs(b.genImpact), 3)}`} detail={`solar ${pf(fin.solarDegradation, 2)}/yr · wind ${pf(fin.windDegradation, 2)}/yr`} />
+        <Stat label="Battery fade + augmentation" value={`${b.bessImpact >= 0 ? "+" : "−"}₹${nf(Math.abs(b.bessImpact), 3)}`} detail={`${pf(bess.annualDegradation, 1)}/yr fade · ${bess.augmentation === "annual" ? "topped up yearly" : bess.augmentation === "oneTime" ? `one top-up in year ${bess.augmentationYear}` : "no augmentation"} · ₹${nf(b.all.augCapexCr, 0)} cr`} />
+        <Stat label="Energy lost to ageing" value={`${nf(lostMu, 0)} MU`} detail={`over ${fin.years} years · lowest yearly DFR ${pf(b.all.minDfr, 2)}`} />
+      </div>
+      <LiveChart option={option} height={300} />
+      {Math.abs(b.all.tariff - finance.tariff) > 1e-6 && !finance.tariffLocked && <p className="rtc-note">Tariffs are solved for the target equity IRR.</p>}
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------- tariff map over solar × wind
+
+export function TariffMap({ opt, sizes, applySizes }) {
+  const map = opt?.tariffMap;
+  const option = useMemo(() => {
+    if (!map) return null;
+    const vals = map.cells.filter((c) => c.feasible && Number.isFinite(c.tariff)).map((c) => c.tariff);
+    if (!vals.length) return null;
+    const lo = Math.min(...vals);
+    const hi = Math.min(Math.max(...vals), lo * 1.25);
+    const ok = (c) => c.feasible && Number.isFinite(c.tariff);
+    const data = map.cells.filter(ok).map((c) => ({ value: [c.si, c.wi, Number(c.tariff.toFixed(4))], cell: c }));
+    const miss = map.cells.filter((c) => !ok(c)).map((c) => ({ value: [c.si, c.wi, 0], cell: c }));
+    const best = opt.best?.sizes;
+    return {
+      animation: false,
+      grid: { left: 70, right: 90, top: 16, bottom: 52 },
+      tooltip: {
+        formatter: (p) => {
+          const c = p.data.cell;
+          return `<b>${nf(c.sizes.solarMw)} MW solar · ${nf(c.sizes.windMw)} MW wind</b><br/>Cheapest battery: ${nf(c.sizes.bessMw)} MW / ${nf(c.sizes.bessMwh)} MWh<br/>${c.feasible ? `25-yr tariff <b>₹${c.tariff.toFixed(4)}/kWh</b>` : "misses the DFR"}<br/>Lowest yearly DFR ${pf(c.minDfr, 2)}${c.worstYear ? ` (year ${c.worstYear})` : ""}<br/><i>click to load</i>`;
+        },
+      },
+      xAxis: { type: "category", name: "Solar MW", nameLocation: "middle", nameGap: 30, data: map.solarGrid.map((v) => nf(v)), splitArea: { show: false } },
+      yAxis: { type: "category", name: "Wind MW", data: map.windGrid.map((v) => nf(v)) },
+      visualMap: { seriesIndex: 0, dimension: 2, min: Number(lo.toFixed(3)), max: Number(hi.toFixed(3)), calculable: true, orient: "vertical", right: 0, top: "middle", itemHeight: 180, precision: 2, text: ["₹/kWh", ""], inRange: { color: ["#fde725", "#6ece58", "#1f9e89", "#31688e", "#482878"] }, outOfRange: { color: "#482878" }, textStyle: { color: "#86867f" } },
+      series: [{
+        type: "heatmap",
+        data,
+        label: { show: map.solarGrid.length <= 11, fontSize: 9, color: "#0a0a0a", formatter: (p) => (typeof p.value[2] === "number" ? p.value[2].toFixed(2) : "") },
+        itemStyle: { borderColor: "#0a0a0a", borderWidth: 1 },
+        emphasis: { itemStyle: { borderColor: DATA_COLORS.signal, borderWidth: 2 } },
+        markPoint: best ? {
+          symbol: "pin", symbolSize: 34, itemStyle: { color: DATA_COLORS.signal },
+          label: { formatter: "best", color: "#0a0a0a", fontSize: 9 },
+          data: [{ coord: [nearest(map.solarGrid, best.solarMw), nearest(map.windGrid, best.windMw)] }],
+        } : undefined,
+      }, {
+        type: "heatmap",
+        name: "misses DFR",
+        data: miss,
+        itemStyle: { color: "#26262a", borderColor: "#0a0a0a", borderWidth: 1 },
+        label: { show: false },
+      }],
+    };
+  }, [map, opt]);
+  const events = useMemo(() => ({ click: (p) => { const c = p?.data?.cell; if (c) applySizes(c.sizes); } }), [applySizes]);
+  if (!option) return null;
+  return (
+    <Section index="M" title="Tariff for every solar and wind size" note={`25-year tariff at each solar × wind point with its cheapest battery (${opt.tariffMap.cells.length} full financial models); grey cells miss the DFR in some year. Click a cell to load that design.`}>
+      <LiveChart option={option} height={Math.max(320, 28 * opt.tariffMap.windGrid.length + 80)} onEvents={events} />
+      <p className="rtc-note">Loaded design: {nf(sizes.solarMw)} MW solar · {nf(sizes.windMw)} MW wind · {nf(sizes.bessMw)} MW / {nf(sizes.bessMwh)} MWh battery.</p>
+    </Section>
+  );
+}
+
+function nearest(grid, v) {
+  let k = 0;
+  grid.forEach((g, i) => { if (Math.abs(g - v) < Math.abs(grid[k] - v)) k = i; });
+  return k;
 }

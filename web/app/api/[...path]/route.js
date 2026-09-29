@@ -14,9 +14,11 @@ const TIMEOUT_MS = Number(process.env.ENGINE_TIMEOUT_MS || 30 * 60 * 1000);
 async function forward(req, { params }) {
   const user = await currentUserWithAccess();
   if (!user) throw new HttpError(401, "Sign in required.");
-  // users granted only engine-free tabs (e.g. Round the Clock) cannot call the engine
-  if (!usesEngine(user.allowedTabs)) throw new HttpError(403, "Contact Administrator: no access to the FDRE engine tabs.");
   const { path } = await params;
+  // Round the Clock users may call only its solver (/api/rtc/*); other engine routes need an
+  // engine-backed tab
+  const rtcRoute = path[0] === "rtc" && user.allowedTabs.includes("rtc");
+  if (!rtcRoute && !usesEngine(user.allowedTabs)) throw new HttpError(403, "Contact Administrator: no access to the FDRE engine tabs.");
   const incoming = new URL(req.url);
   const target = new URL(`/api/${path.map(encodeURIComponent).join("/")}${incoming.search}`, ENGINE_URL);
   const body = req.method === "GET" || req.method === "HEAD" ? null : Buffer.from(await req.arrayBuffer());
@@ -27,7 +29,7 @@ async function forward(req, { params }) {
     const lib = target.protocol === "https:" ? https : http;
     const upstream = lib.request(target, { method: req.method, headers, timeout: TIMEOUT_MS }, (res) => {
       const out = new Headers();
-      for (const h of ["content-type", "content-disposition", "content-length"]) if (res.headers[h]) out.set(h, res.headers[h]);
+      for (const h of ["content-type", "content-disposition", "content-length", "cache-control"]) if (res.headers[h]) out.set(h, res.headers[h]);
       resolve(new Response(Readable.toWeb(res), { status: res.statusCode || 502, headers: out }));
     });
     upstream.on("timeout", () => upstream.destroy(new Error("Engine timed out")));

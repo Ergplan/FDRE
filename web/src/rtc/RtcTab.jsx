@@ -4,7 +4,7 @@ import * as E from "./engine";
 import SaveDialog from "../scenarios/SaveDialog";
 import OptimizerTheatre from "./Theatre";
 import FinanceView from "./FinanceView";
-import { Answer, Alternatives, DispatchStory, EnergyFlow, SolverLog } from "./results";
+import { Answer, Alternatives, AgeingImpact, DispatchStory, EnergyFlow, SolverLog, TariffMap } from "./results";
 import { BessChapter, CHAPTERS, DfrChapter, EnergyChapter, ResourceChapter, TypeChapter, chapterSummary } from "./chapters";
 import { Section, SelectBox, nf, pf } from "./ui";
 
@@ -28,8 +28,10 @@ function defaultState() {
     costs: { ...E.DEFAULT_COSTS },
     fin: { ...E.DEFAULT_FINANCE },
     vars: structuredClone(E.DEFAULT_VARS),
-    objective: "lcoe",
+    objective: "tariff",
+    solver: "highs", // 'highs' = HiGHS LP on the engine + exact 25-year search; 'search' = search only
     gridPoints: 11,
+    stateVersion: 2,
     tariffLocked: false,
     locks: { loadFactor: false },
   };
@@ -41,6 +43,9 @@ function mergeState(saved) {
   for (const k of ["inputs", "bess", "costs", "fin", "locks"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
   merged.vars = Object.fromEntries(Object.keys(base.vars).map((k) => [k, { ...base.vars[k], ...(saved.vars?.[k] || {}) }]));
   if (!CHAPTERS.some((c) => c.id === merged.chapter)) merged.chapter = "energy";
+  // v2: the 25-year tariff became the default objective (it was levelised cost)
+  if ((saved.stateVersion || 1) < 2 && merged.objective === "lcoe") merged.objective = "tariff";
+  merged.stateVersion = 2;
   return merged;
 }
 
@@ -187,7 +192,11 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     workerRef.current = worker;
     const id = Date.now();
     const before = sizes;
-    feedRef.current = { axes: null, cells: [], done: false, result: null, error: null, progress: null };
+    const tariffMode = state.objective === "tariff";
+    feedRef.current = {
+      axes: null, cells: [], tcells: [], tariffMode, done: false, result: null, error: null, progress: null,
+      highs: { active: false, lines: [], progress: null, done: false, result: null, error: null, startedAt: null },
+    };
     const feed = feedRef;
     setMessage("");
     setTheatre(true);
@@ -196,7 +205,12 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       if (msg.id !== id || !feed.current) return;
       if (msg.type === "axes") feed.current.axes = msg.axes;
       else if (msg.type === "cells") feed.current.cells.push(...msg.cells);
+      else if (msg.type === "tcells") feed.current.tcells.push(...msg.cells);
       else if (msg.type === "progress") feed.current.progress = msg.progress;
+      else if (msg.type === "highs-start") Object.assign(feed.current.highs, { active: true, startedAt: performance.now() });
+      else if (msg.type === "highs-log") feed.current.highs.lines.push(...msg.lines);
+      else if (msg.type === "highs-progress") feed.current.highs.progress = msg.progress;
+      else if (msg.type === "highs-done") Object.assign(feed.current.highs, { done: true, result: msg.result, error: msg.error, endedAt: performance.now() });
       else if (msg.type === "error") {
         feed.current.error = msg.error;
         worker.terminate();
@@ -210,6 +224,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       id,
       ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct, sellSurplus: ctx.sellSurplus, extraExportMw: ctx.extraExportMw },
       modelInput: { inputs: state.inputs, costs: state.costs, fin: state.fin, bess: state.bess, vars: state.vars, objective: state.objective, gridPoints: state.gridPoints },
+      useHighs: tariffMode && state.solver !== "search",
     });
   }
 
@@ -367,18 +382,23 @@ export default function RtcTab({ initialScenario = null, user = null }) {
           <span className="rtc-index">07</span>
           <h2>Optimize</h2>
           <p>
-            Search every solar and wind mix, size the cheapest battery that holds the DFR at {pf(inputs.dfrTarget, 0)}, then refine.
+            {state.objective === "tariff"
+              ? <>Map the 25-year tariff over every solar and wind mix (cheapest battery at each), {state.solver !== "search" ? "solve the sizing LP with HiGHS for the global optimum, " : ""}then price the best designs with the full financial model. The DFR of {pf(inputs.dfrTarget, 0)} must hold in every year.</>
+              : <>Search every solar and wind mix, size the cheapest battery that holds the DFR at {pf(inputs.dfrTarget, 0)}, then refine.</>}
             {" "}{sizeKeys.length - freeVars ? `${sizeKeys.length - freeVars} size${sizeKeys.length - freeVars > 1 ? "s are" : " is"} fixed by a lock.` : "All sizes are free."}
             {state.bess.durationH ? ` Battery: ${state.bess.durationH}-hour discharge.` : ""}
           </p>
         </div>
         <div className="optimize-bar-actions">
           <button type="button" className="rtc-reset" onClick={() => setShowOptSettings(!showOptSettings)}><SlidersHorizontal size={13} /> Settings</button>
-          <button type="button" className="primary optimize-go" onClick={runOptimizer} disabled={theatre}><Zap size={16} /> Optimize least cost</button>
+          <button type="button" className="primary optimize-go" onClick={runOptimizer} disabled={theatre}><Zap size={16} /> {state.objective === "tariff" ? "Optimize least tariff" : "Optimize least cost"}</button>
         </div>
         {showOptSettings && (
           <div className="rtc-grid rtc-grid-3 optimize-settings">
-            <SelectBox label="Objective" value={state.objective} onChange={(v) => set("objective", v)} {...lockProps("objective")} options={[["lcoe", "Least levelised cost (₹/kWh)"], ["capex", "Least capital cost"]]} />
+            <SelectBox label="Objective" value={state.objective} onChange={(v) => set("objective", v)} {...lockProps("objective")} options={[["tariff", "Least 25-year tariff (target equity IRR)"], ["lcoe", "Least levelised cost (₹/kWh)"], ["capex", "Least capital cost"]]} />
+            {state.objective === "tariff" && (
+              <SelectBox label="Solver" value={state.solver || "highs"} onChange={(v) => set("solver", v)} {...lockProps("solver")} options={[["highs", "HiGHS LP + exact 25-year search"], ["search", "Search only (no engine call)"]]} />
+            )}
             <SelectBox label="Search depth" value={String(state.gridPoints)} onChange={(v) => set("gridPoints", Number(v))} {...lockProps("gridPoints")} options={[["7", "Fast · 7 × 7 surface"], ["11", "Standard · 11 × 11 surface"], ["15", "Deep · 15 × 15 surface"]]} />
             <p className="rtc-note">Sizes and their search ranges are set in the Solar, Wind and Battery chapters. A locked size is kept as it is.</p>
           </div>
@@ -386,7 +406,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       </section>
 
       <div ref={answerRef} className="answer-anchor" />
-      <Answer sizes={sizes} sim={sim} finance={finance} capex={capex} inputs={inputs} revealKey={revealKey} optimized={Boolean(opt)} targetIrr={state.fin.targetEquityIrr} />
+      <Answer sizes={sizes} sim={sim} finance={finance} capex={capex} inputs={inputs} revealKey={revealKey} optimized={Boolean(opt)} targetIrr={state.fin.targetEquityIrr} highs={opt?.highs} />
       {maxDfr < inputs.dfrTarget && (
         <div className="alert">
           Demand above the {nf(inputs.plantCapacityMw, 0)} MW plant capacity ({nf(sim.demandAboveCapMWh / 1000, 1)} MU) cannot be served, so the highest achievable DFR is {pf(maxDfr, 1)}. Raise the plant capacity or flatten the consumption profile.
@@ -398,10 +418,12 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       </Section>
       <div className="story-divider"><span>Financial model · {state.fin.years} years</span></div>
       <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} />
+      <AgeingImpact ctx={ctx} sizes={sizes} costs={d.costs} fin={finInput} bess={d.bess} dfrTarget={inputs.dfrTarget} finance={finance} />
+      <TariffMap opt={opt} sizes={sizes} applySizes={applySizes} />
       <Alternatives opt={opt} sizes={sizes} target={inputs.dfrTarget} applySizes={applySizes} />
       <SolverLog opt={opt} />
 
-      {theatre && feedRef.current && <OptimizerTheatre feed={feedRef} onFinish={finishTheatre} onCancel={cancelTheatre} />}
+      {theatre && feedRef.current && <OptimizerTheatre feed={feedRef} onFinish={finishTheatre} onCancel={cancelTheatre} onSkipHighs={() => workerRef.current?.postMessage({ type: "skip-highs" })} />}
       {showSave && (
         <SaveDialog
           module="rtc"

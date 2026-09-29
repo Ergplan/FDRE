@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { query } from "./db";
 import { HttpError } from "./auth";
+import { MIN_WIND_PLF } from "../src/rtc/engine";
 
 const LIST_COLS = `p.id, p.seed_key, p.kind, p.name, p.site, p.region, p.source, p.capacity_mw, p.period_from, p.period_to,
   p.coverage, p.cuf, p.monthly_cuf, p.quality, p.issues, p.created_by, p.created_at, u.name AS created_by_name, u.email AS created_by_email`;
@@ -39,6 +40,7 @@ export async function createProfile(user, body) {
   const r4 = (v) => Math.round(v * 1e4) / 1e4;
   const vals = values.map(r4);
   const cuf = vals.reduce((a, b) => a + b, 0) / vals.length;
+  if (kind === "wind" && cuf < MIN_WIND_PLF) throw new HttpError(400, `Wind profiles below ${MIN_WIND_PLF * 100}% PLF are not kept in the library (this one is ${(cuf * 100).toFixed(1)}%).`);
   const monthly = [];
   let t = 0;
   for (const days of [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]) {
@@ -63,11 +65,16 @@ export async function deleteProfile(user, id) {
   await query("DELETE FROM resource_profiles WHERE id = $1", [id]);
 }
 
-/** Load built-in profiles from db/seed/profiles/*.json (insert new seed keys, refresh existing ones). */
+/**
+ * Load built-in profiles from db/seed/profiles/*.json: insert new seed keys, refresh existing
+ * ones, and remove built-in rows whose seed key is no longer shipped (e.g. wind plants below
+ * the 25% PLF minimum).
+ */
 export async function seedProfiles() {
   const dir = [path.join(process.cwd(), "db", "seed", "profiles"), path.join(process.cwd(), "web", "db", "seed", "profiles")].find((d) => fs.existsSync(d));
   if (!dir) return 0;
   let n = 0;
+  const keys = [];
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".json"))) {
     const { profiles = [] } = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
     for (const p of profiles) {
@@ -81,8 +88,10 @@ export async function seedProfiles() {
           p.coverage ?? null, p.cuf ?? null, JSON.stringify(p.monthlyCuf || null), p.quality || "validated", JSON.stringify(p.issues || []),
           p.values ? JSON.stringify(p.values) : null],
       );
+      keys.push(p.seedKey);
       n += 1;
     }
   }
+  if (keys.length) await query("DELETE FROM resource_profiles WHERE seed_key IS NOT NULL AND NOT (seed_key = ANY($1::text[]))", [keys]);
   return n;
 }

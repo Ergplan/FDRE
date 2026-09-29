@@ -8,6 +8,8 @@
 export const HOURS = 8760;
 /** Capacity factors may exceed 1 when a plant's output exceeds its stated AC capacity (PVsyst). */
 export const MAX_CF = 1.3;
+/** Wind plants below this plant load factor are kept out of the profile library. */
+export const MIN_WIND_PLF = 0.25;
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const RS_CR_PER_MWH_AT_1RS = 1e-4;
@@ -803,7 +805,7 @@ export function evaluateDesign(ctx, sizes, model) {
 }
 
 function objectiveValue(ev, objective, dfrTarget) {
-  const base = objective === "capex" ? ev.capexCr / 1000 : ev.lcoe;
+  const base = objective === "capex" ? ev.capexCr / 1000 : ev.lcoe; // "tariff" screens on LCOE
   if (ev.feasible) return base;
   return base + 10 + (dfrTarget - ev.dfrCheck) * 200;
 }
@@ -839,7 +841,7 @@ function linspace(spec, n) {
  */
 const fmtSizes = (z) => `solar ${Math.round(z.solarMw)} MW, wind ${Math.round(z.windMw)} MW, BESS ${Math.round(z.bessMw)} MW / ${Math.round(z.bessMwh)} MWh`;
 
-export function optimize(ctx, model, onProgress) {
+export function* optimizeSteps(ctx, model, onProgress) {
   const started = Date.now();
   const clock = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
   const t0 = clock();
@@ -883,6 +885,42 @@ export function optimize(ctx, model, onProgress) {
     return ev;
   };
 
+  // full 25-year financial model of one design: yearly dispatch with degradation and
+  // augmentation, debt, tax, working capital, and the tariff that gives the target equity IRR.
+  // Feasible = DFR met in every PPA year (exact, not an envelope).
+  const tariffMode = model.objective === "tariff";
+  const tcache = new Map();
+  let tariffEvals = 0;
+  let tariffMs = 0;
+  const tariffAt = (input) => {
+    const sizes = fixedDur ? { ...input, bessMwh: input.bessMw * fixedDur } : input;
+    const key = VAR_KEYS.map((k) => sizes[k]).join("|");
+    if (tcache.has(key)) return tcache.get(key);
+    const ts = clock();
+    const fm = runFinancialModel(ctx, sizes, { costs: model.costs, fin: model.fin, bess: model.bess, dfrTarget: model.dfrTarget, tariffLocked: false });
+    tariffMs += clock() - ts;
+    tariffEvals += 1;
+    const dfrOf = (r) => (model.dfrBasis === "monthly" ? r.minMonthlyDfr : r.dfr);
+    const worstYear = fm.rows.reduce((w, r) => (dfrOf(r) < dfrOf(w) ? r : w), fm.rows[0]);
+    const minDfr = dfrOf(worstYear);
+    const feasible = minDfr >= model.dfrTarget - 1e-6;
+    const rec = {
+      sizes: { ...sizes },
+      tariff: fm.tariff,
+      lcoe: fm.lcoe,
+      capexCr: fm.capex.total,
+      minDfr,
+      worstYear: worstYear.year,
+      augCapexCr: fm.totals.augCapex,
+      feasible,
+      score: (feasible ? fm.tariff : fm.tariff + 10 + (model.dfrTarget - minDfr) * 200) + sizes.bessMw * 1e-7,
+      deliveredMwh: fm.rows.map((r) => r.deliveredMu * 1000),
+      exportMwh: fm.rows.map((r) => r.excessMu * 1000),
+    };
+    tcache.set(key, rec);
+    return rec;
+  };
+
   const gridN = model.gridPoints || 11;
   const solarGrid = linspace(vars.solarMw, gridN);
   const windGrid = linspace(vars.windMw, gridN);
@@ -890,7 +928,7 @@ export function optimize(ctx, model, onProgress) {
   const total = solarGrid.length * windGrid.length * bessGrid.length;
   let done = 0;
   const simsPerEval = model.designCheck === "lifetime" ? 2 : 1;
-  L("setup", `Objective: ${model.objective === "capex" ? "least capital cost" : "least levelised cost of delivered energy"}; DFR ≥ ${(model.dfrTarget * 100).toFixed(1)}% (${model.dfrBasis === "monthly" ? "every month" : "annual"}); check: ${model.designCheck === "lifetime" ? "year 1 and the most degraded year" : "year 1 only"}`);
+  L("setup", `Objective: ${model.objective === "capex" ? "least capital cost" : model.objective === "tariff" ? "least 25-year tariff (screened by levelised cost, then full 25-year financial model on a shortlist)" : "least levelised cost of delivered energy"}; DFR ≥ ${(model.dfrTarget * 100).toFixed(1)}% (${model.dfrBasis === "monthly" ? "every month" : "annual"}); check: ${model.designCheck === "lifetime" ? "year 1 and the most degraded year" : "year 1 only"}`);
   for (const k of VAR_KEYS) {
     const v = vars[k];
     if (k === "bessMwh" && fixedDur) L("setup", `bessMwh: follows battery power × ${fixedDur} h (fixed discharge duration)`);
@@ -900,6 +938,7 @@ export function optimize(ctx, model, onProgress) {
   L("setup", `Grid: ${solarGrid.length} solar × ${windGrid.length} wind × ${bessGrid.length} battery-power points${fixedDur ? "" : ", battery MWh by bisection to the smallest feasible size"}; each design = ${simsPerEval} full 8,760-hour dispatch${simsPerEval > 1 ? "es" : ""}`);
   let gridBest = null;
   const seeds = [];
+  const cellBests = [];
   if (onProgress) onProgress({ stage: "axes", solarGrid, windGrid, total });
   solarGrid.forEach((solarMw, si) => {
     windGrid.forEach((windMw, wi) => {
@@ -939,6 +978,7 @@ export function optimize(ctx, model, onProgress) {
       }
       // one point of the cost surface: best storage for this solar x wind pair
       const okCell = Boolean(cellBest.feasible && !cellBest.durationViolation);
+      cellBests.push({ si, wi, ev: cellBest, ok: okCell });
       const isNewBest = okCell && (!gridBest || cellBest.score < gridBest.score);
       if (isNewBest) gridBest = cellBest;
       L("grid", `${fmtSizes(cellBest.sizes)} → ${okCell ? `LCOE ₹${cellBest.lcoe.toFixed(3)}/kWh` : "misses DFR"} · DFR ${(cellBest.dfrCheck * 100).toFixed(2)}% · capex ₹${Math.round(cellBest.capexCr)} cr${isNewBest ? "  ← best so far" : ""}`, { sizes: cellBest.sizes, lcoe: cellBest.lcoe, dfr: cellBest.dfrCheck, feasible: okCell, evals });
@@ -963,6 +1003,29 @@ export function optimize(ctx, model, onProgress) {
     if (!starts.some((x) => VAR_KEYS.every((k) => Math.abs(x.sizes[k] - s.sizes[k]) < 1e-9))) starts.push(s);
   }
   L("grid", `Grid done: ${evals} designs evaluated, ${seeds.filter((x) => x.feasible && !x.durationViolation).length} of ${seeds.length} grid designs meet the DFR`, { evals });
+  // hand the screening optimum to the caller: it starts the HiGHS LP now, in parallel
+  let highsSeed = null;
+  if (tariffMode && gridBest) {
+    const r = tariffAt(gridBest.sizes);
+    highsSeed = { sizes: r.sizes, tariff: r.tariff, deliveredMwh: r.deliveredMwh, exportMwh: r.exportMwh };
+  }
+  yield { stage: "screened", seed: highsSeed };
+
+  // tariff map: the 25-year tariff of the cheapest design at every solar × wind point
+  let tariffMap = null;
+  if (tariffMode) {
+    L("tariff", `Tariff map: full 25-year financial model for the best design at each of ${cellBests.length} solar × wind points (DFR required in every year)`);
+    tariffMap = { solarGrid, windGrid, cells: [] };
+    cellBests.forEach(({ si, wi, ev, ok }, i) => {
+      const r = ok || ev.dfrCheck >= model.dfrTarget - 0.02 ? tariffAt(ev.sizes) : null;
+      const cell = { si, wi, sizes: ev.sizes, tariff: r ? r.tariff : null, minDfr: r ? r.minDfr : ev.dfrCheck, worstYear: r ? r.worstYear : null, feasible: Boolean(r?.feasible) };
+      tariffMap.cells.push(cell);
+      if (r) L("tariff", `${fmtSizes(ev.sizes)} → ₹${r.tariff.toFixed(4)}/kWh · lowest yearly DFR ${(r.minDfr * 100).toFixed(2)}% (year ${r.worstYear})${r.feasible ? "" : " ✗ misses DFR"}`, { sizes: ev.sizes, tariff: r.tariff, dfr: r.minDfr, feasible: r.feasible });
+      if (onProgress) onProgress({ stage: "tcell", ...cell, z: cell.tariff });
+      if (onProgress && i % 8 === 0) onProgress({ stage: "tariffmap", done: i + 1, total: cellBests.length, evals });
+    });
+  }
+
   starts.forEach((st, i) => L("refine", `Start ${i + 1}: ${fmtSizes(st.sizes)} (LCOE ₹${st.lcoe.toFixed(3)}, DFR ${(st.dfrCheck * 100).toFixed(2)}%)`));
   const results = [];
   starts.forEach((start, si) => {
@@ -1050,22 +1113,169 @@ export function optimize(ctx, model, onProgress) {
       : `Neighbourhood check ${round} (${combos.length} designs, ${span}; ${evals - before} new): no cheaper feasible design; the answer is a local optimum ✓`, { evals });
     if (!improvedBy) break;
   }
+  // ---- HiGHS: wait for the LP optimum (the caller resumes with it, or with nothing) ------
+  const ext = yield { stage: "await-seeds" };
+  let highs = null;
+  if (ext?.log?.length) for (const line of ext.log) if (log.length < 4000) log.push(line);
+  if (ext?.highs) highs = ext.highs;
+  if (ext?.error) {
+    highs = { ok: false, error: ext.error };
+    L("highs", `HiGHS unavailable (${ext.error}); continuing with the search results only`);
+  }
+
+  // ---- stage 2: the 25-year tariff is the objective ------------------------------------
+  let tariffRanked = null;
+  if (tariffMode) {
+    const tlog = (tag, r) => L("tariff", `${tag}${fmtSizes(r.sizes)} → 25-yr tariff ₹${r.tariff.toFixed(4)}/kWh · lowest yearly DFR ${(r.minDfr * 100).toFixed(2)}% (year ${r.worstYear})${r.feasible ? "" : " ✗ misses DFR"} · aug capex ₹${Math.round(r.augCapexCr)} cr`, { sizes: r.sizes, tariff: r.tariff, dfr: r.minDfr, feasible: r.feasible });
+    // shortlist: refine results + best screening designs, including ones just below the target
+    // (the screening envelope is conservative, the yearly check may accept them)
+    const mixKey = (z) => VAR_KEYS.map((k) => z[k]).join("|");
+    const highsDesigns = [];
+    if (highs?.ok && highs.sizes) {
+      const free = VAR_KEYS.filter((k) => !vars[k].locked);
+      const combos = [{}];
+      for (const k of free) {
+        const st = vars[k].step || 1;
+        const lo = snap(Math.floor(highs.sizes[k] / st) * st, vars[k]);
+        const hi = snap(Math.ceil(highs.sizes[k] / st) * st, vars[k]);
+        const next = [];
+        for (const c of combos) for (const v of new Set([lo, hi])) next.push({ ...c, [k]: v });
+        combos.splice(0, combos.length, ...next);
+      }
+      for (const c of combos) {
+        const sizes = { ...Object.fromEntries(VAR_KEYS.map((k) => [k, vars[k].locked ? vars[k].value : highs.sizes[k]])), ...c };
+        highsDesigns.push({ sizes });
+      }
+      const rs = (v) => (Number.isFinite(v) ? `₹${v.toFixed(4)}` : "n/a");
+      L("highs", `HiGHS LP optimum ${fmtSizes(highs.sizes)} (linearised tariff ${rs(highs.tariff)}/kWh, proven lower bound ${rs(highs.lowerBound)}); pricing its ${highsDesigns.length} rounded neighbours with the exact 25-year model`);
+    }
+    const pool = [...highsDesigns, ...results, ...[...cache.values()].filter((e) => !e.durationViolation && e.dfrCheck >= model.dfrTarget - 0.02).sort((a, b) => a.score - b.score)];
+    const shortlist = [];
+    for (const e of pool) {
+      if (shortlist.length >= 40) break;
+      if (!shortlist.some((x) => mixKey(x.sizes) === mixKey(e.sizes))) shortlist.push(e);
+    }
+    L("tariff", `Solving the 25-year tariff (target equity IRR ${(model.fin.targetEquityIrr * 100).toFixed(1)}%) for ${shortlist.length} shortlisted designs; DFR must hold in every year`);
+    let tbest = null;
+    shortlist.forEach((e, i) => {
+      const r = tariffAt(e.sizes);
+      tlog(`#${i + 1}: `, r);
+      if (!tbest || r.score < tbest.score) tbest = r;
+      if (onProgress && i % 4 === 0) onProgress({ stage: "tariff", done: i + 1, total: shortlist.length, evals });
+    });
+    L("tariff", `Best of the shortlist: ${fmtSizes(tbest.sizes)} at ₹${tbest.tariff.toFixed(4)}/kWh`);
+    // pattern search on the tariff itself
+    const free = VAR_KEYS.filter((k) => !vars[k].locked);
+    const steps = Object.fromEntries(free.map((k) => [k, vars[k].step * 4]));
+    for (let guard = 0; guard < 200; guard += 1) {
+      let moved = false;
+      for (const k of free) {
+        for (const dir of [1, -1]) {
+          const next = { ...tbest.sizes, [k]: snap(tbest.sizes[k] + dir * steps[k], vars[k]) };
+          if (next[k] === tbest.sizes[k]) continue;
+          const r = tariffAt(next);
+          if (r.score < tbest.score - 1e-9) {
+            L("tariff", `Refine: ${k} ${tbest.sizes[k]} → ${next[k]} · tariff ₹${tbest.tariff.toFixed(4)} → ₹${r.tariff.toFixed(4)} · lowest yearly DFR ${(r.minDfr * 100).toFixed(2)}%`);
+            tbest = r;
+            moved = true;
+          }
+        }
+      }
+      if (onProgress && guard % 3 === 0) onProgress({ stage: "tariff", done: tariffEvals, total: tariffEvals + 20, evals });
+      if (!moved) {
+        let any = false;
+        for (const k of free) if (steps[k] > vars[k].step) { steps[k] = Math.max(vars[k].step, steps[k] / 2); any = true; }
+        if (!any) break;
+      }
+    }
+    // neighbourhood check on the tariff
+    for (let round = 1; round <= 3; round += 1) {
+      const combos = [];
+      const walk = (i, cur) => {
+        if (i === free.length) { combos.push(cur); return; }
+        for (let d = -2; d <= 2; d += 1) walk(i + 1, { ...cur, [free[i]]: snap(tbest.sizes[free[i]] + d * vars[free[i]].step * 2, vars[free[i]]) });
+      };
+      walk(0, { ...tbest.sizes });
+      const before = tariffEvals;
+      let better = null;
+      for (const c of combos) {
+        const r = tariffAt(c);
+        if (r.score < tbest.score - 1e-9) { better = r; tbest = r; }
+      }
+      L("verify", better
+        ? `Tariff neighbourhood check ${round} (${combos.length} designs, ±${free.map((k) => `${k} ${vars[k].step * 4}`).join(", ")}; ${tariffEvals - before} new): cheaper design adopted: ${fmtSizes(tbest.sizes)} at ₹${tbest.tariff.toFixed(4)}`
+        : `Tariff neighbourhood check ${round} (${combos.length} designs; ${tariffEvals - before} new): no lower tariff nearby; the answer is a local optimum of the 25-year tariff ✓`);
+      if (!better) break;
+    }
+    tariffRanked = [...tcache.values()].filter((r) => r.feasible).sort((a, b) => a.tariff - b.tariff);
+    if (highs?.ok) {
+      const onGrid = highsDesigns.map((d) => tariffAt(d.sizes)).sort((a, b) => a.score - b.score)[0];
+      if (onGrid && Number.isFinite(highs.tariff)) L("highs", `Exact model at the rounded HiGHS design ${fmtSizes(onGrid.sizes)}: ₹${onGrid.tariff.toFixed(4)}/kWh (LP estimate ₹${highs.tariff.toFixed(4)}; difference ₹${(onGrid.tariff - highs.tariff).toFixed(4)} from rounding, tax-loss timing and interpolated years)`);
+    }
+    const finalEv = evalAt(tbest.sizes);
+    best = { ...finalEv, tariff: tbest.tariff, minLifetimeDfr: tbest.minDfr, worstYear: tbest.worstYear, feasible: tbest.feasible, durationViolation: finalEv.durationViolation, score: tbest.score };
+    L("result", `25-year tariff optimum: ${fmtSizes(best.sizes)} · ₹${tbest.tariff.toFixed(4)}/kWh for ${(model.fin.targetEquityIrr * 100).toFixed(1)}% equity IRR · lowest yearly DFR ${(tbest.minDfr * 100).toFixed(2)}% in year ${tbest.worstYear} · ${tariffEvals} full 25-year models in ${(tariffMs / 1000).toFixed(2)} s (${(tariffMs / Math.max(1, tariffEvals)).toFixed(1)} ms each)`, { sizes: best.sizes, tariff: tbest.tariff });
+  }
+
   // independent re-check of the winner: fresh dispatch of year 1 (and the degraded envelope)
   const y1 = simulate(ctx, best.sizes);
   const worst = model.designCheck === "lifetime" ? simulate(ctx, best.sizes, model.worstFactors) : null;
   const ms = Date.now() - started;
-  L("result", `Best: ${fmtSizes(best.sizes)} · LCOE ₹${best.lcoe.toFixed(4)}/kWh · capex ₹${Math.round(best.capexCr)} cr`, { sizes: best.sizes, lcoe: best.lcoe, dfr: best.dfrCheck });
+  L("result", `Best: ${fmtSizes(best.sizes)} · ${best.tariff ? `25-yr tariff ₹${best.tariff.toFixed(4)}/kWh · ` : ""}LCOE ₹${best.lcoe.toFixed(4)}/kWh · capex ₹${Math.round(best.capexCr)} cr`, { sizes: best.sizes, lcoe: best.lcoe, dfr: best.dfrCheck });
   L("result", `Re-check: year-1 DFR ${(y1.dfr * 100).toFixed(3)}%${worst ? `, degraded-year DFR ${(worst.dfr * 100).toFixed(3)}%` : ""}, lowest month ${(y1.minMonthlyDfr * 100).toFixed(2)}% → ${best.feasible && !best.durationViolation ? "meets" : "does NOT meet"} the ${(model.dfrTarget * 100).toFixed(1)}% target`);
   L("result", `Work: ${evals} unique designs (${cacheHits} repeat look-ups served from cache), ${evals * simsPerEval} full-year dispatches = ${((evals * simsPerEval * HOURS) / 1e6).toFixed(1)} million simulated hours in ${(simMs / 1000).toFixed(2)} s (${((simMs / Math.max(1, evals * simsPerEval))).toFixed(2)} ms per dispatch); total ${(ms / 1000).toFixed(2)} s`);
   return {
-    log,
-    stats: { evals, cacheHits, dispatches: evals * simsPerEval, simulatedHours: evals * simsPerEval * HOURS, simMs: Math.round(simMs), ms, gridPoints: solarGrid.length * windGrid.length, starts: starts.length },
+    log: log.sort((a, b) => a.t - b.t), // HiGHS lines carry their own times
+    stats: { evals, cacheHits, dispatches: evals * simsPerEval + tariffEvals * (model.fin.years || 25), simulatedHours: (evals * simsPerEval + tariffEvals * (model.fin.years || 25)) * HOURS, simMs: Math.round(simMs + tariffMs), ms, gridPoints: solarGrid.length * windGrid.length, starts: starts.length, tariffEvals, tariffMs: Math.round(tariffMs) },
+    tariffRanked: tariffRanked ? tariffRanked.slice(0, 12).map(({ deliveredMwh, exportMwh, ...r }) => r) : null,
+    tariffMap,
+    highs,
     best,
     feasible: Boolean(best?.feasible && !best?.durationViolation),
     alternatives,
     cloud,
     evals,
     ms,
+  };
+}
+
+/**
+ * Run the optimizer to completion. `external` is what the caller would resume the
+ * "await-seeds" step with ({ highs, log } from a HiGHS run, or { error }); null = search only.
+ */
+export function optimize(ctx, model, onProgress, external = null) {
+  const it = optimizeSteps(ctx, model, onProgress);
+  let r = it.next();
+  while (!r.done) r = it.next(r.value.stage === "await-seeds" ? external : undefined);
+  return r.value;
+}
+
+/** Request body for the engine's HiGHS sizing LP (/api/rtc/lp). */
+export function highsPayload(ctx, model, seed) {
+  const round = (arr, d) => Array.from(arr, (v) => Math.round(v * 10 ** d) / 10 ** d);
+  const vars = {};
+  for (const k of VAR_KEYS) {
+    const v = model.vars[k];
+    vars[k] = { locked: Boolean(v.locked), value: v.value, min: Math.min(v.min, v.max), max: Math.max(v.min, v.max), step: v.step };
+  }
+  return {
+    ctx: {
+      demand: round(ctx.demand, 4),
+      solarCf: round(ctx.solarCf, 6),
+      windCf: round(ctx.windCf, 6),
+      plantMw: ctx.plantMw,
+      lossPct: ctx.lossPct || 0,
+      sellSurplus: Boolean(ctx.sellSurplus),
+      extraExportMw: ctx.extraExportMw || 0,
+    },
+    bess: model.bess,
+    costs: model.costs,
+    fin: model.fin,
+    dfrTarget: model.dfrTarget,
+    dfrBasis: model.dfrBasis,
+    vars,
+    seed: seed || null,
+    tariffGuess: seed?.tariff || null,
   };
 }
 
@@ -1293,11 +1503,31 @@ export function runFinancialModel(ctx, sizes, { costs, fin, bess, dfrTarget, tar
   };
 }
 
+/**
+ * How ageing moves the 25-year tariff: the same plant with no ageing, with solar and wind
+ * degradation, and with battery fade + augmentation as configured.
+ */
+export function tariffAgeingBreakdown(ctx, sizes, { costs, fin, bess, dfrTarget }) {
+  const run = (f, b) => runFinancialModel(ctx, sizes, { costs, fin: f, bess: b, dfrTarget, tariffLocked: false });
+  const noAgeFin = { ...fin, solarDegradation: 0, windDegradation: 0 };
+  const noAgeBess = { ...bess, annualDegradation: 0 };
+  const ideal = run(noAgeFin, noAgeBess);
+  const gen = run(fin, noAgeBess);
+  const all = run(fin, bess);
+  return {
+    ideal: { tariff: ideal.tariff, minDfr: ideal.minLifetimeDfr, deliveredMu: ideal.totals.deliveredMu },
+    gen: { tariff: gen.tariff, minDfr: gen.minLifetimeDfr, deliveredMu: gen.totals.deliveredMu },
+    all: { tariff: all.tariff, minDfr: all.minLifetimeDfr, deliveredMu: all.totals.deliveredMu, augCapexCr: all.totals.augCapex, penaltyCr: all.totals.penalty },
+    genImpact: gen.tariff - ideal.tariff,
+    bessImpact: all.tariff - gen.tariff,
+  };
+}
+
 export function buildContext({ demand, solarCf, windCf, plantMw, bess, lossPct = 0, sellSurplus = false, extraExportMw = 0 }) {
   return { demand, solarCf, windCf, plantMw, bess, lossPct, sellSurplus, extraExportMw };
 }
 
-export function buildModel({ inputs, costs, fin, bess, vars, objective = "lcoe", gridPoints = 11 }) {
+export function buildModel({ inputs, costs, fin, bess, vars, objective = "tariff", gridPoints = 11 }) {
   const finWithGrowth = { ...fin, demandGrowth: inputs.demandGrowth || 0 };
   return {
     costs,

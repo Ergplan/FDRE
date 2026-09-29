@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import {
   HOURS, DEFAULT_RTC_INPUTS, DEFAULT_BESS, DEFAULT_COSTS, DEFAULT_FINANCE, DEFAULT_VARS,
   synthSolarCf, synthWindCf, buildDemand, buildContext, buildModel, simulate, optimize,
-  runFinancialModel, parseProfileCsv, parseDatedProfile, mean, irr,
+  runFinancialModel, parseProfileCsv, parseDatedProfile, mean, irr, withDuration, tariffAgeingBreakdown,
+  optimizeSteps, highsPayload,
 } from "../web/src/rtc/engine.js";
 
 const inputs = DEFAULT_RTC_INPUTS;
@@ -112,5 +113,40 @@ assert.throws(() => parseProfileCsv("1\n2\n3"));
   assert.equal(p.quality, "validated", "night negatives and above-nameplate output are acceptable for modelled files");
   assert.ok(Math.max(...p.values) > 1.1, "output above nameplate is kept");
   assert.ok(p.name.startsWith("Beed"), "title from metadata");
+}
+// the 25-year tariff objective never does worse than the LCOE-screened answer on the tariff
+{
+  const mTar = buildModel({ inputs, costs: DEFAULT_COSTS, fin: DEFAULT_FINANCE, bess: DEFAULT_BESS, vars: DEFAULT_VARS, objective: "tariff" });
+  const t0 = performance.now();
+  const ot = optimize(ctx, mTar);
+  const tarOf = (z) => runFinancialModel(ctx, z, { costs: DEFAULT_COSTS, fin: DEFAULT_FINANCE, bess: DEFAULT_BESS, dfrTarget: inputs.dfrTarget }).tariff;
+  const lcoeBest = optimize(ctx, buildModel({ inputs, costs: DEFAULT_COSTS, fin: DEFAULT_FINANCE, bess: DEFAULT_BESS, vars: DEFAULT_VARS, objective: "lcoe" })).best;
+  assert.ok(ot.feasible && ot.best.minLifetimeDfr >= inputs.dfrTarget - 1e-6, "tariff optimum meets the DFR in every year");
+  assert.ok(ot.best.tariff <= tarOf(lcoeBest.sizes) + 1e-9, "tariff objective is at least as good as the LCOE answer");
+  console.log(`tariff objective: ${JSON.stringify(ot.best.sizes)} ₹${ot.best.tariff.toFixed(4)} vs LCOE-optimal design ₹${tarOf(lcoeBest.sizes).toFixed(4)} · ${ot.stats.tariffEvals} 25-yr models · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+  const ab = tariffAgeingBreakdown(ctx, ot.best.sizes, { costs: DEFAULT_COSTS, fin: DEFAULT_FINANCE, bess: DEFAULT_BESS, dfrTarget: inputs.dfrTarget });
+  assert.ok(Math.abs(ab.ideal.tariff + ab.genImpact + ab.bessImpact - ab.all.tariff) < 1e-9);
+  console.log(`ageing: no-ageing ₹${ab.ideal.tariff.toFixed(3)} + generation ₹${ab.genImpact.toFixed(3)} + battery ₹${ab.bessImpact.toFixed(3)} = ₹${ab.all.tariff.toFixed(3)}`);
+  assert.equal(ot.tariffMap.cells.length, ot.tariffMap.solarGrid.length * ot.tariffMap.windGrid.length, "tariff map covers the grid");
+
+  // HiGHS hand-off: the generator pauses after screening (seed for the LP) and before the
+  // tariff search (LP result); the exact search then starts from the rounded LP optimum.
+  const it = optimizeSteps(ctx, mTar);
+  const screened = it.next().value;
+  assert.equal(screened.stage, "screened");
+  assert.ok(screened.seed.tariff > 0 && screened.seed.deliveredMwh.length === DEFAULT_FINANCE.years, "seed carries the tariff and yearly energy for the LP");
+  const body = highsPayload(ctx, mTar, screened.seed);
+  assert.equal(body.ctx.demand.length, HOURS);
+  assert.ok(Array.isArray(body.ctx.solarCf) && body.vars.bessMw.max > 0, "payload is plain JSON");
+  assert.equal(it.next().value.stage, "await-seeds");
+  // LP optimum from fdre_rtc_lp.py for this case (default Beed inputs)
+  const lp = { ok: true, sizes: { solarMw: 672.7, windMw: 475.1, bessMw: 395.5, bessMwh: 1582.2 }, tariff: 5.6533, lowerBound: 5.6532, seconds: 42 };
+  const done = it.next({ highs: lp, log: [{ t: 5, stage: "highs", msg: "injected" }] });
+  assert.ok(done.done && done.value.highs === lp && done.value.log.some((l) => l.msg === "injected"));
+  const oh = done.value;
+  assert.ok(oh.feasible && oh.best.tariff <= ot.best.tariff + 1e-9, "seeding with the LP optimum never makes the answer worse");
+  console.log(`with HiGHS seed: ${JSON.stringify(oh.best.sizes)} ₹${oh.best.tariff.toFixed(4)} (search alone ₹${ot.best.tariff.toFixed(4)})`);
+  const failed = optimize(ctx, mTar, null, { error: "engine down" });
+  assert.ok(failed.feasible && failed.highs.ok === false, "an unavailable engine falls back to the search");
 }
 console.log("RTC engine checks passed");
