@@ -522,13 +522,10 @@ function EChart({ option, height = 360 }) {
   return <div className="echart" ref={ref} style={{ height }} />;
 }
 
-function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading, user, onSave, canSave, linked, allowed }) {
+function Sidebar({ tabs, activeTab, setActiveTab, user, onSave, canSave, linked, allowed }) {
   return (
     <aside className="sidebar">
       <a href="/" className="brand sidebar-brand" aria-label="Joulewise FDRE home"><Brand /></a>
-      <button className="primary full" onClick={onOptimize} disabled={Boolean(loading) || !allowed.has("optimization")} title={allowed.has("optimization") ? undefined : "Contact Administrator"}>
-        {loading ? <Loader2 className="spin" size={18} /> : <Zap size={18} />} Run optimized result
-      </button>
 
       <div className="side-section">
         <h3>Workspace</h3>
@@ -3536,8 +3533,6 @@ export default function App({ user = null, initialScenario = null }) {
         tabs={tabs}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOptimize={() => optimize()}
-        loading={loading}
         user={user}
         onSave={() => setShowSave(true)}
         canSave={Boolean(optimizedResult || customResult)}
