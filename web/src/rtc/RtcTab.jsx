@@ -4,7 +4,7 @@ import * as E from "./engine";
 import SaveDialog from "../scenarios/SaveDialog";
 import OptimizerTheatre from "./Theatre";
 import FinanceView from "./FinanceView";
-import { Answer, Alternatives, DispatchStory, EnergyFlow } from "./results";
+import { Answer, Alternatives, DispatchStory, EnergyFlow, SolverLog } from "./results";
 import { BessChapter, CHAPTERS, DfrChapter, EnergyChapter, ResourceChapter, TypeChapter, chapterSummary } from "./chapters";
 import { Section, SelectBox, nf, pf } from "./ui";
 
@@ -399,6 +399,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       <div className="story-divider"><span>Financial model · {state.fin.years} years</span></div>
       <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} />
       <Alternatives opt={opt} sizes={sizes} target={inputs.dfrTarget} applySizes={applySizes} />
+      <SolverLog opt={opt} />
 
       {theatre && feedRef.current && <OptimizerTheatre feed={feedRef} onFinish={finishTheatre} onCancel={cancelTheatre} />}
       {showSave && (

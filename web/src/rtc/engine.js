@@ -837,8 +837,17 @@ function linspace(spec, n) {
  * for the smallest feasible MWh. Stage 2: compass (pattern) search from the best candidates
  * on the snapped lattice. Locked variables are held at their value.
  */
+const fmtSizes = (z) => `solar ${Math.round(z.solarMw)} MW, wind ${Math.round(z.windMw)} MW, BESS ${Math.round(z.bessMw)} MW / ${Math.round(z.bessMwh)} MWh`;
+
 export function optimize(ctx, model, onProgress) {
   const started = Date.now();
+  const clock = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
+  const t0 = clock();
+  // Optimizer log: what was searched, every surface point, every accepted move, final checks.
+  const log = [];
+  const L = (stage, msg, extra = {}) => { if (log.length < 4000) log.push({ t: Math.round(clock() - t0), stage, msg, ...extra }); };
+  let cacheHits = 0;
+  let simMs = 0;
   const vars = {};
   for (const k of VAR_KEYS) {
     const v = model.vars[k];
@@ -855,8 +864,10 @@ export function optimize(ctx, model, onProgress) {
   const evalAt = (input) => {
     const sizes = fixedDur ? { ...input, bessMwh: input.bessMw * fixedDur } : input;
     const key = VAR_KEYS.map((k) => sizes[k]).join("|");
-    if (cache.has(key)) return cache.get(key);
+    if (cache.has(key)) { cacheHits += 1; return cache.get(key); }
+    const ts = clock();
     const ev = evaluateDesign(ctx, sizes, model);
+    simMs += clock() - ts;
     // duration window only applies when a BESS exists
     if (fixedDur) {
       // duration is fixed by definition
@@ -878,6 +889,16 @@ export function optimize(ctx, model, onProgress) {
   const bessGrid = linspace(vars.bessMw, fixedDur ? 9 : 6);
   const total = solarGrid.length * windGrid.length * bessGrid.length;
   let done = 0;
+  const simsPerEval = model.designCheck === "lifetime" ? 2 : 1;
+  L("setup", `Objective: ${model.objective === "capex" ? "least capital cost" : "least levelised cost of delivered energy"}; DFR ≥ ${(model.dfrTarget * 100).toFixed(1)}% (${model.dfrBasis === "monthly" ? "every month" : "annual"}); check: ${model.designCheck === "lifetime" ? "year 1 and the most degraded year" : "year 1 only"}`);
+  for (const k of VAR_KEYS) {
+    const v = vars[k];
+    if (k === "bessMwh" && fixedDur) L("setup", `bessMwh: follows battery power × ${fixedDur} h (fixed discharge duration)`);
+    else L("setup", `${k}: ${v.locked ? `locked at ${v.value}` : `searched ${v.min}–${v.max} step ${v.step}`}`);
+  }
+  L("setup", `Plant capacity ${ctx.plantMw} MW; demand ${(ctx.demand.reduce((a, b) => a + b, 0) / 1000).toFixed(1)} MU; surplus ${ctx.sellSurplus ? `sold (extra export ${ctx.extraExportMw || 0} MW)` : "curtailed"}`);
+  L("setup", `Grid: ${solarGrid.length} solar × ${windGrid.length} wind × ${bessGrid.length} battery-power points${fixedDur ? "" : ", battery MWh by bisection to the smallest feasible size"}; each design = ${simsPerEval} full 8,760-hour dispatch${simsPerEval > 1 ? "es" : ""}`);
+  let gridBest = null;
   const seeds = [];
   if (onProgress) onProgress({ stage: "axes", solarGrid, windGrid, total });
   solarGrid.forEach((solarMw, si) => {
@@ -917,6 +938,10 @@ export function optimize(ctx, model, onProgress) {
         if (onProgress && done % 25 === 0) onProgress({ stage: "grid", done, total, evals });
       }
       // one point of the cost surface: best storage for this solar x wind pair
+      const okCell = Boolean(cellBest.feasible && !cellBest.durationViolation);
+      const isNewBest = okCell && (!gridBest || cellBest.score < gridBest.score);
+      if (isNewBest) gridBest = cellBest;
+      L("grid", `${fmtSizes(cellBest.sizes)} → ${okCell ? `LCOE ₹${cellBest.lcoe.toFixed(3)}/kWh` : "misses DFR"} · DFR ${(cellBest.dfrCheck * 100).toFixed(2)}% · capex ₹${Math.round(cellBest.capexCr)} cr${isNewBest ? "  ← best so far" : ""}`, { sizes: cellBest.sizes, lcoe: cellBest.lcoe, dfr: cellBest.dfrCheck, feasible: okCell, evals });
       if (onProgress) {
         onProgress({
           stage: "cell",
@@ -937,6 +962,8 @@ export function optimize(ctx, model, onProgress) {
     if (starts.length >= (model.starts || 6)) break;
     if (!starts.some((x) => VAR_KEYS.every((k) => Math.abs(x.sizes[k] - s.sizes[k]) < 1e-9))) starts.push(s);
   }
+  L("grid", `Grid done: ${evals} designs evaluated, ${seeds.filter((x) => x.feasible && !x.durationViolation).length} of ${seeds.length} grid designs meet the DFR`, { evals });
+  starts.forEach((st, i) => L("refine", `Start ${i + 1}: ${fmtSizes(st.sizes)} (LCOE ₹${st.lcoe.toFixed(3)}, DFR ${(st.dfrCheck * 100).toFixed(2)}%)`));
   const results = [];
   starts.forEach((start, si) => {
     let cur = start;
@@ -956,6 +983,7 @@ export function optimize(ctx, model, onProgress) {
           if (next[k] === cur.sizes[k]) continue;
           const ev = evalAt(next);
           if (ev.score < cur.score - 1e-9) {
+            L("refine", `Start ${si + 1}: ${k} ${cur.sizes[k]} → ${next[k]} · LCOE ₹${cur.lcoe.toFixed(4)} → ₹${ev.lcoe.toFixed(4)} · DFR ${(ev.dfrCheck * 100).toFixed(2)}%${ev.feasible ? "" : " (infeasible)"}`, { evals });
             cur = ev;
             improved = true;
           }
@@ -966,7 +994,11 @@ export function optimize(ctx, model, onProgress) {
         for (const dir of [1, -1]) {
           const next = { ...cur.sizes, bessMw: snap(cur.sizes.bessMw + dir * steps.bessMw, vars.bessMw), bessMwh: snap(cur.sizes.bessMwh + dir * steps.bessMwh * 4, vars.bessMwh) };
           const ev = evalAt(next);
-          if (ev.score < cur.score - 1e-9) { cur = ev; improved = true; }
+          if (ev.score < cur.score - 1e-9) {
+            L("refine", `Start ${si + 1}: battery MW+MWh together → ${Math.round(next.bessMw)} MW / ${Math.round(next.bessMwh)} MWh · LCOE ₹${ev.lcoe.toFixed(4)}`, { evals });
+            cur = ev;
+            improved = true;
+          }
         }
       }
       if (!improved) {
@@ -978,8 +1010,10 @@ export function optimize(ctx, model, onProgress) {
           }
         }
         if (!any) break;
+        L("refine", `Start ${si + 1}: no improving move; halving steps → ${VAR_KEYS.filter((k) => steps[k]).map((k) => `${k} ${steps[k]}`).join(", ")}`);
       }
     }
+    L("refine", `Start ${si + 1} converged: ${fmtSizes(cur.sizes)} · LCOE ₹${cur.lcoe.toFixed(4)} · DFR ${(cur.dfrCheck * 100).toFixed(2)}%`, { evals });
     results.push(cur);
     if (onProgress) onProgress({ stage: "refine", done: si + 1, total: starts.length, evals });
   });
@@ -992,14 +1026,46 @@ export function optimize(ctx, model, onProgress) {
     const mix = (x) => [x.sizes.solarMw, x.sizes.windMw, x.sizes.bessMwh].join("|");
     if (!alternatives.some((x) => mix(x) === mix(e))) alternatives.push(e);
   }
-  const best = results[0] || seeds[0];
+  let best = results[0] || seeds[0];
+  // neighbourhood check: exhaustively evaluate every design within ±3 double-steps of the
+  // answer (7 × 7 × 7 around solar, wind and battery power), adopt anything cheaper and repeat
+  // around the new answer until a round finds nothing better (max 4 rounds)
+  for (let round = 1; round <= 4; round += 1) {
+    const axes = VAR_KEYS.filter((k) => !vars[k].locked).map((k) => ({ k, stride: vars[k].step * 2 }));
+    const combos = [];
+    const walk = (i, cur) => {
+      if (i === axes.length) { combos.push(cur); return; }
+      for (let d = -3; d <= 3; d += 1) walk(i + 1, { ...cur, [axes[i].k]: snap(best.sizes[axes[i].k] + d * axes[i].stride, vars[axes[i].k]) });
+    };
+    walk(0, { ...best.sizes });
+    const before = evals;
+    let improvedBy = null;
+    for (const c of combos) {
+      const ev = evalAt(c);
+      if (ev.feasible && !ev.durationViolation && ev.score < best.score - 1e-9) { improvedBy = ev; best = ev; }
+    }
+    const span = axes.map((a) => `${a.k} ±${a.stride * 3}`).join(", ");
+    L("verify", improvedBy
+      ? `Neighbourhood check ${round} (${combos.length} designs, ${span}; ${evals - before} new): found a cheaper feasible design and adopted it: ${fmtSizes(best.sizes)} · LCOE ₹${best.lcoe.toFixed(4)}`
+      : `Neighbourhood check ${round} (${combos.length} designs, ${span}; ${evals - before} new): no cheaper feasible design; the answer is a local optimum ✓`, { evals });
+    if (!improvedBy) break;
+  }
+  // independent re-check of the winner: fresh dispatch of year 1 (and the degraded envelope)
+  const y1 = simulate(ctx, best.sizes);
+  const worst = model.designCheck === "lifetime" ? simulate(ctx, best.sizes, model.worstFactors) : null;
+  const ms = Date.now() - started;
+  L("result", `Best: ${fmtSizes(best.sizes)} · LCOE ₹${best.lcoe.toFixed(4)}/kWh · capex ₹${Math.round(best.capexCr)} cr`, { sizes: best.sizes, lcoe: best.lcoe, dfr: best.dfrCheck });
+  L("result", `Re-check: year-1 DFR ${(y1.dfr * 100).toFixed(3)}%${worst ? `, degraded-year DFR ${(worst.dfr * 100).toFixed(3)}%` : ""}, lowest month ${(y1.minMonthlyDfr * 100).toFixed(2)}% → ${best.feasible && !best.durationViolation ? "meets" : "does NOT meet"} the ${(model.dfrTarget * 100).toFixed(1)}% target`);
+  L("result", `Work: ${evals} unique designs (${cacheHits} repeat look-ups served from cache), ${evals * simsPerEval} full-year dispatches = ${((evals * simsPerEval * HOURS) / 1e6).toFixed(1)} million simulated hours in ${(simMs / 1000).toFixed(2)} s (${((simMs / Math.max(1, evals * simsPerEval))).toFixed(2)} ms per dispatch); total ${(ms / 1000).toFixed(2)} s`);
   return {
+    log,
+    stats: { evals, cacheHits, dispatches: evals * simsPerEval, simulatedHours: evals * simsPerEval * HOURS, simMs: Math.round(simMs), ms, gridPoints: solarGrid.length * windGrid.length, starts: starts.length },
     best,
     feasible: Boolean(best?.feasible && !best?.durationViolation),
     alternatives,
     cloud,
     evals,
-    ms: Date.now() - started,
+    ms,
   };
 }
 

@@ -400,3 +400,71 @@ export function Alternatives({ opt, sizes, target, applySizes }) {
     </Section>
   );
 }
+
+// ---------------------------------------------------------------- optimizer log
+
+const LOG_STAGES = [["all", "All"], ["setup", "Setup"], ["grid", "Surface"], ["refine", "Refine"], ["verify", "Verify"], ["result", "Result"]];
+
+export function SolverLog({ opt }) {
+  const [stage, setStage] = useState("all");
+  const [open, setOpen] = useState(false);
+  if (!opt?.log?.length) return null;
+  const st = opt.stats || {};
+  const rows = stage === "all" ? opt.log : opt.log.filter((l) => l.stage === stage);
+  const download = () => {
+    const lines = [
+      `Round-the-clock optimizer log · ${opt.at || new Date().toISOString()}`,
+      `designs ${st.evals} · dispatches ${st.dispatches} · simulated hours ${st.simulatedHours} · ${st.ms} ms`,
+      "",
+      ...opt.log.map((l) => `${String(l.t).padStart(6)} ms  ${l.stage.padEnd(7)} ${l.msg}`),
+    ];
+    const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rtc_optimizer_log_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <Section
+      index="L"
+      title="Optimizer log"
+      note="What the optimizer searched, every point of the cost surface, each improvement, and the final checks"
+      actions={(
+        <>
+          <button type="button" className="secondary" onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"} log</button>
+          <button type="button" className="secondary" onClick={download}>Download .txt</button>
+        </>
+      )}
+    >
+      <div className="rtc-stats flush-top">
+        <Stat label="Designs evaluated" value={nf(st.evals)} detail={`${nf(st.cacheHits)} repeats from cache`} />
+        <Stat label="Full-year dispatches" value={nf(st.dispatches)} detail="8,760 hours each" />
+        <Stat label="Hours simulated" value={`${nf((st.simulatedHours || 0) / 1e6, 1)} M`} detail={`${nf(st.simMs / Math.max(1, st.dispatches), 2)} ms per dispatch`} />
+        <Stat label="Run time" value={`${nf((st.ms || 0) / 1000, 2)} s`} detail={`${nf(st.gridPoints)} surface points · ${st.starts} refine starts`} />
+      </div>
+      {open && (
+        <>
+          <div className="chapter-toolbar" style={{ marginTop: 12 }}>
+            <div className="seg">
+              {LOG_STAGES.map(([id, label]) => (
+                <button key={id} type="button" className={stage === id ? "active" : ""} onClick={() => setStage(id)}>
+                  {label}{id !== "all" ? ` (${opt.log.filter((l) => l.stage === id).length})` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="solver-log" role="log">
+            {rows.map((l, i) => (
+              <div key={i} className={`log-line log-${l.stage} ${/best so far|✓|adopted/.test(l.msg) ? "log-hi" : ""} ${/misses DFR|does NOT/.test(l.msg) ? "log-lo" : ""}`}>
+                <span className="log-t">{String(l.t).padStart(5)} ms</span>
+                <span className="log-s">{l.stage}</span>
+                <span className="log-m">{l.msg}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
