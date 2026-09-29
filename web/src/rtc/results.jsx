@@ -119,6 +119,7 @@ function stackOption(labels, agg, unit, { dfrLine = true, target } = {}) {
     series: [
       ...SUPPLY.map(([k, n, c]) => ({ name: n, type: "bar", stack: "s", data: r(agg[k]), itemStyle: { color: c } })),
       { name: "Shortfall", type: "bar", stack: "s", data: r(agg.unmet), itemStyle: { color: "rgba(255,107,95,0.3)", borderColor: DATA_COLORS.unmet, borderWidth: 1 } },
+      { name: "Surplus → BESS", type: "bar", stack: "s", data: r(agg.charge), itemStyle: { color: "rgba(169,139,255,0.25)", borderColor: DATA_COLORS.bess, borderWidth: 1, borderType: "dashed" } },
       { name: "Sold", type: "bar", stack: "s", data: r(agg.excess), itemStyle: { color: "rgba(111,207,151,0.35)", borderColor: DATA_COLORS.surplus, borderWidth: 1 } },
       { name: "Curtailed", type: "bar", stack: "s", data: r(agg.curtail), itemStyle: { color: "rgba(134,134,127,0.16)", borderColor: "#6a6a64", borderWidth: 1, borderType: "dashed" } },
       ...(dfrLine ? [{
@@ -204,7 +205,7 @@ export function DispatchStory({ sim, inputs, sizes }) {
 
       {scale === "day" && (
         <div className="dispatch-pane">
-          <p className="rtc-note">Hour by hour. Step through the year with ‹ ›, switch to 7 days, lock the y-axis or export a PNG.</p>
+          <p className="rtc-note">Hour by hour. Solid bands serve the customer (solar, wind, battery discharge); hatched bands above demand are surplus: charging the battery, sold, or curtailed. Step through the year with ‹ ›, switch to 7 days, lock the y-axis or export a PNG.</p>
           <FlowChart hourly={h} height={440} key="day" />
           <div className="rtc-card" style={{ marginTop: 14 }}>
             <div className="rtc-card-head"><span>Battery state of charge · drag the slider to move through the year</span></div>

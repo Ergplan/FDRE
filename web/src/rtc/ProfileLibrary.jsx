@@ -181,7 +181,24 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
           <button type="button" className={tab === "upload" ? "active" : ""} onClick={() => setTab("upload")}><Upload size={12} /> Upload file</button>
         </div>
         <div className="chapter-toolbar-end">
-          <span className="rtc-note">In use: <b>{current ? current.name : `Synthetic ${E.BEED_SITE.name}`}</b>{current?.quality && current.quality !== "validated" ? " · use with care" : ""}</span>
+          <label className="profile-pick">
+            <span>{label === "wind" ? "Wind" : "Solar"} profile in use</span>
+            <select
+              value={current?.id ? String(current.id) : current ? "upload" : "synthetic"}
+              disabled={locked || items === null}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "synthetic") applyProfile(null);
+                else { const it = items?.find((x) => String(x.id) === v); if (it) useLibrary(it); }
+              }}
+            >
+              <option value="synthetic">Synthetic {E.BEED_SITE.name} (modelled)</option>
+              {current && !current.id && <option value="upload">{current.name} (uploaded file)</option>}
+              {items?.filter((it) => it.quality !== "rejected").map((it) => (
+                <option key={it.id} value={String(it.id)}>{it.name} · CUF {pf(it.cuf, 1)}{it.quality !== "validated" ? " · use with care" : ""}</option>
+              ))}
+            </select>
+          </label>
           <LockButton locked={locked} onToggle={() => lockProps(lockKey).onLock()} title={`Lock the ${label} profile`} />
         </div>
       </div>
@@ -194,7 +211,7 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
               <tr><th>Profile</th><th>Quality</th><th className="num">CUF</th><th>Monthly CUF</th><th className="num">Measured</th><th>Period</th><th className="num">Plant MW</th><th /></tr>
             </thead>
             <tbody>
-              <tr className={synthetic ? "selected" : ""}>
+              <tr className={`${synthetic ? "selected" : ""} row-pick`} onClick={(e) => { if (!e.target.closest("button") && !synthetic && !locked) applyProfile(null); }}>
                 <td><strong>Synthetic {E.BEED_SITE.name}</strong><small>Modelled profile tuned to the CUF you set above</small></td>
                 <td><span className="q-badge q-model">Model</span></td>
                 <td className="num">{pf(kind === "wind" ? state.inputs.windCuf : state.inputs.solarCuf, 1)}</td>
@@ -206,7 +223,12 @@ export default function ProfileLibrary({ kind, state, set, lockProps, isLocked, 
               </tr>
               {items === null && <tr><td colSpan={8}><Loader2 className="spin" size={14} /> Loading library…</td></tr>}
               {items?.map((it) => (
-                <tr key={it.id} className={`${inUse(it) ? "selected" : ""} ${it.quality === "rejected" ? "row-rejected" : ""}`}>
+                <tr
+                  key={it.id}
+                  className={`${inUse(it) ? "selected" : ""} ${it.quality === "rejected" ? "row-rejected" : "row-pick"}`}
+                  onClick={(e) => { if (!e.target.closest("button") && !inUse(it) && !locked && it.quality !== "rejected" && busy !== it.id) useLibrary(it); }}
+                  title={it.quality === "rejected" ? undefined : "Click to use this profile"}
+                >
                   <td>
                     <strong>{it.name}</strong>
                     <small>{[it.site, it.region].filter(Boolean).join(" · ")}{it.seed_key ? " · built-in" : it.created_by_name || it.created_by_email ? ` · uploaded by ${it.created_by_name || it.created_by_email}` : ""}</small>

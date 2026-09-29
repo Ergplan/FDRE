@@ -254,3 +254,9 @@ td > .tag:first-child { margin-left: 0; }
   .theatre-stage.with-console { grid-template-columns: 1fr; }
   .highs-lines { max-height: 180px; }
 }
+
+/* profile picker */
+.profile-pick { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.profile-pick select { min-width: 260px; max-width: 420px; }
+.profile-table tr.row-pick { cursor: pointer; }
+.profile-table tr.row-pick:hover td { background: var(--surface); }
