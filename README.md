@@ -37,6 +37,37 @@ Installed Python environments, `node_modules`, build output, and unrelated local
 documents are excluded from Git. External resource inputs such as the Bikaner
 wind CSV are not bundled here; see `react_demo/README.md` for the current input path.
 
+## Round the Clock (RTC) tab
+
+The React dashboard opens on **Round the Clock**, a self-contained least-cost sizing
+workspace for firm RE supply (default case: 2,455 MU/yr, 285 MW plant capacity, 85% DFR,
+Beed, Maharashtra; capex solar ₹3.5 cr/MW, wind ₹6.5 cr/MW, BESS ₹1.2 cr/MWh). It runs
+entirely in the browser and does not need the FastAPI backend.
+
+- **Load**: plant capacity, annual energy and load factor are linked through lock toggles.
+  DFR target (annual or every month), a lifetime design check, demand growth and losses.
+  You can draw the 24-hour and monthly consumption shape with the mouse, or upload an
+  8760 (or 15-minute) CSV.
+- **Resource**: synthetic Beed solar and wind profiles calibrated to CUF, or uploaded 8760
+  CSVs (capacity factors, or MW normalised by a reference MW). Drag the monthly CUF bars
+  to rescale months.
+- **Storage & cost**: RTE, SoC window, fade, augmentation, duration window and capex.
+- **Optimizer**: runs in a Web Worker. It does a grid search with bisection on BESS MWh,
+  then a pattern search. Locked sizes are held fixed. The solution-space scatter is
+  clickable, and the least-cost alternatives can be loaded.
+- **Dispatch**: an hourly supply stack drawn with the
+  [Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library
+  (1 day / 7 days, Lock Y axis, PNG export), plus monthly DFR, the energy balance and the
+  battery state of charge.
+- **Financial model**: a 25-year model covering operations, P&L, cash flow, debt, DSCR,
+  WDV tax, loss carry-forward, working capital, augmentation capex, and project and equity
+  IRR. Leave the tariff unlocked to solve it for the target equity IRR, or lock it to
+  compute returns. The model exports to CSV.
+
+Inputs, locks and uploads are kept in the browser's local storage. Engine checks:
+`node tools/check_rtc_engine.mjs`. The synthetic profiles are for screening only, so
+upload bankable 8760 profiles before bidding.
+
 ## Streamlit Application
 
 Streamlit application and Python engine for modelling the uploaded NHPC Tranche-II Firm & Dispatchable Renewable Energy (FDRE) RfS against the uploaded Rajasthan project configuration.

@@ -10,6 +10,7 @@ import {
   Calculator,
   CheckCircle2,
   CircleDollarSign,
+  Clock3,
   CloudSun,
   Database,
   Download,
@@ -31,6 +32,8 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
+import { THEME_NAME } from "./chartTheme";
+import RtcTab from "./rtc/RtcTab";
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -439,7 +442,7 @@ function DataTable({ rows = [], columns, maxRows = 14 }) {
   );
 }
 
-function MiniLine({ data = [], xKey = "year", yKey, floor, format = (v) => v, color = "#0b7a75" }) {
+function MiniLine({ data = [], xKey = "year", yKey, floor, format = (v) => v, color = "#5ab4e8" }) {
   const points = data.filter((d) => Number.isFinite(Number(d[yKey])));
   if (!points.length) return <div className="empty-chart">No trend data</div>;
   const values = points.map((d) => Number(d[yKey]));
@@ -497,7 +500,7 @@ function EChart({ option, height = 360 }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ref.current) return undefined;
-    const chart = echarts.init(ref.current, null, { renderer: "canvas" });
+    const chart = echarts.init(ref.current, THEME_NAME, { renderer: "canvas" });
     chart.setOption(option);
     const resize = () => chart.resize();
     window.addEventListener("resize", resize);
@@ -513,8 +516,8 @@ function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading }) {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <span><Zap size={22} /></span>
-        <div><strong>FDRE Optimizer</strong><small>React client demo</small></div>
+        <span><Zap size={18} /></span>
+        <div><strong>FDRE</strong><small>Hybrid RE optimization</small></div>
       </div>
       <button className="primary full" onClick={onOptimize} disabled={Boolean(loading)}>
         {loading ? <Loader2 className="spin" size={18} /> : <Zap size={18} />} Run optimized result
@@ -523,9 +526,9 @@ function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading }) {
       <div className="side-section">
         <h3>Workspace</h3>
         <nav className="side-nav">
-          {tabs.map(([id, Icon, label]) => (
+          {tabs.map(([id, Icon, label, tag]) => (
             <button key={id} className={activeTab === id ? "active" : ""} onClick={() => setActiveTab(id)}>
-              <Icon size={17} /> {label}
+              <Icon size={15} /> {label}{tag && <span className="nav-tag">{tag}</span>}
             </button>
           ))}
         </nav>
@@ -1343,12 +1346,12 @@ function FinancialStatementsTab({ optimizedResult, financeResult }) {
   const minDscr = Number(finance.min_dscr);
 
   const revenueChart = {
-    color: ["#0b7a75", "#244c72", "#c33f3f", "#f2a12d"],
+    color: ["#5ab4e8", "#a98bff", "#ff6b5f", "#f5b83d"],
     tooltip: { trigger: "axis", valueFormatter: (v) => `Rs ${num(v, 1)} cr` },
     legend: { top: 0 },
     grid: { left: 58, right: 22, top: 48, bottom: 46 },
     xAxis: { type: "category", data: years },
-    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#e6efeb" } } },
+    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#242424" } } },
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: [
       { name: "PPA revenue", type: "bar", stack: "revenue", data: table.map((d) => d.revenue_ppa_cr) },
@@ -1360,12 +1363,12 @@ function FinancialStatementsTab({ optimizedResult, financeResult }) {
   };
 
   const profitChart = {
-    color: ["#0b7a75", "#244c72", "#f2a12d", "#c33f3f", "#6a5acd"],
+    color: ["#5ab4e8", "#a98bff", "#f5b83d", "#ff6b5f", "#7ddc9a"],
     tooltip: { trigger: "axis", valueFormatter: (v) => `Rs ${num(v, 1)} cr` },
     legend: { top: 0 },
     grid: { left: 58, right: 22, top: 48, bottom: 46 },
     xAxis: { type: "category", boundaryGap: false, data: years },
-    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#e6efeb" } } },
+    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#242424" } } },
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: [
       { name: "Net revenue", type: "line", smooth: true, symbol: "none", areaStyle: { opacity: 0.08 }, data: table.map((d) => d.revenue_net_cr) },
@@ -1377,12 +1380,12 @@ function FinancialStatementsTab({ optimizedResult, financeResult }) {
   };
 
   const cashFlowChart = {
-    color: ["#0b7a75", "#244c72", "#f2a12d", "#c33f3f", "#6a5acd"],
+    color: ["#5ab4e8", "#a98bff", "#f5b83d", "#ff6b5f", "#7ddc9a"],
     tooltip: { trigger: "axis", valueFormatter: (v) => `Rs ${num(v, 1)} cr` },
     legend: { top: 0 },
     grid: { left: 58, right: 22, top: 48, bottom: 46 },
     xAxis: { type: "category", boundaryGap: false, data: years },
-    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#e6efeb" } } },
+    yAxis: { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#242424" } } },
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: [
       { name: "CFADS", type: "line", smooth: true, symbol: "none", data: table.map((d) => d.cfads_cr) },
@@ -1394,13 +1397,13 @@ function FinancialStatementsTab({ optimizedResult, financeResult }) {
   };
 
   const debtChart = {
-    color: ["#244c72", "#0b7a75", "#c33f3f", "#f2a12d"],
+    color: ["#a98bff", "#5ab4e8", "#ff6b5f", "#f5b83d"],
     tooltip: { trigger: "axis" },
     legend: { top: 0 },
     grid: { left: 58, right: 58, top: 48, bottom: 46 },
     xAxis: { type: "category", data: years },
     yAxis: [
-      { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#e6efeb" } } },
+      { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#242424" } } },
       { type: "value", name: "DSCR", min: 0, splitLine: { show: false } },
     ],
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
@@ -1496,13 +1499,13 @@ function SensitivityScenariosTab({ optimizedResult, scenarioInputs, setScenarioI
     { Metric: "Project cost", "Optimizer base": baseFinance ? `Rs ${num(baseFinance.total_project_cost_cr, 0)} cr` : "N/A", Scenario: finance ? `Rs ${num(finance.total_project_cost_cr, 0)} cr` : "Run scenario" },
   ];
   const chartOption = {
-    color: ["#0b7a75", "#244c72", "#f2a12d", "#c33f3f"],
+    color: ["#5ab4e8", "#a98bff", "#f5b83d", "#ff6b5f"],
     tooltip: { trigger: "axis" },
     legend: { top: 0 },
     grid: { left: 58, right: 56, top: 48, bottom: 44 },
     xAxis: { type: "category", boundaryGap: false, data: years },
     yAxis: [
-      { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#e6efeb" } } },
+      { type: "value", name: "Rs cr", splitLine: { lineStyle: { color: "#242424" } } },
       { type: "value", name: "DSCR", min: 0, splitLine: { show: false } },
     ],
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
@@ -1581,12 +1584,12 @@ function DispatchTab({ result, embedded = false }) {
       <header><h2>Ultra dispatch cockpit</h2><span>Hourly curve for the first operating week</span></header>
       <EChart
         option={{
-          color: ["#0b7a75", "#244c72", "#f2a12d", "#b35c00", "#6a5acd", "#c33f3f"],
+          color: ["#5ab4e8", "#a98bff", "#f5b83d", "#e07b39", "#7ddc9a", "#ff6b5f"],
           animation: false,
           tooltip: {
             trigger: "axis",
             confine: true,
-            axisPointer: { type: "cross", label: { backgroundColor: "#102823" } },
+            axisPointer: { type: "cross", label: { backgroundColor: "#202020" } },
             valueFormatter: (v) => `${num(v, 1)} MWh`,
           },
           legend: {
@@ -1595,7 +1598,7 @@ function DispatchTab({ result, embedded = false }) {
             type: "scroll",
             itemWidth: 14,
             itemHeight: 8,
-            textStyle: { color: "#34423e", fontWeight: 700 },
+            textStyle: { color: "#c2c2bc", fontWeight: 700 },
           },
           grid: { left: 74, right: 74, top: 72, bottom: 92, containLabel: true },
           xAxis: {
@@ -1603,7 +1606,7 @@ function DispatchTab({ result, embedded = false }) {
             boundaryGap: false,
             data: hours,
             axisLabel: {
-              color: "#5d6d68",
+              color: "#86867f",
               interval: 11,
               rotate: 0,
               formatter: (value) => value.replace(" ", "\n"),
@@ -1612,7 +1615,7 @@ function DispatchTab({ result, embedded = false }) {
             splitLine: {
               show: true,
               interval: (index) => index % 24 === 0,
-              lineStyle: { color: "#e5eee9" },
+              lineStyle: { color: "#333333" },
             },
           },
           yAxis: [
@@ -1621,15 +1624,15 @@ function DispatchTab({ result, embedded = false }) {
               name: "Dispatch MW / MWh",
               nameGap: 42,
               nameLocation: "middle",
-              axisLabel: { formatter: (v) => num(v, 0), color: "#5d6d68" },
-              splitLine: { lineStyle: { color: "#e6efeb" } },
+              axisLabel: { formatter: (v) => num(v, 0), color: "#86867f" },
+              splitLine: { lineStyle: { color: "#242424" } },
             },
             {
               type: "value",
               name: "SOC MWh",
               nameGap: 48,
               nameLocation: "middle",
-              axisLabel: { formatter: (v) => num(v, 0), color: "#5d6d68" },
+              axisLabel: { formatter: (v) => num(v, 0), color: "#86867f" },
               splitLine: { show: false },
             },
           ],
@@ -1922,7 +1925,7 @@ function WindTab({ defaults, settings, optimizedResult }) {
             xAxis: { type: "category", data: pLevels.map((p) => p.level) },
             yAxis: { type: "value", name: "GWh" },
             series: [
-              { name: "Net generation", type: "bar", barWidth: 34, itemStyle: { borderRadius: [8, 8, 0, 0], color: "#0b7a75" }, data: pLevels.map((p) => p.net_gwh) },
+              { name: "Net generation", type: "bar", barWidth: 34, itemStyle: { borderRadius: 0, color: "#5ab4e8" }, data: pLevels.map((p) => p.net_gwh) },
               { name: "PLF", type: "line", smooth: true, yAxisIndex: 0, data: pLevels.map((p) => p.plf * 100) },
             ],
           }}
@@ -2961,7 +2964,7 @@ function OptimizerValidationTab({ optimizedResult, validationResult, validationL
       orient: "horizontal",
       left: "center",
       bottom: 4,
-      inRange: { color: ["#dff3ee", "#0b7a75", "#12332f"] },
+      inRange: { color: ["#161616", "#2f5f7d", "#d4ff3f"] },
     },
     series: [{
       name: "Tariff",
@@ -3114,7 +3117,7 @@ function App() {
   const [validationResult, setValidationResult] = useState(null);
   const [validationLoading, setValidationLoading] = useState("");
   const [pvsystReports, setPvsystReports] = useState([]);
-  const [activeTab, setActiveTab] = useState("tender");
+  const [activeTab, setActiveTab] = useState("rtc");
   const [loading, setLoading] = useState("Booting model");
   const [error, setError] = useState("");
   const [settings, setSettings] = useState({
@@ -3402,6 +3405,7 @@ function App() {
 
   const resultForTabs = optimizedResult || customResult;
   const tabs = [
+    ["rtc", Clock3, "Round the Clock", "New"],
     ["tender", FileText, "Tender Upload"],
     ["project", Settings2, "Project Configuration"],
     ["yield", BarChart3, "Yield Assessment"],
@@ -3427,9 +3431,10 @@ function App() {
         loading={loading}
       />
       <main>
-        {error && <div className="alert">{error}</div>}
-        {loading && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
+        {error && activeTab !== "rtc" && <div className="alert">{error}</div>}
+        {loading && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
+        {activeTab === "rtc" && <RtcTab />}
         {activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
