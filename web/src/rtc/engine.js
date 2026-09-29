@@ -302,6 +302,191 @@ export function parseProfileCsv(text, { kind = "cf", referenceMw = null } = {}) 
   return { values: out, note: `capacity factors, CUF ${(mean(out) * 100).toFixed(1)}%` };
 }
 
+// ---------------------------------------------------------------- dated time series (SCADA / meter exports)
+
+const DAY_OFFSET = (() => {
+  const out = [];
+  let acc = 0;
+  for (const d of MONTH_DAYS) { out.push(acc); acc += d; }
+  return out;
+})();
+
+function splitCsvLine(line) {
+  const out = [];
+  let cur = "";
+  let q = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (q) {
+      if (c === '"' && line[i + 1] === '"') { cur += '"'; i += 1; } else if (c === '"') q = false; else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === "," || c === ";" || c === "\t") { out.push(cur.trim()); cur = ""; } else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+/** "2025-09-29", "29-09-2025", "29/09/2025", "2025-09-29 00:15" → { m (0-11), d (1-31), hh, mm } */
+function parseDateTime(dateStr, timeStr) {
+  const s = String(dateStr || "").trim();
+  let y; let m; let d; let rest = "";
+  let hit = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(.*)$/);
+  if (hit) { [, y, m, d, rest] = hit; } else {
+    hit = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(.*)$/);
+    if (!hit) return null;
+    [, d, m, y, rest] = hit;
+  }
+  const t = String(timeStr || rest || "").match(/(\d{1,2}):(\d{2})/);
+  return { y: Number(y), m: Number(m) - 1, d: Number(d), hh: t ? Number(t[1]) : 0, mm: t ? Number(t[2]) : 0 };
+}
+
+/**
+ * Turn a dated generation export (e.g. SLDC/RLDC SCADA blockwise CSV: Date, Clock Time,
+ * Actual Generation (MW), CUF (%)) into an 8760 hourly capacity-factor profile with a quality
+ * report. Handles 15-minute or hourly data covering part of a year:
+ *   - capacity from `referenceMw`, else implied by the CUF column, else the 99.5th percentile;
+ *   - negative readings (auxiliary consumption) → 0; readings above 110% of capacity → invalid;
+ *   - hours without data are filled with the same month × hour-of-day average (or the
+ *     annual hour-of-day average when a whole month is missing).
+ * Returns null when the file has no recognisable date column (caller falls back to 8760 lists).
+ */
+export function parseDatedProfile(text, { referenceMw = null } = {}) {
+  const lines = String(text).split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 48) return null;
+  const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const find = (re, not) => header.findIndex((h, i) => re.test(h) && i !== not);
+  const dateCol = find(/date|day|timestamp|datetime/);
+  if (dateCol < 0) return null;
+  const timeCol = find(/clock|time|hour/, dateCol);
+  // prefer measured output over schedules / forecasts
+  const PRIORITY = [/actual.*\(mw\)/, /actual.*(mw|kw|power|generation)/, /(generation|output|power).*\((mw|kw)\)/, /^(mw|kw|power|output|generation)$/, /\((mw|kw)\)/];
+  let valCol = -1;
+  for (const re of PRIORITY) {
+    valCol = header.findIndex((h, i) => re.test(h) && !/schedul|forecast|deviation|injection|settlement|mwh|kwh/.test(h) && i !== dateCol && i !== timeCol);
+    if (valCol >= 0) break;
+  }
+  const cufCol = find(/cuf|capacity factor/);
+  const nameCol = find(/entity name|plant|site|name/);
+  if (valCol < 0) {
+    const sample = splitCsvLine(lines[1]);
+    for (let i = sample.length - 1; i >= 0; i -= 1) if (i !== dateCol && i !== timeCol && Number.isFinite(Number(sample[i]))) { valCol = i; break; }
+  }
+  if (valCol < 0) throw new Error("No generation (MW) column found.");
+  const kw = /kw/.test(header[valCol]) && !/mw/.test(header[valCol]);
+
+  const sum = new Float64Array(HOURS);
+  const cnt = new Uint16Array(HOURS);
+  const raw = [];
+  const implied = [];
+  let first = null;
+  let last = null;
+  let name = "";
+  for (let i = 1; i < lines.length; i += 1) {
+    const c = splitCsvLine(lines[i]);
+    const dt = parseDateTime(c[dateCol], timeCol >= 0 ? c[timeCol] : "");
+    if (!dt || dt.m < 0 || dt.m > 11 || (dt.m === 1 && dt.d === 29)) continue;
+    let mw = Number(c[valCol]);
+    if (!Number.isFinite(mw)) continue;
+    if (kw) mw /= 1000;
+    const h = (DAY_OFFSET[dt.m] + dt.d - 1) * 24 + Math.min(23, dt.hh);
+    if (h < 0 || h >= HOURS) continue;
+    raw.push([h, mw]);
+    if (cufCol >= 0) {
+      const cf = Number(c[cufCol]);
+      if (cf > 0.5 && mw > 0) implied.push(mw / (cf / 100));
+    }
+    const key = `${dt.y}-${String(dt.m + 1).padStart(2, "0")}-${String(dt.d).padStart(2, "0")}`;
+    if (!first || key < first) first = key;
+    if (!last || key > last) last = key;
+    if (!name && nameCol >= 0) name = c[nameCol];
+  }
+  if (raw.length < 48) throw new Error("Too few dated rows were recognised.");
+  const sorted = (arr) => [...arr].sort((a, b) => a - b);
+  let capacityMw = Number(referenceMw) > 0 ? Number(referenceMw) : null;
+  let capacitySource = "given";
+  if (!capacityMw && implied.length > 20) { capacityMw = sorted(implied)[implied.length >> 1]; capacitySource = "implied by the CUF column"; }
+  if (!capacityMw) { const v = sorted(raw.map((r) => r[1])); capacityMw = v[Math.floor(v.length * 0.995)] || 1; capacitySource = "99.5th percentile of output (no capacity given)"; }
+
+  let negatives = 0;
+  let invalid = 0;
+  for (const [h, mw0] of raw) {
+    let mw = mw0;
+    if (mw < 0) { negatives += 1; mw = 0; }
+    if (mw > capacityMw * 1.1) { invalid += 1; continue; }
+    sum[h] += mw;
+    cnt[h] += 1;
+  }
+  const cf = new Float64Array(HOURS);
+  const have = new Uint8Array(HOURS);
+  const mhSum = Array.from({ length: 12 }, () => new Float64Array(24));
+  const mhCnt = Array.from({ length: 12 }, () => new Uint32Array(24));
+  const hSum = new Float64Array(24);
+  const hCnt = new Uint32Array(24);
+  let covered = 0;
+  for (let t = 0; t < HOURS; t += 1) {
+    if (!cnt[t]) continue;
+    const v = Math.min(1, sum[t] / cnt[t] / capacityMw);
+    cf[t] = v;
+    have[t] = 1;
+    covered += 1;
+    mhSum[MONTH_OF_HOUR[t]][HOUR_OF_DAY[t]] += v;
+    mhCnt[MONTH_OF_HOUR[t]][HOUR_OF_DAY[t]] += 1;
+    hSum[HOUR_OF_DAY[t]] += v;
+    hCnt[HOUR_OF_DAY[t]] += 1;
+  }
+  const monthsMissing = [];
+  for (let m = 0; m < 12; m += 1) if (!mhCnt[m].some((n) => n > 0)) monthsMissing.push(MONTHS[m]);
+  for (let t = 0; t < HOURS; t += 1) {
+    if (have[t]) continue;
+    const m = MONTH_OF_HOUR[t];
+    const hh = HOUR_OF_DAY[t];
+    cf[t] = mhCnt[m][hh] ? mhSum[m][hh] / mhCnt[m][hh] : hCnt[hh] ? hSum[hh] / hCnt[hh] : 0;
+  }
+  const coverage = covered / HOURS;
+  const invalidShare = invalid / raw.length;
+  const negShare = negatives / raw.length;
+  const cuf = mean(cf);
+  const issues = [];
+  let quality = "validated";
+  if (invalidShare > 0.05) { quality = "rejected"; issues.push(`${(invalidShare * 100).toFixed(1)}% of readings exceed 110% of the ${capacityMw.toFixed(1)} MW capacity (wrong capacity, unit or capacity change)`); }
+  if (negShare > 0.15) { quality = "rejected"; issues.push(`${(negShare * 100).toFixed(0)}% of readings are negative`); }
+  if (quality !== "rejected") {
+    if (coverage < 0.5) { quality = "suspect"; issues.push(`only ${(coverage * 100).toFixed(0)}% of the year has data`); }
+    if (cuf < 0.12) { quality = "suspect"; issues.push(`very low CUF ${(cuf * 100).toFixed(1)}% (infirm / commissioning power or curtailment?)`); }
+    if (monthsMissing.length >= 3) { quality = "suspect"; issues.push(`no data for ${monthsMissing.join(", ")} (filled with the average day)`); }
+  }
+  const monthly = monthlyMeans(cf);
+  return {
+    values: cf,
+    name,
+    capacityMw,
+    capacitySource,
+    from: first,
+    to: last,
+    coverage,
+    filledHours: HOURS - covered,
+    invalidShare,
+    negativeShare: negShare,
+    monthsMissing,
+    cuf,
+    monthlyCuf: monthly,
+    quality,
+    issues,
+    note: `${first} → ${last} · ${(coverage * 100).toFixed(0)}% of hours measured, rest filled · CUF ${(cuf * 100).toFixed(1)}% on ${capacityMw.toFixed(1)} MW`,
+  };
+}
+
+/** Upload entry point: dated exports first, then plain 8760 / 35040 lists. */
+export function parseAnyProfile(text, { kind = "cf", referenceMw = null } = {}) {
+  if (kind !== "demand") {
+    const dated = parseDatedProfile(text, { referenceMw });
+    if (dated) return dated;
+  }
+  const plain = parseProfileCsv(text, { kind, referenceMw });
+  const cuf = mean(plain.values);
+  return { ...plain, cuf, monthlyCuf: monthlyMeans(plain.values), coverage: 1, quality: "validated", issues: [], filledHours: 0 };
+}
+
 export function profileTemplateCsv(kind) {
   const head = kind === "demand" ? "hour,month,hour_of_day,demand_mw" : `hour,month,hour_of_day,${kind}_cf_per_mw`;
   const rows = [head];

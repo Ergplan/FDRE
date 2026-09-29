@@ -69,8 +69,16 @@ It reads as a story. Six chapters sit in a vertical rail, each with its own icon
    seasonality, or a profile drawn with the mouse or uploaded (8760 / 15-minute CSV).
 3. **DFR**: target, measured annually or every month, a lifetime design check, shortfall
    penalty and surplus sales.
-4. **Solar** and 5. **Wind**: size (fixed by lock, or an optimizer range), capex, O&M,
-   degradation, and a synthetic or uploaded profile whose monthly CUF can be redrawn.
+4. **Solar** and 5. **Wind**: size (fixed by lock, or an optimizer range), capex, O&M and
+   degradation. The generation profile comes from a shared **profile library** in Postgres,
+   the synthetic site profile, or an upload, and its monthly CUF can be redrawn. Uploads can
+   be SCADA or meter exports with dates (15-minute or hourly, part of a year) or plain
+   8760 / 35040 lists. They are converted to 8760 hourly capacity factors (capacity from the
+   CUF column or a reference MW, negatives clipped, readings above capacity dropped, gaps
+   filled from the same month and hour), graded Validated / Use with care / Rejected, and can
+   be saved to the library for the team. Built-in wind profiles for 8 Maharashtra (WRPC)
+   plants and a validated Beed-cluster average are in `web/db/seed/profiles/`. Rebuild them
+   with `node tools/build_profile_library.mjs <scada-folder> <out.json>`.
 6. **Battery storage**: a 2-hour or 4-hour discharge duration (energy = power × hours, so
    the optimizer sizes only MW), plus cost, efficiency, SoC window, fade and augmentation.
 

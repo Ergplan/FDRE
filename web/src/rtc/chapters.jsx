@@ -3,6 +3,7 @@ import { BatteryCharging, Clock3, Download, Sun, Target, Wind, X, Zap } from "lu
 import * as E from "./engine";
 import { LiveChart, PaintChart } from "./charts";
 import { DATA_COLORS } from "../chartTheme";
+import ProfileLibrary from "./ProfileLibrary";
 import { Field, HOUR_LABELS, LockButton, NumberInput, SelectBox, Stat, SwitchBox, UploadButton, downloadText, heatmapOption, nf, pf } from "./ui";
 
 // ---------------------------------------------------------------- chapter catalogue
@@ -248,7 +249,7 @@ export function DfrChapter({ state, patch, lockProps, maxDfr, sim }) {
 
 // ---------------------------------------------------------------- 04 / 05 solar and wind
 
-export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, isLocked, cf, base, readUpload }) {
+export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, isLocked, cf, base, user }) {
   const isSolar = kind === "solar";
   const meta = CHAPTERS.find((c) => c.id === kind);
   const upload = state[`${kind}Upload`];
@@ -288,8 +289,9 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
       </div>
       <Group
         title="Generation profile"
-        note={upload ? `Uploaded: ${upload.name} · ${upload.note}` : `Synthetic ${E.BEED_SITE.name} profile`}
+        note={upload ? `${upload.source === "library" ? "Library" : "Uploaded"}: ${upload.name} · ${upload.note}` : `Synthetic ${E.BEED_SITE.name} profile`}
       >
+        <ProfileLibrary kind={kind} state={state} set={set} lockProps={lockProps} isLocked={isLocked} color={meta.color} user={user} />
         <div className="chapter-toolbar">
           <div className={`rtc-grid ${isSolar ? "rtc-grid-4" : "rtc-grid-3"} grow`}>
             {isSolar ? (
@@ -300,16 +302,8 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
             ) : (
               <Field label="Annual CUF" pct value={state.inputs.windCuf} onChange={(v) => patch("inputs", { windCuf: v })} {...lockProps("windCuf")} disabled={Boolean(upload)} step={0.1} min={10} max={55} />
             )}
-            <Field label="Upload reference MW" unit="MW" value={state[`${kind}RefMw`] ?? 0} onChange={(v) => set(`${kind}RefMw`, v)} {...lockProps(`${kind}RefMw`)} step={1} min={0} hint="For MW uploads; 0 = use the maximum" />
+            <Field label="Upload reference MW" unit="MW" value={state[`${kind}RefMw`] ?? 0} onChange={(v) => set(`${kind}RefMw`, v)} {...lockProps(`${kind}RefMw`)} step={1} min={0} hint="Plant capacity for MW uploads; 0 = from the CUF column or the peak" />
             <Stat label="Modelled CUF" value={pf(cuf, 2)} detail={scaled ? "after monthly redraw" : "as loaded"} />
-          </div>
-        </div>
-        <div className="chapter-toolbar">
-          <div className="chapter-toolbar-end">
-            <button type="button" className="secondary" onClick={() => downloadText(`rtc_${kind}_template.csv`, E.profileTemplateCsv(kind))}><Download size={14} /> Template</button>
-            <UploadButton label="Upload 8760" onFile={(f) => readUpload(f, kind, `${kind}Upload`)} disabled={isLocked(lockKey)} />
-            {upload && <button type="button" className="secondary" disabled={isLocked(lockKey)} onClick={() => set(`${kind}Upload`, null)}><X size={14} /> Use synthetic</button>}
-            <LockButton locked={isLocked(lockKey)} onToggle={() => lockProps(lockKey).onLock()} title={`Lock the ${kind} profile`} />
           </div>
         </div>
         <div className="rtc-grid rtc-grid-2">

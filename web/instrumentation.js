@@ -4,6 +4,9 @@ export async function register() {
   for (let attempt = 1; attempt <= 30; attempt += 1) {
     try {
       await migrate();
+      const { seedProfiles } = await import("./lib/profiles");
+      const n = await seedProfiles();
+      if (n) console.log(`[db] loaded ${n} built-in resource profiles`);
       return;
     } catch (err) {
       console.error(`[db] migration attempt ${attempt} failed: ${err.message}`);

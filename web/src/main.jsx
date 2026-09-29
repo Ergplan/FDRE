@@ -3550,7 +3550,7 @@ export default function App({ user = null, initialScenario = null }) {
         {loading && canView && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
         {!canView && <Restricted label={tabs.find((t) => t[0] === activeTab)?.[2] || "This tab"} contacts={user?.adminContacts} />}
-        {canView && activeTab === "rtc" && <RtcTab initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
+        {canView && activeTab === "rtc" && <RtcTab user={user} initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
         {canView && activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {canView && activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {canView && activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}

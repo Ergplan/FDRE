@@ -67,7 +67,7 @@ function compactOpt(opt) {
 
 // ---------------------------------------------------------------- main tab
 
-export default function RtcTab({ initialScenario = null }) {
+export default function RtcTab({ initialScenario = null, user = null }) {
   // a scenario opened from the library replaces the working state once per page load
   const openKey = initialScenario ? `${initialScenario.scenario.id}@${initialScenario.current.version}` : null;
   const fresh = openKey && openKey !== openedScenarioKey;
@@ -279,7 +279,7 @@ export default function RtcTab({ initialScenario = null }) {
   const next = CHAPTERS[chapterIndex + 1];
   const prev = CHAPTERS[chapterIndex - 1];
   const ChapterIcon = chapter.icon;
-  const chapterProps = { state, patch, set, setVar, lockProps, isLocked, sizes, sim };
+  const chapterProps = { state, patch, set, setVar, lockProps, isLocked, sizes, sim, user };
   const sizeKeys = state.bess.durationH ? ["solarMw", "windMw", "bessMw"] : ["solarMw", "windMw", "bessMw", "bessMwh"];
   const freeVars = sizeKeys.filter((k) => !state.vars[k].locked).length;
 

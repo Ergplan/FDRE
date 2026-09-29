@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   HOURS, DEFAULT_RTC_INPUTS, DEFAULT_BESS, DEFAULT_COSTS, DEFAULT_FINANCE, DEFAULT_VARS,
   synthSolarCf, synthWindCf, buildDemand, buildContext, buildModel, simulate, optimize,
-  runFinancialModel, parseProfileCsv, mean, irr,
+  runFinancialModel, parseProfileCsv, parseDatedProfile, mean, irr,
 } from "../web/src/rtc/engine.js";
 
 const inputs = DEFAULT_RTC_INPUTS;
@@ -83,4 +83,20 @@ const mw = Array.from({ length: 35040 }, () => "50").join("\n");
 const parsedMw = parseProfileCsv(mw, { referenceMw: 100 });
 assert.ok(Math.abs(mean(parsedMw.values) - 0.5) < 1e-9, "15-min MW upload normalised");
 assert.throws(() => parseProfileCsv("1\n2\n3"));
+// dated SCADA export: must read "Actual Generation (MW)", not "Schedule (MW)"; negatives → 0; gaps filled
+{
+  const rows = ["Block No,Clock Time (HH:MM),Date / Range,Entity Name,Schedule (MW),Actual Generation (MW),CUF (%)"];
+  for (let day = 1; day <= 28; day += 1) {
+    for (let b = 0; b < 96; b += 1) {
+      const hh = String(Math.floor(b / 4)).padStart(2, "0"); const mm = String((b % 4) * 15).padStart(2, "0");
+      const actual = b < 8 ? -0.5 : 30; // small negative aux at night
+      rows.push(`${b + 1},"${hh}:${mm}","2026-02-${String(day).padStart(2, "0")}","Test_W",0.00,${actual},${(Math.max(0, actual) / 100 * 100).toFixed(2)}`);
+    }
+  }
+  const p = parseDatedProfile(rows.join("\n"));
+  assert.ok(Math.abs(p.capacityMw - 100) < 1e-6, "capacity implied by the CUF column");
+  assert.ok(p.monthlyCuf[1] > 0.25 && p.monthlyCuf[1] < 0.3, "uses actual generation, not schedule");
+  assert.ok(p.negativeShare > 0 && p.values.every((v) => v >= 0), "negatives clipped");
+  assert.ok(p.coverage < 0.1 && p.values[0] >= 0 && p.quality === "suspect", "partial year flagged and filled");
+}
 console.log("RTC engine checks passed");
