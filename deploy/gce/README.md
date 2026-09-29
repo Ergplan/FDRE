@@ -7,7 +7,7 @@ database. The stack is defined in `docker-compose.yml`:
 |---|---|
 | `web` | Next.js app: dashboard, login, saved scenarios, Excel export. Published on `WEB_PORT` (80). |
 | `engine` | Python/FastAPI engine (FDRE optimizer, finance, EYA, tender review). Internal only. |
-| `db` | Postgres 16. Data in the Docker volume `fdre_pgdata`. |
+| `db` | Postgres 16. Data in the Docker volume `fdre-dashboard_pgdata`. |
 
 ## First install
 

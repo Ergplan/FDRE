@@ -3,7 +3,7 @@
 # Postgres + Python engine + Next.js web app via Docker Compose, published on port 80.
 #
 #   sudo bash deploy/gce/install.sh          # from the repository root on the VM
-# Re-run after `git pull` to update. Data lives in the Docker volume fdre_pgdata.
+# Re-run after `git pull` to update. Data lives in the Docker volume fdre-dashboard_pgdata.
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -38,7 +38,20 @@ ENV
   echo "    created .env with random secrets (keep it; the database password is inside)"
 fi
 
-echo "==> Building and starting containers"
+echo "==> Migrating from the earlier stack name 'fdre', if present"
+# The stack used to be called "fdre"; it is now "fdre-dashboard". Stop the old containers
+# (their port 80 would clash) and copy the old database volume across once. The old volume
+# is left in place as a fallback; remove it later with: docker volume rm fdre_pgdata
+if docker ps -a --filter label=com.docker.compose.project=fdre -q | grep -q .; then
+  docker compose -p fdre down --remove-orphans || true
+fi
+if docker volume inspect fdre_pgdata >/dev/null 2>&1 && ! docker volume inspect fdre-dashboard_pgdata >/dev/null 2>&1; then
+  docker volume create fdre-dashboard_pgdata >/dev/null
+  docker run --rm -v fdre_pgdata:/from:ro -v fdre-dashboard_pgdata:/to alpine sh -c 'cp -a /from/. /to/'
+  echo "    copied database volume fdre_pgdata -> fdre-dashboard_pgdata"
+fi
+
+echo "==> Building and starting containers (project fdre-dashboard)"
 docker compose up -d --build --remove-orphans
 
 echo "==> Daily database backup (02:15, keeps 14 days in $APP_DIR/backups)"

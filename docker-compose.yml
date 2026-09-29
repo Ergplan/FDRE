@@ -1,6 +1,6 @@
 # One client deployment: Postgres + Python engine + Next.js web app.
 # Configure through .env (see .env.example); start with: docker compose up -d --build
-name: fdre
+name: fdre-dashboard
 
 services:
   db:
