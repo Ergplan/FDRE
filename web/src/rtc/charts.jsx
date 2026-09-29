@@ -168,7 +168,7 @@ const FLOW_SERIES = [
 const FLOW_TOOLBAR = { range: true, stepper: true, view: false, todScale: false, lock: true, export: true };
 
 /** Hourly supply stack using the Ergplan/charting energy-flow-chart library. */
-export function FlowChart({ hourly, year = 2026, height = 440 }) {
+export function FlowChart({ hourly, year = 2026, height = 440, rangeMode = "day" }) {
   const data = useMemo(() => {
     if (!hourly) return null;
     const n = hourly.demand.length;
@@ -200,7 +200,7 @@ export function FlowChart({ hourly, year = 2026, height = 440 }) {
         unit="MW"
         yLabel="Power (MW)"
         height={height}
-        rangeMode="week"
+        rangeMode={rangeMode}
         toolbar={FLOW_TOOLBAR}
         live={false}
       />

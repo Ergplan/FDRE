@@ -618,8 +618,10 @@ export function optimize(ctx, model, onProgress) {
   const total = solarGrid.length * windGrid.length * bessGrid.length;
   let done = 0;
   const seeds = [];
-  for (const solarMw of solarGrid) {
-    for (const windMw of windGrid) {
+  if (onProgress) onProgress({ stage: "axes", solarGrid, windGrid, total });
+  solarGrid.forEach((solarMw, si) => {
+    windGrid.forEach((windMw, wi) => {
+      let cellBest = null;
       for (const bessMw of bessGrid) {
         done += 1;
         let best;
@@ -650,10 +652,24 @@ export function optimize(ctx, model, onProgress) {
           }
         }
         seeds.push(best);
+        if (!cellBest || best.score < cellBest.score) cellBest = best;
         if (onProgress && done % 25 === 0) onProgress({ stage: "grid", done, total, evals });
       }
-    }
-  }
+      // one point of the cost surface: best storage for this solar x wind pair
+      if (onProgress) {
+        onProgress({
+          stage: "cell",
+          si,
+          wi,
+          lcoe: cellBest.lcoe,
+          capexCr: cellBest.capexCr,
+          feasible: Boolean(cellBest.feasible && !cellBest.durationViolation),
+          dfr: cellBest.dfrCheck,
+          sizes: cellBest.sizes,
+        });
+      }
+    });
+  });
   seeds.sort((a, b) => a.score - b.score);
   const starts = [];
   for (const s of seeds) {

@@ -50,34 +50,37 @@ wind CSV are not bundled here; see `react_demo/README.md` for the current input 
 
 ## Round the Clock (RTC) tab
 
-The React dashboard opens on **Round the Clock**, a self-contained least-cost sizing
-workspace for firm RE supply (default case: 2,455 MU/yr, 285 MW plant capacity, 85% DFR,
-Beed, Maharashtra; capex solar ₹3.5 cr/MW, wind ₹6.5 cr/MW, BESS ₹1.2 cr/MWh). It runs
-entirely in the browser and does not need the FastAPI backend.
+The dashboard opens on **Round the Clock**, a least-cost sizing workspace for firm RE supply
+(default case: 2,455 MU/yr, 285 MW plant capacity, 85% DFR, Beed, Maharashtra; capex solar
+₹3.5 cr/MW, wind ₹6.5 cr/MW, BESS ₹1.2 cr/MWh). Its engine (`web/src/rtc/engine.js`) runs in
+the browser and does not need the Python service.
 
-- **Load**: plant capacity, annual energy and load factor are linked through lock toggles.
-  DFR target (annual or every month), a lifetime design check, demand growth and losses.
-  You can draw the 24-hour and monthly consumption shape with the mouse, or upload an
-  8760 (or 15-minute) CSV.
-- **Resource**: synthetic Beed solar and wind profiles calibrated to CUF, or uploaded 8760
-  CSVs (capacity factors, or MW normalised by a reference MW). Drag the monthly CUF bars
-  to rescale months.
-- **Storage & cost**: RTE, SoC window, fade, augmentation, duration window and capex.
-- **Optimizer**: runs in a Web Worker. It does a grid search with bisection on BESS MWh,
-  then a pattern search. Locked sizes are held fixed. The solution-space scatter is
-  clickable, and the least-cost alternatives can be loaded.
-- **Dispatch**: an hourly supply stack drawn with the
-  [Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library
-  (1 day / 7 days, Lock Y axis, PNG export), plus monthly DFR, the energy balance and the
-  battery state of charge.
-- **Financial model**: a 25-year model covering operations, P&L, cash flow, debt, DSCR,
-  WDV tax, loss carry-forward, working capital, augmentation capex, and project and equity
-  IRR. Leave the tariff unlocked to solve it for the target equity IRR, or lock it to
-  compute returns. The model exports to CSV.
+It reads as a story. Six chapters sit in a vertical rail, each with its own icon and colour:
 
-Inputs, locks and uploads are kept in the browser's local storage. Engine checks:
-`node tools/check_rtc_engine.mjs`. The synthetic profiles are for screening only, so
-upload bankable 8760 profiles before bidding.
+1. **Energy needed**: annual energy, plant capacity and load factor (linked by locks), plus
+   demand growth and losses.
+2. **Supply type**: round-the-clock, peak-weighted, day-time or night-weighted presets,
+   seasonality, or a profile drawn with the mouse or uploaded (8760 / 15-minute CSV).
+3. **DFR**: target, measured annually or every month, a lifetime design check, shortfall
+   penalty and surplus sales.
+4. **Solar** and 5. **Wind**: size (fixed by lock, or an optimizer range), capex, O&M,
+   degradation, and a synthetic or uploaded profile whose monthly CUF can be redrawn.
+6. **Battery storage**: power and energy sizes, cost, efficiency, SoC window, duration
+   window, fade and augmentation.
+
+**Optimize** opens a full-screen animation. An isometric 3D cost surface (₹/kWh over
+solar MW × wind MW, with the cheapest feasible battery at each point) builds for about seven
+seconds while the optimizer runs in a Web Worker. Mixes that miss the DFR show as a red
+plateau. The least-cost point is then marked, the animation fades, and the answer is
+revealed. Below the answer are the dispatch (Day / Month / Year toggle; the Day view uses the
+[Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library,
+vendored in `web/vendor/`), the full 25-year financial model (P&L, cash flow, debt, DSCR,
+IRRs, tariff solved for the target equity IRR or fixed by lock, CSV export) and the
+explorable alternatives. Every input has a lock toggle. Save the case to the database from
+the header.
+
+Engine checks: `node tools/check_rtc_engine.mjs`. The synthetic profiles are for screening
+only, so upload bankable 8760 profiles before bidding.
 
 ## Streamlit Application
 
