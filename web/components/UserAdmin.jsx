@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { KeyRound, Trash2, UserPlus } from "lucide-react";
 import { when } from "./ScenarioLibrary";
+import TabAccess from "./TabAccess";
 
 async function call(path, method, body) {
   const res = await fetch(path, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -10,7 +11,7 @@ async function call(path, method, body) {
   return data;
 }
 
-export default function UserAdmin({ me, initial }) {
+export default function UserAdmin({ me, initial, defaultTabs }) {
   const [users, setUsers] = useState(initial);
   const [form, setForm] = useState({ email: "", name: "", password: "", role: "user" });
   const [msg, setMsg] = useState("");
@@ -62,6 +63,7 @@ export default function UserAdmin({ me, initial }) {
           </tbody>
         </table>
       </div>
+      <TabAccess users={users} setUsers={setUsers} initialDefault={defaultTabs} />
     </>
   );
 }

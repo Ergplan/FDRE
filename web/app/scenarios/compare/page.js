@@ -6,7 +6,7 @@ import PageShell from "@/components/PageShell";
 import ScenarioCompare from "@/components/ScenarioCompare";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Compare scenarios · FDRE" };
+export const metadata = { title: "Compare scenarios" };
 
 export default async function Compare({ searchParams }) {
   const user = await currentUser();

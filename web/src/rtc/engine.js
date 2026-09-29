@@ -50,6 +50,7 @@ export const DEFAULT_BESS = {
   augmentation: "annual", // 'annual' | 'none' | 'oneTime'
   augmentationYear: 12,
   costDeclinePct: 0.03,
+  durationH: 4, // discharge duration chosen by the user: 2 or 4 hours (MWh = MW x hours); null = free
   minDurationH: 1,
   maxDurationH: 8,
 };
@@ -498,6 +499,12 @@ export function worstYearFactors(fin, bess) {
 
 // ---------------------------------------------------------------- costs
 
+/** Apply the chosen discharge duration (MWh = MW x hours) when one is set. */
+export function withDuration(sizes, bess) {
+  const dur = Number(bess?.durationH);
+  return dur > 0 ? { ...sizes, bessMwh: sizes.bessMw * dur } : sizes;
+}
+
 export function capexCr(sizes, costs) {
   const hard = sizes.solarMw * costs.solarCrPerMw
     + sizes.windMw * costs.windCrPerMw
@@ -621,12 +628,18 @@ export function optimize(ctx, model, onProgress) {
   let evals = 0;
   const minDur = model.bess.minDurationH || 0;
   const maxDur = model.bess.maxDurationH || 1e9;
-  const evalAt = (sizes) => {
+  // fixed discharge duration: battery energy follows battery power, only MW is searched
+  const fixedDur = Number(model.bess.durationH) > 0 ? Number(model.bess.durationH) : null;
+  if (fixedDur) vars.bessMwh = { ...vars.bessMwh, locked: true, value: 0 };
+  const evalAt = (input) => {
+    const sizes = fixedDur ? { ...input, bessMwh: input.bessMw * fixedDur } : input;
     const key = VAR_KEYS.map((k) => sizes[k]).join("|");
     if (cache.has(key)) return cache.get(key);
     const ev = evaluateDesign(ctx, sizes, model);
     // duration window only applies when a BESS exists
-    if (sizes.bessMwh > 0 && sizes.bessMw > 0) {
+    if (fixedDur) {
+      // duration is fixed by definition
+    } else if (sizes.bessMwh > 0 && sizes.bessMw > 0) {
       const dur = sizes.bessMwh / sizes.bessMw;
       if (dur < minDur - 1e-9 || dur > maxDur + 1e-9) ev.durationViolation = true;
     } else if (sizes.bessMwh > 0 !== sizes.bessMw > 0) ev.durationViolation = true;
@@ -641,7 +654,7 @@ export function optimize(ctx, model, onProgress) {
   const gridN = model.gridPoints || 11;
   const solarGrid = linspace(vars.solarMw, gridN);
   const windGrid = linspace(vars.windMw, gridN);
-  const bessGrid = linspace(vars.bessMw, 6);
+  const bessGrid = linspace(vars.bessMw, fixedDur ? 9 : 6);
   const total = solarGrid.length * windGrid.length * bessGrid.length;
   let done = 0;
   const seeds = [];

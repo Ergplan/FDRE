@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import ExcelJS from "exceljs";
 import { handler, HttpError, requireUser } from "@/lib/auth";
 import { getScenario } from "@/lib/scenarios";
@@ -42,6 +44,16 @@ export const GET = handler(async (req) => {
 
   const fields = fieldsFor(items.map((i) => i.current.summary));
   const cmp = wb.addWorksheet("Comparison");
+  // Joulewise logo above the table (light version for white spreadsheet backgrounds)
+  const logoPath = path.join(process.cwd(), "public", "brand", "joulewise-logo.png");
+  let headerRow = 1;
+  if (fs.existsSync(logoPath)) {
+    headerRow = 4;
+    const logo = wb.addImage({ buffer: fs.readFileSync(logoPath), extension: "png" });
+    cmp.addRow([]); cmp.addRow([]); cmp.addRow([]);
+    cmp.getRow(1).height = 24; cmp.getRow(2).height = 24;
+    cmp.addImage(logo, { tl: { col: 0, row: 0 }, ext: { width: 196, height: 46 } });
+  }
   styleHeader(cmp.addRow(["Metric", "Unit", ...items.map((i) => `${i.scenario.name} (v${i.current.version})`)]));
   cmp.addRow(["Module", "", ...items.map((i) => MODULE_LABEL[i.scenario.module] || i.scenario.module)]);
   cmp.addRow(["Saved", "", ...items.map((i) => new Date(i.current.created_at).toISOString().slice(0, 16).replace("T", " "))]);
@@ -55,7 +67,7 @@ export const GET = handler(async (req) => {
   cmp.getColumn(1).width = 26;
   cmp.getColumn(2).width = 10;
   items.forEach((_, k) => { cmp.getColumn(k + 3).width = 22; });
-  cmp.views = [{ state: "frozen", xSplit: 2, ySplit: 1 }];
+  cmp.views = [{ state: "frozen", xSplit: 2, ySplit: headerRow }];
 
   for (const { scenario, current } of items) {
     const ws = wb.addWorksheet(sheetName(wb, scenario.name));

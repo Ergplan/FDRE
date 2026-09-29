@@ -1,4 +1,5 @@
-import { FolderOpen, LayoutDashboard, UserRound, Users, Zap } from "lucide-react";
+import { FolderOpen, LayoutDashboard, UserRound, Users } from "lucide-react";
+import Brand from "@/src/Brand";
 import SignOutButton from "./SignOutButton";
 
 /** Frame for the non-dashboard pages (library, compare, users, account). */
@@ -12,10 +13,7 @@ export default function PageShell({ user, active, title, eyebrow, actions, child
   return (
     <div className="page">
       <header className="topbar">
-        <a href="/" className="brand topbar-brand">
-          <span><Zap size={16} /></span>
-          <div><strong>FDRE</strong><small>Hybrid RE optimization</small></div>
-        </a>
+        <a href="/" className="topbar-brand" aria-label="Joulewise FDRE home"><Brand size="sm" /></a>
         <nav>
           {links.map(([id, href, Icon, label]) => (
             <a key={id} href={href} className={active === id ? "active" : ""}><Icon size={14} /> {label}</a>
@@ -36,6 +34,7 @@ export default function PageShell({ user, active, title, eyebrow, actions, child
         </div>
         {children}
       </main>
+      <footer className="page-foot"><img src="/brand/joulewise-mark.png" alt="" width={18} height={18} /> Joulewise · FDRE optimizer</footer>
     </div>
   );
 }

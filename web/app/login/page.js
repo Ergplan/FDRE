@@ -3,7 +3,7 @@ import { currentUser, userCount } from "@/lib/auth";
 import AuthForm from "@/components/AuthForm";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Sign in · FDRE" };
+export const metadata = { title: "Sign in" };
 
 export default async function Login({ searchParams }) {
   if ((await userCount()) === 0) redirect("/setup");

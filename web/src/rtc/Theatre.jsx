@@ -222,6 +222,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel }) {
       <div className="theatre-inner">
         <header className="theatre-head">
           <div>
+            <span className="theatre-brand"><img src="/brand/joulewise-logo-dark.png" alt="Joulewise" /></span>
             <span className="rtc-index">OPTIMIZING</span>
             <h2>Searching for the least-cost mix</h2>
           </div>

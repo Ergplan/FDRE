@@ -6,7 +6,7 @@ import PageShell from "@/components/PageShell";
 import ScenarioLibrary from "@/components/ScenarioLibrary";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Saved scenarios · FDRE" };
+export const metadata = { title: "Saved scenarios" };
 
 export default async function Scenarios({ searchParams }) {
   const user = await currentUser();

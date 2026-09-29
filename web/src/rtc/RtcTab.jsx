@@ -124,7 +124,8 @@ export default function RtcTab({ initialScenario = null }) {
     () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
     [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct, d.fin.sellSurplus, d.fin.extraExportMw],
   );
-  const sizes = useMemo(() => Object.fromEntries(Object.entries(d.vars).map(([k, v]) => [k, v.value])), [d.vars]);
+  // battery energy follows the chosen discharge duration (2 h or 4 h)
+  const sizes = useMemo(() => E.withDuration(Object.fromEntries(Object.entries(d.vars).map(([k, v]) => [k, v.value])), d.bess), [d.vars, d.bess]);
   const sim = useMemo(() => E.simulate(ctx, sizes, { hourly: true }), [ctx, sizes]);
   const finInput = useMemo(() => ({ ...d.fin, demandGrowth: inputs.demandGrowth }), [d.fin, inputs.demandGrowth]);
   const finance = useMemo(
@@ -279,7 +280,8 @@ export default function RtcTab({ initialScenario = null }) {
   const prev = CHAPTERS[chapterIndex - 1];
   const ChapterIcon = chapter.icon;
   const chapterProps = { state, patch, set, setVar, lockProps, isLocked, sizes, sim };
-  const freeVars = Object.values(state.vars).filter((v) => !v.locked).length;
+  const sizeKeys = state.bess.durationH ? ["solarMw", "windMw", "bessMw"] : ["solarMw", "windMw", "bessMw", "bessMwh"];
+  const freeVars = sizeKeys.filter((k) => !state.vars[k].locked).length;
 
   return (
     <div className="rtc story">
@@ -329,7 +331,7 @@ export default function RtcTab({ initialScenario = null }) {
           })}
           <button type="button" className="story-tab story-tab-go" onClick={runOptimizer} disabled={theatre}>
             <span className="story-tab-icon"><Zap size={17} /></span>
-            <span className="story-tab-text"><small>07</small><strong>Optimize</strong><em>{freeVars} of 4 sizes free</em></span>
+            <span className="story-tab-text"><small>07</small><strong>Optimize</strong><em>{freeVars} of {sizeKeys.length} sizes free</em></span>
           </button>
         </nav>
 
@@ -366,7 +368,8 @@ export default function RtcTab({ initialScenario = null }) {
           <h2>Optimize</h2>
           <p>
             Search every solar and wind mix, size the cheapest battery that holds the DFR at {pf(inputs.dfrTarget, 0)}, then refine.
-            {" "}{4 - freeVars ? `${4 - freeVars} size${4 - freeVars > 1 ? "s are" : " is"} fixed by a lock.` : "All four sizes are free."}
+            {" "}{sizeKeys.length - freeVars ? `${sizeKeys.length - freeVars} size${sizeKeys.length - freeVars > 1 ? "s are" : " is"} fixed by a lock.` : "All sizes are free."}
+            {state.bess.durationH ? ` Battery: ${state.bess.durationH}-hour discharge.` : ""}
           </p>
         </div>
         <div className="optimize-bar-actions">

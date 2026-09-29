@@ -54,6 +54,10 @@ const opt = optimize(ctx, model);
 console.log(`optimize: ${opt.evals} evaluations in ${(performance.now() - t1).toFixed(0)} ms`);
 console.log("best", opt.best.sizes, `DFR ${(opt.best.dfr * 100).toFixed(2)}% (check ${(opt.best.dfrCheck * 100).toFixed(2)}%)`, `LCOE ${opt.best.lcoe.toFixed(3)} Rs/kWh`, `capex ${opt.best.capexCr.toFixed(0)} cr`);
 assert.ok(opt.feasible, "optimizer finds a feasible design");
+assert.equal(opt.best.sizes.bessMwh, opt.best.sizes.bessMw * DEFAULT_BESS.durationH, "battery energy follows the chosen duration");
+const opt2h = optimize(ctx, buildModel({ inputs, costs: DEFAULT_COSTS, fin: DEFAULT_FINANCE, bess: { ...DEFAULT_BESS, durationH: 2 }, vars: DEFAULT_VARS, gridPoints: 7 }));
+assert.equal(opt2h.best.sizes.bessMwh, opt2h.best.sizes.bessMw * 2, "2-hour battery");
+console.log("2-hour best", opt2h.best.sizes, `LCOE ${opt2h.best.lcoe.toFixed(3)} feasible ${opt2h.feasible}`);
 assert.ok(opt.best.dfrCheck >= inputs.dfrTarget - 1e-6);
 
 // locks are honoured

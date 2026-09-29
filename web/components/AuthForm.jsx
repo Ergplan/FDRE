@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import Brand from "@/src/Brand";
 
 /** Sign-in and first-run administrator forms. */
 export default function AuthForm({ mode = "login", next = "/" }) {
@@ -33,11 +34,13 @@ export default function AuthForm({ mode = "login", next = "/" }) {
   return (
     <div className="auth">
       <div className="auth-art">
+        <Brand size="lg" product={false} className="auth-logo" />
         <div className="eyebrow">FDRE · Hybrid RE optimization</div>
         <h1>{setup ? <>Set up<br />workspace</> : <>Round<br />the clock</>}</h1>
         <p>Solar, wind and storage sizing, hourly dispatch and 25-year project finance, with every saved result kept for your team.</p>
       </div>
       <form className="auth-card" onSubmit={submit}>
+        <Brand size="sm" className="auth-card-logo" />
         <h2>{setup ? "Create the administrator" : "Sign in"}</h2>
         {setup && <p className="note">No users exist yet. This account can add colleagues afterwards.</p>}
         {setup && <label>Name<input value={form.name} onChange={set("name")} autoComplete="name" /></label>}

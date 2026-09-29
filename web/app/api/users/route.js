@@ -3,7 +3,7 @@ import { handler, hashPassword, HttpError, requireUser, validatePassword } from 
 
 export const GET = handler(async () => {
   await requireUser({ admin: true });
-  const { rows } = await query("SELECT id, email, name, role, created_at, last_login_at FROM users ORDER BY created_at");
+  const { rows } = await query("SELECT id, email, name, role, tab_access, created_at, last_login_at FROM users ORDER BY created_at");
   return Response.json({ users: rows });
 });
 

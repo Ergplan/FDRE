@@ -16,6 +16,7 @@ import {
   Download,
   FileText,
   FolderOpen,
+  Lock,
   LogOut,
   Save,
   UserRound,
@@ -40,6 +41,8 @@ import "./styles.css";
 import { THEME_NAME } from "./chartTheme";
 import RtcTab from "./rtc/RtcTab";
 import SaveDialog from "./scenarios/SaveDialog";
+import Brand from "./Brand";
+import { ALL_TAB_IDS, usesEngine } from "../lib/tabs";
 import { authApi } from "./scenarios/client";
 
 async function api(path, body) {
@@ -519,25 +522,33 @@ function EChart({ option, height = 360 }) {
   return <div className="echart" ref={ref} style={{ height }} />;
 }
 
-function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading, user, onSave, canSave, linked }) {
+function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading, user, onSave, canSave, linked, allowed }) {
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <span><Zap size={18} /></span>
-        <div><strong>FDRE</strong><small>Hybrid RE optimization</small></div>
-      </div>
-      <button className="primary full" onClick={onOptimize} disabled={Boolean(loading)}>
+      <a href="/" className="brand sidebar-brand" aria-label="Joulewise FDRE home"><Brand /></a>
+      <button className="primary full" onClick={onOptimize} disabled={Boolean(loading) || !allowed.has("optimization")} title={allowed.has("optimization") ? undefined : "Contact Administrator"}>
         {loading ? <Loader2 className="spin" size={18} /> : <Zap size={18} />} Run optimized result
       </button>
 
       <div className="side-section">
         <h3>Workspace</h3>
         <nav className="side-nav">
-          {tabs.map(([id, Icon, label, tag]) => (
-            <button key={id} className={activeTab === id ? "active" : ""} onClick={() => setActiveTab(id)}>
-              <Icon size={15} /> {label}{tag && <span className="nav-tag">{tag}</span>}
-            </button>
-          ))}
+          {tabs.map(([id, Icon, label, tag]) => {
+            const ok = allowed.has(id);
+            return (
+              <button
+                key={id}
+                className={`${activeTab === id ? "active" : ""} ${ok ? "" : "nav-locked"}`}
+                onClick={() => setActiveTab(id)}
+                title={ok ? undefined : "Contact Administrator for access"}
+                aria-disabled={!ok}
+              >
+                {ok ? <Icon size={15} /> : <Lock size={15} />}
+                <span className="nav-label">{label}{!ok && <small>Contact Administrator</small>}</span>
+                {ok && tag && <span className="nav-tag">{tag}</span>}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -3153,7 +3164,28 @@ function fdreSummary(settings, result, source) {
   };
 }
 
+function Restricted({ label, contacts = [] }) {
+  return (
+    <section className="restricted">
+      <Lock size={28} />
+      <span className="rtc-index">RESTRICTED</span>
+      <h2>{label}</h2>
+      <p>Your account does not have access to this tab. <strong>Contact Administrator</strong> to have it enabled.</p>
+      {contacts.length > 0 && (
+        <ul>
+          {contacts.map((c) => (
+            <li key={c.email}><a href={`mailto:${c.email}?subject=${encodeURIComponent(`FDRE access: ${label}`)}`}>{c.name || c.email}</a>{c.name && <small>{c.email}</small>}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function App({ user = null, initialScenario = null }) {
+  const allowed = useMemo(() => new Set(user?.allowedTabs ?? ALL_TAB_IDS), [user]);
+  const needsEngine = usesEngine([...allowed]);
+  const firstAllowed = ALL_TAB_IDS.find((id) => allowed.has(id)) || "rtc";
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3165,7 +3197,11 @@ export default function App({ user = null, initialScenario = null }) {
   const [validationResult, setValidationResult] = useState(null);
   const [validationLoading, setValidationLoading] = useState("");
   const [pvsystReports, setPvsystReports] = useState([]);
-  const [activeTab, setActiveTab] = useState(initialScenario?.scenario?.module === "fdre" ? "results" : "rtc");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialScenario?.scenario?.module === "fdre") return "results";
+    if (initialScenario?.scenario?.module === "rtc") return "rtc";
+    return allowed.has("rtc") ? "rtc" : firstAllowed;
+  });
   const [fdreLinked, setFdreLinked] = useState(null);
   const [showSave, setShowSave] = useState(false);
   const [notice, setNotice] = useState("");
@@ -3429,6 +3465,10 @@ export default function App({ user = null, initialScenario = null }) {
 
   useEffect(() => {
     async function boot() {
+      if (!needsEngine) {
+        setLoading("");
+        return;
+      }
       try {
         const data = await api("/api/defaults");
         setDefaults(data);
@@ -3488,6 +3528,7 @@ export default function App({ user = null, initialScenario = null }) {
     ["results", LayoutDashboard, "Results"],
     ["reports", Database, "Reports"],
   ];
+  const canView = allowed.has(activeTab);
 
   return (
     <div className="app-shell">
@@ -3501,26 +3542,28 @@ export default function App({ user = null, initialScenario = null }) {
         onSave={() => setShowSave(true)}
         canSave={Boolean(optimizedResult || customResult)}
         linked={fdreLinked}
+        allowed={allowed}
       />
       <main>
-        {notice && activeTab !== "rtc" && <div className="loading">{notice}</div>}
-        {error && activeTab !== "rtc" && <div className="alert">{error}</div>}
-        {loading && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
+        {notice && canView && activeTab !== "rtc" && <div className="loading">{notice}</div>}
+        {error && canView && activeTab !== "rtc" && <div className="alert">{error}</div>}
+        {loading && canView && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
-        {activeTab === "rtc" && <RtcTab initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
-        {activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
-        {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
-        {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
-        {activeTab === "joulewiseReport" && <JoulewiseReportTab report={defaults?.joulewise_report} customResult={customResult} settings={settings} setSettings={setSettings} />}
-        {activeTab === "finance" && <FinanceTab optimizedResult={optimizedResult} financeResult={financeResult} settings={settings} setSettings={setSettings} onFinanceRerun={financeRerun} loading={loading} />}
-        {activeTab === "statements" && <FinancialStatementsTab optimizedResult={optimizedResult} financeResult={financeResult} />}
-        {activeTab === "sensitivity" && <SensitivityScenariosTab optimizedResult={optimizedResult} scenarioInputs={scenarioInputs} setScenarioInputs={setScenarioInputs} scenarioResult={scenarioResult} scenarioLoading={scenarioLoading} onRunScenario={() => runScenario()} onResetScenario={resetScenario} />}
-        {activeTab === "customDispatch" && <CustomDispatchTab settings={settings} setSettings={setSettings} result={dispatchResult} onRunDispatch={runCustomDispatch} loading={loading} />}
-        {activeTab === "optimization" && <OptimizationTab optimizedResult={optimizedResult} onOptimize={() => optimize()} loading={loading} />}
-        {activeTab === "validation" && <OptimizerValidationTab optimizedResult={optimizedResult} validationResult={validationResult} validationLoading={validationLoading} onRunValidation={runValidation} />}
-        {activeTab === "optimizedEya" && <OptimizedEyaTab optimizedResult={optimizedResult} defaults={defaults} />}
-        {activeTab === "results" && <ResultsTab optimizedResult={optimizedResult} customResult={customResult} settings={settings} setSettings={setSettings} onEvaluate={evaluateCustom} loading={loading} />}
-        {activeTab === "reports" && <ReportsTab defaults={defaults} optimizedResult={optimizedResult} customResult={customResult} project={sidebarProject} settings={settings} />}
+        {!canView && <Restricted label={tabs.find((t) => t[0] === activeTab)?.[2] || "This tab"} contacts={user?.adminContacts} />}
+        {canView && activeTab === "rtc" && <RtcTab initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
+        {canView && activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
+        {canView && activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
+        {canView && activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
+        {canView && activeTab === "joulewiseReport" && <JoulewiseReportTab report={defaults?.joulewise_report} customResult={customResult} settings={settings} setSettings={setSettings} />}
+        {canView && activeTab === "finance" && <FinanceTab optimizedResult={optimizedResult} financeResult={financeResult} settings={settings} setSettings={setSettings} onFinanceRerun={financeRerun} loading={loading} />}
+        {canView && activeTab === "statements" && <FinancialStatementsTab optimizedResult={optimizedResult} financeResult={financeResult} />}
+        {canView && activeTab === "sensitivity" && <SensitivityScenariosTab optimizedResult={optimizedResult} scenarioInputs={scenarioInputs} setScenarioInputs={setScenarioInputs} scenarioResult={scenarioResult} scenarioLoading={scenarioLoading} onRunScenario={() => runScenario()} onResetScenario={resetScenario} />}
+        {canView && activeTab === "customDispatch" && <CustomDispatchTab settings={settings} setSettings={setSettings} result={dispatchResult} onRunDispatch={runCustomDispatch} loading={loading} />}
+        {canView && activeTab === "optimization" && <OptimizationTab optimizedResult={optimizedResult} onOptimize={() => optimize()} loading={loading} />}
+        {canView && activeTab === "validation" && <OptimizerValidationTab optimizedResult={optimizedResult} validationResult={validationResult} validationLoading={validationLoading} onRunValidation={runValidation} />}
+        {canView && activeTab === "optimizedEya" && <OptimizedEyaTab optimizedResult={optimizedResult} defaults={defaults} />}
+        {canView && activeTab === "results" && <ResultsTab optimizedResult={optimizedResult} customResult={customResult} settings={settings} setSettings={setSettings} onEvaluate={evaluateCustom} loading={loading} />}
+        {canView && activeTab === "reports" && <ReportsTab defaults={defaults} optimizedResult={optimizedResult} customResult={customResult} project={sidebarProject} settings={settings} />}
       </main>
       {showSave && (
         <SaveDialog

@@ -4,7 +4,7 @@ import PageShell from "@/components/PageShell";
 import AccountForm from "@/components/AccountForm";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Account · FDRE" };
+export const metadata = { title: "Account" };
 
 export default async function Account() {
   const user = await currentUser();

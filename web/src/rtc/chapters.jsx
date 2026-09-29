@@ -45,7 +45,7 @@ export function chapterSummary(id, state, derived) {
     case "dfr": return `${pf(inputs.dfrTarget, 0)} ${inputs.dfrBasis === "monthly" ? "every month" : "annual"}`;
     case "solar": return `${fixed("solarMw")} MW · CUF ${pf(derived.solarCuf, 1)}`;
     case "wind": return `${fixed("windMw")} MW · CUF ${pf(derived.windCuf, 1)}`;
-    case "bess": return `${fixed("bessMw")} MW · ${fixed("bessMwh")} MWh`;
+    case "bess": return state.bess.durationH ? `${fixed("bessMw")} MW · ${state.bess.durationH}-hour` : `${fixed("bessMw")} MW · ${fixed("bessMwh")} MWh`;
     default: return "";
   }
 }
@@ -338,12 +338,38 @@ export function BessChapter({ state, patch, setVar, lockProps, sizes, sim }) {
   const duration = sizes.bessMw > 0 ? sizes.bessMwh / sizes.bessMw : 0;
   return (
     <>
-      <p className="chapter-lead">The battery shifts surplus solar and wind into the hours they cannot cover. It charges only from the plant, never from the grid.</p>
+      <p className="chapter-lead">The battery shifts surplus solar and wind into the hours they cannot cover. It charges only from the plant, never from the grid. Choose a 2-hour or 4-hour battery.</p>
+      <div className="duration-pick">
+        <div>
+          <span className="duration-label">Discharge duration</span>
+          <p>How many hours the battery can discharge at full power. Energy (MWh) = power (MW) × hours, so the optimizer only sizes the MW.</p>
+        </div>
+        <div className="seg seg-strong duration-seg" role="radiogroup" aria-label="Battery discharge duration">
+          {[2, 4].map((h) => (
+            <button
+              key={h}
+              type="button"
+              role="radio"
+              aria-checked={bess.durationH === h}
+              className={bess.durationH === h ? "active" : ""}
+              disabled={lockProps("bess.durationH").locked}
+              onClick={() => patch("bess", { durationH: h })}
+            >
+              {h} hours
+            </button>
+          ))}
+        </div>
+        <LockButton {...{ locked: lockProps("bess.durationH").locked, onToggle: lockProps("bess.durationH").onLock }} title="Lock the discharge duration" />
+      </div>
       <div className="rtc-grid rtc-grid-3">
         <SizeCard label="Power" unit="MW" spec={state.vars.bessMw} onChange={(v) => setVar("bessMw", v)} color={color} />
-        <SizeCard label="Energy" unit="MWh" spec={state.vars.bessMwh} onChange={(v) => setVar("bessMwh", v)} color={color} />
+        <div className="size-card derived" style={{ "--chapter": color }}>
+          <div className="size-card-top"><span>Energy</span></div>
+          <div className="size-card-value"><strong>{nf(sizes.bessMwh)}</strong><em>MWh</em></div>
+          <small>{nf(sizes.bessMw)} MW × {bess.durationH || nf(duration, 2)} h. Follows the power size.</small>
+        </div>
         <div className="rtc-stat-pair stacked">
-          <Stat label="Duration" value={`${nf(duration, 2)} h`} detail={`${nf(sizes.bessMw)} MW / ${nf(sizes.bessMwh)} MWh`} />
+          <Stat label="Duration" value={`${nf(duration, 1)} h`} detail={`${nf(sizes.bessMw)} MW / ${nf(sizes.bessMwh)} MWh`} />
           <Stat label="Year-1 cycles" value={nf(sim.cycles, 0)} detail={`${nf(sim.dischargeMWh / 1000, 1)} MU discharged`} />
         </div>
       </div>
@@ -360,8 +386,6 @@ export function BessChapter({ state, patch, setVar, lockProps, sizes, sim }) {
           <Field label="Minimum SoC" pct value={bess.minSoc} onChange={(v) => patch("bess", { minSoc: Math.min(v, bess.maxSoc - 0.05) })} {...lockProps("bess.minSoc")} step={1} min={0} max={50} />
           <Field label="Maximum SoC" pct value={bess.maxSoc} onChange={(v) => patch("bess", { maxSoc: Math.max(v, bess.minSoc + 0.05) })} {...lockProps("bess.maxSoc")} step={1} min={50} max={100} hint={`Usable depth ${pf(bess.maxSoc - bess.minSoc, 0)}`} />
           <Field label="Initial SoC" pct value={bess.initSoc} onChange={(v) => patch("bess", { initSoc: v })} {...lockProps("bess.initSoc")} step={5} min={0} max={100} />
-          <Field label="Min duration" unit="h" value={bess.minDurationH} onChange={(v) => patch("bess", { minDurationH: Math.min(v, bess.maxDurationH) })} {...lockProps("bess.minDurationH")} step={0.5} min={0} hint="Optimizer MWh/MW window" />
-          <Field label="Max duration" unit="h" value={bess.maxDurationH} onChange={(v) => patch("bess", { maxDurationH: Math.max(v, bess.minDurationH) })} {...lockProps("bess.maxDurationH")} step={0.5} min={0.5} />
         </div>
       </Group>
       <Group title="Ageing & augmentation">

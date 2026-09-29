@@ -2,7 +2,7 @@ import "@/src/styles.css";
 import "@/src/app.css";
 
 export const metadata = {
-  title: "FDRE Optimizer",
+  title: { default: "Joulewise · FDRE Optimizer", template: "%s · Joulewise FDRE" },
   description: "Hybrid RE sizing, dispatch and project finance",
 };
 

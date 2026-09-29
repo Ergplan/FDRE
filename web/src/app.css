@@ -136,3 +136,51 @@ td > .tag:first-child { margin-left: 0; }
   .search { min-width: 0; flex: 1 1 100%; }
   .toolbar-end { margin-left: 0; }
 }
+
+/* Joulewise brand */
+.jw-brand { display: inline-grid; gap: 6px; justify-items: start; line-height: 1; }
+.jw-brand img { display: block; height: auto; }
+.jw-sm img { width: 118px; }
+.jw-md img { width: 150px; }
+.jw-lg img { width: min(360px, 70vw); }
+.jw-brand small { color: var(--muted); font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; }
+.sidebar-brand { display: block; margin-bottom: 26px; text-decoration: none; }
+.sidebar-brand > span { display: inline-grid; place-items: start; width: auto; height: auto; border: 0; background: transparent; }
+.topbar-brand { text-decoration: none; }
+.auth-logo { margin-bottom: 8px; }
+.auth-card-logo { display: none; }
+.page-foot { display: flex; align-items: center; gap: 8px; width: min(1560px, calc(100% - 48px)); margin: 0 auto; padding: 18px 0 28px; border-top: 1px solid var(--line); color: var(--faint); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+.theatre-brand img { display: block; width: 104px; margin-bottom: 12px; opacity: 0.9; }
+
+/* restricted tabs */
+.side-nav button.nav-locked { color: var(--faint); cursor: not-allowed; }
+.side-nav button.nav-locked:hover { background: transparent; color: var(--muted); }
+.side-nav button.nav-locked.active { background: var(--surface); color: var(--muted); }
+.nav-label { display: grid; gap: 2px; text-align: left; }
+.nav-label small { color: var(--warn); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; opacity: 0.8; }
+.restricted { display: grid; justify-items: start; gap: 12px; margin-top: 24px; padding: 48px 40px; border: 1px dashed var(--line-3); background: repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 10px, transparent 10px 20px), var(--bg-2); color: var(--muted); }
+.restricted h2 { color: var(--ink); font-size: clamp(24px, 3vw, 40px); text-transform: none; letter-spacing: -0.01em; }
+.restricted p { max-width: 560px; color: var(--ink-2); line-height: 1.6; }
+.restricted p strong { color: var(--warn); }
+.restricted ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.restricted li { display: flex; gap: 10px; align-items: baseline; }
+.restricted li a { color: var(--ink); }
+.restricted li small { color: var(--muted); }
+
+/* tab access matrix */
+.access-matrix td, .access-matrix th { text-align: center; padding: 8px 10px; }
+.access-matrix td:first-child, .access-matrix th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.access-matrix th small { display: block; text-transform: none; letter-spacing: 0; font-family: var(--font-sans); font-size: 11px; color: var(--muted); margin-top: 3px; }
+.access-matrix input[type="checkbox"] { width: 16px; height: 16px; min-height: 0; }
+.access-matrix select { min-height: 28px; font-size: 12px; padding: 0 6px; margin-top: 6px; }
+.access-matrix tr.engine-note td { color: var(--muted); font-size: 12px; text-align: left; }
+.access-default { background: rgba(212,255,63,0.04); }
+
+/* battery duration */
+.duration-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--chapter) 40%, var(--line)); background: color-mix(in srgb, var(--chapter) 6%, var(--bg-2)); }
+.duration-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--chapter); }
+.duration-pick p { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; max-width: 560px; }
+.duration-seg button { min-width: 110px; padding: 14px 18px; font-size: 14px; font-weight: 600; }
+.duration-seg button.active { background: var(--chapter); color: #0a0a0a; }
+.size-card.derived .size-card-value strong { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 640px) { .duration-pick { grid-template-columns: 1fr; } }

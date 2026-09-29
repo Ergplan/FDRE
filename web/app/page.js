@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/auth";
+import { currentUserWithAccess } from "@/lib/auth";
 import { getScenario } from "@/lib/scenarios";
 import { plain } from "@/lib/json";
 import DashboardClient from "@/components/DashboardClient";
@@ -7,7 +7,7 @@ import DashboardClient from "@/components/DashboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }) {
-  const user = await currentUser();
+  const user = await currentUserWithAccess();
   if (!user) redirect("/login");
   const sp = await searchParams;
   let initialScenario = null;

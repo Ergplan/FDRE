@@ -4,14 +4,18 @@
 import http from "node:http";
 import https from "node:https";
 import { Readable } from "node:stream";
-import { handler, requireUser } from "@/lib/auth";
+import { currentUserWithAccess, handler, HttpError } from "@/lib/auth";
+import { usesEngine } from "@/lib/tabs";
 
 export const dynamic = "force-dynamic";
 const ENGINE_URL = process.env.ENGINE_URL || "http://127.0.0.1:8000";
 const TIMEOUT_MS = Number(process.env.ENGINE_TIMEOUT_MS || 30 * 60 * 1000);
 
 async function forward(req, { params }) {
-  await requireUser();
+  const user = await currentUserWithAccess();
+  if (!user) throw new HttpError(401, "Sign in required.");
+  // users granted only engine-free tabs (e.g. Round the Clock) cannot call the engine
+  if (!usesEngine(user.allowedTabs)) throw new HttpError(403, "Contact Administrator: no access to the FDRE engine tabs.");
   const { path } = await params;
   const incoming = new URL(req.url);
   const target = new URL(`/api/${path.map(encodeURIComponent).join("/")}${incoming.search}`, ENGINE_URL);

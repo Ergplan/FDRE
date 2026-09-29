@@ -39,7 +39,13 @@ npm ci && npm run dev                   # http://localhost:3000
 ```
 
 Database migrations in `web/db/migrations` are applied automatically when the web app
-starts. See `DOCLING_SETUP.md` for parser setup. Tender reviewer
+starts.
+
+The app carries Joulewise branding on every page (logo files in `web/public/brand/`). An
+administrator sets which dashboard tabs other users can open under **Users → Tab access**.
+There is a deployment default plus optional per-user custom lists. Tabs a user may not open
+are greyed out with "Contact Administrator". Users without any engine-backed tab are also
+refused by the engine API. See `DOCLING_SETUP.md` for parser setup. Tender reviewer
 drafts are stored in the browser and can be downloaded as JSON; they are not
 shared server-side records. CfD documents can be reviewed but their settlement
 and dispatch rules are not implemented by the FDRE optimizer.
@@ -65,8 +71,8 @@ It reads as a story. Six chapters sit in a vertical rail, each with its own icon
    penalty and surplus sales.
 4. **Solar** and 5. **Wind**: size (fixed by lock, or an optimizer range), capex, O&M,
    degradation, and a synthetic or uploaded profile whose monthly CUF can be redrawn.
-6. **Battery storage**: power and energy sizes, cost, efficiency, SoC window, duration
-   window, fade and augmentation.
+6. **Battery storage**: a 2-hour or 4-hour discharge duration (energy = power × hours, so
+   the optimizer sizes only MW), plus cost, efficiency, SoC window, fade and augmentation.
 
 **Optimize** opens a full-screen animation. An isometric 3D cost surface (₹/kWh over
 solar MW × wind MW, with the cheapest feasible battery at each point) builds for about seven
