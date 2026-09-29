@@ -1,5 +1,5 @@
+"use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
 import TenderReview, { restoreTenderReviews, saveTenderReviews } from "./TenderReview";
 import * as echarts from "echarts";
 import {
@@ -15,6 +15,11 @@ import {
   Database,
   Download,
   FileText,
+  FolderOpen,
+  LogOut,
+  Save,
+  UserRound,
+  Users,
   Gauge,
   LayoutDashboard,
   Loader2,
@@ -34,6 +39,8 @@ import {
 import "./styles.css";
 import { THEME_NAME } from "./chartTheme";
 import RtcTab from "./rtc/RtcTab";
+import SaveDialog from "./scenarios/SaveDialog";
+import { authApi } from "./scenarios/client";
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -512,7 +519,7 @@ function EChart({ option, height = 360 }) {
   return <div className="echart" ref={ref} style={{ height }} />;
 }
 
-function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading }) {
+function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading, user, onSave, canSave, linked }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -533,6 +540,25 @@ function Sidebar({ tabs, activeTab, setActiveTab, onOptimize, loading }) {
           ))}
         </nav>
       </div>
+
+      <div className="side-section">
+        <h3>Results</h3>
+        <nav className="side-nav">
+          <button type="button" onClick={onSave} disabled={!canSave} title={canSave ? "Save the FDRE settings and results" : "Run or evaluate a case first"}>
+            <Save size={15} /> {linked ? `Save FDRE · v${linked.version + 1}` : "Save FDRE results"}
+          </button>
+          <a href="/scenarios"><FolderOpen size={15} /> Saved scenarios</a>
+          {user?.role === "admin" && <a href="/admin/users"><Users size={15} /> Users</a>}
+        </nav>
+        {linked && <p className="side-note">Open: {linked.name} · v{linked.version}</p>}
+      </div>
+
+      {user && (
+        <div className="side-section side-user">
+          <a href="/account" className="side-user-link"><UserRound size={15} /><span><strong>{user.name || user.email}</strong><small>{user.role}</small></span></a>
+          <button type="button" className="rtc-icon-btn" title="Sign out" onClick={async () => { await authApi.logout().catch(() => {}); window.location.href = "/login"; }}><LogOut size={15} /></button>
+        </div>
+      )}
     </aside>
   );
 }
@@ -3105,7 +3131,29 @@ function ReportsTab({ defaults, optimizedResult, customResult, project, settings
   );
 }
 
-function App() {
+function fdreSummary(settings, result, source) {
+  const cap = result?.capacity || {};
+  const fin = result?.finance || {};
+  const totals = result?.operating?.totals || {};
+  const num = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+  return {
+    source,
+    solarMw: num(cap.solar_ac_mw),
+    windMw: num(cap.wind_mw),
+    bessMw: num(cap.bess_power_mw),
+    bessMwh: num(cap.bess_energy_mwh),
+    capexCr: num(fin.total_project_cost_cr),
+    tariff: num(result?.tariff),
+    equityIrr: num(fin.equity_irr),
+    projectIrr: num(fin.project_irr),
+    minDscr: num(fin.min_dscr),
+    contractedMw: num(settings.contractedCapacity),
+    minPeakAvailability: num(totals.min_peak_availability),
+    penaltyGwh: num(totals.penalty_gwh),
+  };
+}
+
+export default function App({ user = null, initialScenario = null }) {
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3117,7 +3165,10 @@ function App() {
   const [validationResult, setValidationResult] = useState(null);
   const [validationLoading, setValidationLoading] = useState("");
   const [pvsystReports, setPvsystReports] = useState([]);
-  const [activeTab, setActiveTab] = useState("rtc");
+  const [activeTab, setActiveTab] = useState(initialScenario?.scenario?.module === "fdre" ? "results" : "rtc");
+  const [fdreLinked, setFdreLinked] = useState(null);
+  const [showSave, setShowSave] = useState(false);
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState("Booting model");
   const [error, setError] = useState("");
   const [settings, setSettings] = useState({
@@ -3360,6 +3411,23 @@ function App() {
   }
 
   useEffect(() => {
+    if (initialScenario?.scenario?.module !== "fdre") return;
+    const { scenario, current } = initialScenario;
+    const inputs = current.inputs || {};
+    const results = current.results || {};
+    if (inputs.settings) setSettings((s) => ({ ...s, ...inputs.settings }));
+    if (inputs.scenarioInputs) setScenarioInputs(inputs.scenarioInputs);
+    setOptimizedResult(results.optimizedResult || null);
+    setCustomResult(results.customResult || null);
+    setFinanceResult(results.financeResult || null);
+    setDispatchResult(results.dispatchResult || null);
+    setFdreLinked({ id: scenario.id, name: scenario.name, version: current.version });
+    setActiveTab(results.optimizedResult ? "optimization" : "results");
+    setNotice(`Opened “${scenario.name}” version ${current.version}.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     async function boot() {
       try {
         const data = await api("/api/defaults");
@@ -3429,12 +3497,17 @@ function App() {
         setActiveTab={setActiveTab}
         onOptimize={() => optimize()}
         loading={loading}
+        user={user}
+        onSave={() => setShowSave(true)}
+        canSave={Boolean(optimizedResult || customResult)}
+        linked={fdreLinked}
       />
       <main>
+        {notice && activeTab !== "rtc" && <div className="loading">{notice}</div>}
         {error && activeTab !== "rtc" && <div className="alert">{error}</div>}
         {loading && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
-        {activeTab === "rtc" && <RtcTab />}
+        {activeTab === "rtc" && <RtcTab initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
         {activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
@@ -3449,11 +3522,27 @@ function App() {
         {activeTab === "results" && <ResultsTab optimizedResult={optimizedResult} customResult={customResult} settings={settings} setSettings={setSettings} onEvaluate={evaluateCustom} loading={loading} />}
         {activeTab === "reports" && <ReportsTab defaults={defaults} optimizedResult={optimizedResult} customResult={customResult} project={sidebarProject} settings={settings} />}
       </main>
+      {showSave && (
+        <SaveDialog
+          module="fdre"
+          linked={fdreLinked}
+          defaultName={`FDRE ${num(settings.contractedCapacity, 0)} MW · ${new Date().toISOString().slice(0, 10)}`}
+          build={() => {
+            const result = optimizedResult || customResult;
+            return {
+              inputs: { settings, scenarioInputs },
+              results: { optimizedResult, customResult, financeResult, dispatchResult },
+              summary: fdreSummary(settings, result, optimizedResult ? "optimized" : "custom"),
+            };
+          }}
+          onSaved={(linked) => {
+            setFdreLinked(linked);
+            setShowSave(false);
+            setNotice(`Saved “${linked.name}” version ${linked.version}.`);
+          }}
+          onClose={() => setShowSave(false)}
+        />
+      )}
     </div>
   );
 }
-
-const rootElement = document.getElementById("root");
-const root = globalThis.__FDRE_REACT_ROOT__ || createRoot(rootElement);
-globalThis.__FDRE_REACT_ROOT__ = root;
-root.render(<App />);

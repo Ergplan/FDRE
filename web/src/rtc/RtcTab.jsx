@@ -6,6 +6,7 @@ import {
   Loader2,
   Lock,
   RotateCcw,
+  Save,
   Sun,
   Unlock,
   Upload,
@@ -16,6 +17,7 @@ import {
 import * as E from "./engine";
 import { FlowChart, LiveChart, PaintChart } from "./charts";
 import { DATA_COLORS } from "../chartTheme";
+import SaveDialog from "../scenarios/SaveDialog";
 
 // ---------------------------------------------------------------- state
 
@@ -59,16 +61,20 @@ function defaultState() {
   };
 }
 
+function mergeState(saved) {
+  const base = defaultState();
+  const merged = { ...base, ...saved };
+  for (const k of ["inputs", "bess", "costs", "fin", "locks"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
+  merged.vars = Object.fromEntries(Object.keys(base.vars).map((k) => [k, { ...base.vars[k], ...(saved.vars?.[k] || {}) }]));
+  return merged;
+}
+
 function loadState() {
   const base = defaultState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return base;
-    const saved = JSON.parse(raw);
-    const merged = { ...base, ...saved };
-    for (const k of ["inputs", "bess", "costs", "fin", "locks"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
-    merged.vars = Object.fromEntries(Object.keys(base.vars).map((k) => [k, { ...base.vars[k], ...(saved.vars?.[k] || {}) }]));
-    return merged;
+    return mergeState(JSON.parse(raw));
   } catch {
     return base;
   }
@@ -76,6 +82,15 @@ function loadState() {
 
 let sessionState = null; // survives switching dashboard tabs
 let sessionOpt = null;
+let sessionLinked = null;
+let openedScenarioKey = null;
+
+/** Keep saved optimizer results compact: the scatter cloud is thinned to 1,500 points. */
+function compactOpt(opt) {
+  if (!opt) return null;
+  const step = Math.max(1, Math.ceil((opt.cloud?.length || 0) / 1500));
+  return { ...opt, cloud: (opt.cloud || []).filter((_, i) => i % step === 0) };
+}
 
 // ---------------------------------------------------------------- formatting
 
@@ -249,11 +264,18 @@ function heatmapOption(matrix, { name, unit, max, min = 0, colors }) {
 
 // ---------------------------------------------------------------- main tab
 
-export default function RtcTab() {
-  const [state, setState] = useState(() => sessionState || loadState());
-  const [opt, setOpt] = useState(sessionOpt);
+export default function RtcTab({ initialScenario = null }) {
+  // a scenario opened from the library replaces the working state once per page load
+  const openKey = initialScenario ? `${initialScenario.scenario.id}@${initialScenario.current.version}` : null;
+  const fresh = openKey && openKey !== openedScenarioKey;
+  const [state, setState] = useState(() => (fresh ? mergeState(initialScenario.current.inputs?.state || {}) : sessionState || loadState()));
+  const [opt, setOpt] = useState(() => (fresh ? initialScenario.current.results?.opt || null : sessionOpt));
+  const [linked, setLinked] = useState(() => (fresh ? { id: initialScenario.scenario.id, name: initialScenario.scenario.name, version: initialScenario.current.version } : sessionLinked));
+  const [showSave, setShowSave] = useState(false);
+  useEffect(() => { if (fresh) openedScenarioKey = openKey; }, [fresh, openKey]);
+  useEffect(() => { sessionLinked = linked; }, [linked]);
   const [optBusy, setOptBusy] = useState(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(fresh ? `Opened “${initialScenario.scenario.name}” version ${initialScenario.current.version}.` : "");
   const workerRef = useRef(null);
 
   useEffect(() => {
@@ -389,6 +411,37 @@ export default function RtcTab() {
     if (!window.confirm("Reset every Round-the-clock input, profile and lock to the defaults?")) return;
     setState(defaultState());
     setOpt(null);
+    setLinked(null);
+  }
+
+  function buildSave() {
+    const { hourly, ...simSummary } = sim;
+    return {
+      inputs: { state: { ...state, view: "load" } },
+      results: { opt: compactOpt(opt), sim: simSummary, finance, capex },
+      summary: {
+        annualEnergyMu: inputs.annualEnergyMu,
+        plantCapacityMw: inputs.plantCapacityMw,
+        dfrTarget: inputs.dfrTarget,
+        solarMw: sizes.solarMw,
+        windMw: sizes.windMw,
+        bessMw: sizes.bessMw,
+        bessMwh: sizes.bessMwh,
+        dfr: sim.dfr,
+        minMonthlyDfr: sim.minMonthlyDfr,
+        minLifetimeDfr: finance.minLifetimeDfr,
+        deliveredMu: sim.deliveredMWh / 1000,
+        curtailMu: sim.curtailMWh / 1000,
+        capexCr: capex.total,
+        tariff: finance.tariff,
+        tariffLocked: finance.tariffLocked,
+        lcoe: finance.lcoe,
+        equityIrr: finance.equityIrr,
+        projectIrr: finance.projectIrr,
+        minDscr: finance.minDscr,
+        payback: finance.payback,
+      },
+    };
   }
 
   const dfrOk = sim.dfr >= inputs.dfrTarget - 1e-6 && (inputs.dfrBasis !== "monthly" || sim.minMonthlyDfr >= inputs.dfrTarget - 1e-6);
@@ -461,6 +514,9 @@ export default function RtcTab() {
         ))}
         <div className="rtc-subnav-tail">
           {stale && <span className="rtc-live"><Loader2 className="spin" size={12} /> updating</span>}
+          {linked && <span className="rtc-live" title="Saved scenario this workspace is linked to">{linked.name} · v{linked.version}</span>}
+          <button type="button" className="rtc-reset" onClick={() => setShowSave(true)} disabled={stale}><Save size={13} /> Save</button>
+          <a className="rtc-reset" href="/scenarios?module=rtc">Open</a>
           <button type="button" className="rtc-reset" onClick={resetAll}><RotateCcw size={13} /> Reset</button>
         </div>
       </nav>
@@ -489,6 +545,16 @@ export default function RtcTab() {
       )}
       {state.view === "dispatch" && <DispatchView sim={sim} inputs={inputs} sizes={sizes} />}
       {state.view === "finance" && <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} />}
+      {showSave && (
+        <SaveDialog
+          module="rtc"
+          linked={linked}
+          defaultName={`RTC ${nf(inputs.annualEnergyMu, 0)} MU · ${nf(inputs.plantCapacityMw, 0)} MW · DFR ${pf(inputs.dfrTarget, 0)}`}
+          build={buildSave}
+          onSaved={(next) => { setLinked(next); setShowSave(false); setMessage(`Saved “${next.name}” version ${next.version}.`); }}
+          onClose={() => setShowSave(false)}
+        />
+      )}
     </div>
   );
 }

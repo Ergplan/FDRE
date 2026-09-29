@@ -8,27 +8,38 @@ enterprise UI specifications, data/API contracts, input dictionary, validation
 matrix and phased delivery backlog. Proposed features are clearly separated
 from what is implemented today.
 
-## React Application
+## Web application (Next.js + Postgres)
 
-The current frontend is in `react_demo/`, with a FastAPI backend and the Python
-optimization, finance, yield-assessment and tender-review modules in this repository.
-Use Python 3.12 and a recent Node.js LTS release.
+The product is the Next.js app in `web/`. It has email/password login, and saved scenarios
+with version history, comparison and Excel export, stored in Postgres. The Python modules in
+this repository (optimizer, finance, EYA, tender review) run as a FastAPI service
+(`react_demo/backend/api.py`). The web app forwards `/api/*` engine calls to it for
+signed-in users. Each client deployment has its own database.
 
-From the repository root:
+Run everything with Docker:
 
 ```sh
-python3.12 -m venv .venv
-source .venv/bin/activate
+cp .env.example .env   # set POSTGRES_PASSWORD and SESSION_SECRET
+docker compose up -d --build
+```
+
+Then open http://localhost/ and create the administrator account. For VM deployment and
+backups, see `deploy/gce/README.md`.
+
+Local development without Docker (Python 3.12, Node 22, a local Postgres):
+
+```sh
+python3.12 -m venv .venv && source .venv/bin/activate
 python -m pip install -r requirements.txt
 # Optional layout, table and OCR extraction:
 python -m pip install -r requirements-docling.txt
-cd react_demo
-npm ci
-python -m uvicorn backend.api:app --host 127.0.0.1 --port 8000
+(cd react_demo && python -m uvicorn backend.api:app --host 127.0.0.1 --port 8000) &
+cd web && cp .env.example .env.local   # point DATABASE_URL at your Postgres
+npm ci && npm run dev                   # http://localhost:3000
 ```
 
-In a second terminal, run `npm run dev` from `react_demo`, then open
-http://127.0.0.1:5173/. See `DOCLING_SETUP.md` for parser setup. Tender reviewer
+Database migrations in `web/db/migrations` are applied automatically when the web app
+starts. See `DOCLING_SETUP.md` for parser setup. Tender reviewer
 drafts are stored in the browser and can be downloaded as JSON; they are not
 shared server-side records. CfD documents can be reviewed but their settlement
 and dispatch rules are not implemented by the FDRE optimizer.

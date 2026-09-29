@@ -1,0 +1,45 @@
+# One client deployment: Postgres + Python engine + Next.js web app.
+# Configure through .env (see .env.example); start with: docker compose up -d --build
+name: fdre
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fdre
+      POSTGRES_USER: fdre
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fdre -d fdre"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  engine:
+    build:
+      context: .
+      dockerfile: deploy/docker/engine.Dockerfile
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://fdre:${POSTGRES_PASSWORD}@db:5432/fdre
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      ENGINE_URL: http://engine:8000
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    ports:
+      - "${WEB_PORT:-80}:3000"
+
+volumes:
+  pgdata:

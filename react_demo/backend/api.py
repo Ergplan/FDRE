@@ -30,7 +30,7 @@ import fdre_tender_rag as TRAG
 
 WIND_SAMPLE_PATH = pathlib.Path("/Users/rachitagarwal/Downloads/Wind Generation Bikaner.csv")
 DIST_DIR = ROOT / "react_demo" / "dist"
-REPORT_ASSET_DIR = ROOT / "react_demo" / "public" / "report_assets"
+REPORT_ASSET_DIR = ROOT / "web" / "public" / "report_assets"
 
 
 class EvaluationRequest(BaseModel):

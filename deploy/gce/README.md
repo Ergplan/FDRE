@@ -1,38 +1,30 @@
-# Deploy to the GCE VM `tariff-order` (asia-south2-b)
+# Deploy one client instance (GCE VM)
 
-This deployment puts the whole dashboard, including Round the Clock and the FastAPI backend,
-on port 80 with no login. nginx sits in front of uvicorn, and systemd restarts the app on
-failure and on reboot. The VM needs about 2 GB RAM (e2-small or larger) for the build.
+Each client gets its own VM (or its own `WEB_PORT` on a shared VM), with its own Postgres
+database. The stack is defined in `docker-compose.yml`:
 
-## 1. Give the VM a public IP and open port 80 (run once, in Cloud Shell)
+| service | what it is |
+|---|---|
+| `web` | Next.js app: dashboard, login, saved scenarios, Excel export. Published on `WEB_PORT` (80). |
+| `engine` | Python/FastAPI engine (FDRE optimizer, finance, EYA, tender review). Internal only. |
+| `db` | Postgres 16. Data in the Docker volume `fdre_pgdata`. |
 
-```sh
-ZONE=asia-south2-b
-# Static external IP (the VM currently has only an internal IP)
-gcloud compute addresses create fdre-ip --region asia-south2
-gcloud compute instances add-access-config tariff-order --zone $ZONE \
-  --address "$(gcloud compute addresses describe fdre-ip --region asia-south2 --format='value(address)')"
+## First install
 
-# Allow HTTP from anywhere
-gcloud compute instances add-tags tariff-order --zone $ZONE --tags http-server
-gcloud compute firewall-rules create allow-http-80 --allow tcp:80 \
-  --target-tags http-server --source-ranges 0.0.0.0/0   # skip if it already exists
-```
+1. The VM needs a public IP and port 80 open. For `tariff-order`, this is already done
+   (static IP `fdre-ip`, 34.131.67.235; firewall rule `allow-http-80`).
+2. On the VM:
+   ```sh
+   git clone -b claude/intelligent-carson-mwonct https://github.com/Ergplan/FDRE.git fdre
+   cd fdre && sudo bash deploy/gce/install.sh
+   ```
+   The script installs Docker, writes `.env` with random secrets, builds and starts the
+   containers, and schedules a daily database backup. It also removes the earlier
+   nginx/systemd install if one exists.
+3. Open `http://<external IP>/`. The first visitor is asked to create the **administrator**
+   account. Add colleagues under **Users**.
 
-## 2. Install the app on the VM
-
-```sh
-gcloud compute ssh tariff-order --zone asia-south2-b    # or the SSH button in the console
-# on the VM:
-git clone -b claude/intelligent-carson-mwonct https://github.com/Ergplan/FDRE.git fdre
-cd fdre
-sudo bash deploy/gce/install.sh
-```
-
-The repository is private, so `git clone` asks for a GitHub username and a personal access
-token with read access. A read-only deploy key also works.
-
-Open `http://<external IP>/`.
+About 4 GB RAM is recommended (e2-medium). The first build takes 5–10 minutes.
 
 ## Update
 
@@ -43,10 +35,16 @@ cd ~/fdre && git pull && sudo bash deploy/gce/install.sh
 ## Operate
 
 ```sh
-sudo systemctl status fdre          # app status
-sudo journalctl -u fdre -f          # app logs
-sudo systemctl restart fdre
+sudo docker compose ps                 # status
+sudo docker compose logs -f web        # web app logs (also: engine, db)
+sudo bash deploy/backup.sh             # backup now → backups/*.sql.gz
+gunzip -c backups/<file>.sql.gz | sudo docker compose exec -T db psql -U fdre -d fdre   # restore
 ```
 
-The page is public: anyone with the IP can use it. To restrict it later, narrow
-`--source-ranges` on the firewall rule to your office IPs.
+Keep `.env`. It holds the database password and the session secret. Changing
+`SESSION_SECRET` signs everyone out.
+
+## HTTPS
+
+With a domain name pointed at the VM, put a TLS proxy (for example Caddy) in front of port 80
+and set `COOKIE_SECURE=true` in `.env`.

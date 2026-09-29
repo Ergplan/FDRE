@@ -1,11 +1,11 @@
-// Smoke/consistency checks for the RTC engine (react_demo/src/rtc/engine.js).
+// Smoke/consistency checks for the RTC engine (web/src/rtc/engine.js).
 // Run from the repository root: node tools/check_rtc_engine.mjs
 import assert from "node:assert/strict";
 import {
   HOURS, DEFAULT_RTC_INPUTS, DEFAULT_BESS, DEFAULT_COSTS, DEFAULT_FINANCE, DEFAULT_VARS,
   synthSolarCf, synthWindCf, buildDemand, buildContext, buildModel, simulate, optimize,
   runFinancialModel, parseProfileCsv, mean, irr,
-} from "../react_demo/src/rtc/engine.js";
+} from "../web/src/rtc/engine.js";
 
 const inputs = DEFAULT_RTC_INPUTS;
 const solarCf = synthSolarCf({ targetCuf: inputs.solarCuf, dcAc: inputs.solarDcAc });

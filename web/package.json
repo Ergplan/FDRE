@@ -1,0 +1,22 @@
+{
+  "name": "fdre-web",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "check:rtc": "node ../tools/check_rtc_engine.mjs"
+  },
+  "dependencies": {
+    "echarts": "^6.1.0",
+    "energy-flow-chart": "file:vendor/energy-flow-chart",
+    "exceljs": "^4.4.0",
+    "jose": "^6.2.12",
+    "lucide-react": "^0.468.0",
+    "next": "^16.3.6",
+    "pg": "^8.23.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}
