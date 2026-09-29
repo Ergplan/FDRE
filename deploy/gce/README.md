@@ -29,8 +29,17 @@ About 4 GB RAM is recommended (e2-medium). The first build takes 5–10 minutes.
 ## Update
 
 ```sh
-cd ~/fdre && git pull && sudo bash deploy/gce/install.sh
+cd ~/fdre && bash deploy/update.sh
 ```
+
+No sudo is needed, only membership of the `docker` group. The script keeps the current port,
+database password and session secret by reading them from the running containers, backs up
+the database to `~/fdre-backups/`, pulls the code and rebuilds only the `fdre-dashboard`
+containers.
+
+**Shared VM note (tariff-order):** Caddy from another app owns ports 80/443 there, so FDRE
+is published on port **8081** (`WEB_PORT=8081`). Never stop Caddy or move FDRE to port 80
+on that VM.
 
 ## Operate
 
