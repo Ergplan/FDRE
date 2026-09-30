@@ -1,6 +1,7 @@
 // Dashboard tabs an administrator can grant. Shared by server and client.
 export const TAB_CATALOG = [
   { id: "rtc", label: "Round the Clock", engine: false },
+  { id: "bessTender", label: "BESS Tender", engine: false },
   { id: "tender", label: "Tender Upload", engine: true },
   { id: "project", label: "Project Configuration", engine: true },
   { id: "yield", label: "Yield Assessment", engine: true },

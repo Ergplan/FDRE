@@ -147,6 +147,51 @@ Engine checks: `node tools/check_rtc_engine.mjs` and `python -m pytest tests/tes
 The synthetic profiles are for screening only, so upload bankable 8760 profiles before
 bidding.
 
+## BESS Tender tab
+
+**BESS Tender** reads a standalone battery storage RfS and prices the bid. It follows the same
+story flow as Round the Clock:
+
+1. **Tender:** upload the RfS (PDF, Word or text). The engine (`fdre_bess_tender.py`, route
+   `/api/bess/parse`) reuses the tender pipeline from `fdre_tender_rag.py`:
+   - Docling reads the layout, tables and OCR, with page boundaries kept. If the OCR models
+     can't load it retries without OCR, then falls back to the standard extractor.
+   - The text is split into clause-aware chunks, and the issuer, RfS number, timeline, risk
+     flags and amendments are extracted.
+   - It then extracts about 23 BESS requirements: power and energy, duration, cycles per day
+     and per year, minimum round-trip efficiency, availability and its basis, contract term,
+     SCOD, tariff basis and ceiling, VGF, who supplies charging energy, capacity-maintenance
+     (augmentation) obligation, connection voltage, bid limits, EMD and PBG, and the
+     availability and RTE penalties.
+   - Each requirement has a confidence (found / check / default) and its page, clause and
+     snippet.
+2. **Requirements:** every value is editable and lockable. Locked values survive a new upload
+   or amendment. Click a source to see the tender text.
+3. **Battery**, 4. **Costs**, 5. **Finance:**
+   - efficiency, depth of discharge, calendar and cycle fade;
+   - DC block, PCS and balance-of-plant costs, cell price decline, augmentation campaign cost,
+     O&M;
+   - debt, tax and target equity IRR.
+6. **Optimize:** the engine (`web/src/bess/engine.js`, runs in the browser) prices every
+   day-one oversize (0 to 60%) against every augmentation interval (1 to 12 years). Each
+   strategy gets a yearly capacity plan that keeps the contracted MWh at the delivery point
+   in every year, plus a full financial model. The capacity charge (₹/MW/month) is solved
+   for the target equity IRR. The same isometric animation shows the surface, then the
+   answer is revealed:
+   - the bid against the ceiling;
+   - tender compliance, with sources;
+   - energy over the term, stacked by battery block, with the RTE;
+   - a day of operation for any year;
+   - the financial model, with CSV export;
+   - the strategy map;
+   - tender insights: penalties, securities, risk flags and amendments.
+
+Checks: `node tools/check_bess_engine.mjs` and `python -m pytest tests/test_bess_tender.py`
+(which uses a generated sample RfS in `tests/bess_rfs_sample.py`). The engine Docker image
+installs Docling with CPU-only PyTorch and pre-downloads its layout, table and OCR models
+(`DOCLING_ARTIFACTS_PATH`). Set `INSTALL_DOCLING=false` to skip this; tender parsing then uses
+the standard extractor.
+
 ## Streamlit Application
 
 Streamlit application and Python engine for modelling the uploaded NHPC Tranche-II Firm & Dispatchable Renewable Energy (FDRE) RfS against the uploaded Rajasthan project configuration.

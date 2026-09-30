@@ -38,7 +38,7 @@ function positions(n) {
 
 const clockOf = (ms) => `${String(Math.floor(ms / 60000)).padStart(2, "0")}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
-export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs }) {
+export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs, title, buildSteps }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const consoleRef = useRef(null);
@@ -180,7 +180,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs
         ctx2d.stroke();
       }
 
-      drawColorbar(ctx2d, W, H, zLo, zHi);
+      drawColorbar(ctx2d, W, H, zLo, zHi, axes.missLabel);
 
       // HiGHS: scan plane while it solves, its optimum once it is back
       const hs = f.highs;
@@ -188,7 +188,9 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs
       const sMax0 = axes.solarGrid[nS - 1];
       const wMin0 = axes.windGrid[0];
       const wMax0 = axes.windGrid[nW - 1];
-      const uvOf = (z) => [nS <= 1 ? 0.5 : (z.solarMw - sMin0) / Math.max(1e-9, sMax0 - sMin0), nW <= 1 ? 0.5 : (z.windMw - wMin0) / Math.max(1e-9, wMax0 - wMin0)];
+      const xKey = axes.xKey || "solarMw";
+      const yKey = axes.yKey || "windMw";
+      const uvOf = (z) => [nS <= 1 ? 0.5 : (z[xKey] - sMin0) / Math.max(1e-9, sMax0 - sMin0), nW <= 1 ? 0.5 : (z[yKey] - wMin0) / Math.max(1e-9, wMax0 - wMin0)];
       if (hs?.active && !hs.done && !foundAt && shown >= total) drawScan(ctx2d, proj, (elapsed / 2600) % 1);
       if (hs?.done && hs.result?.sizes && Number.isFinite(hs.result.tariff) && !foundAt) {
         const [u, v] = uvOf(hs.result.sizes);
@@ -202,7 +204,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs
         const k = now - foundAt;
         const best = f.result.best;
         const [u, v] = uvOf(best.sizes);
-        drawFound(ctx2d, proj, u, v, hOf(Number.isFinite(best.tariff) ? best.tariff : best.lcoe), best, Math.min(1, k / 600), now);
+        drawFound(ctx2d, proj, u, v, hOf(Number.isFinite(best.tariff) ? best.tariff : best.lcoe), best, Math.min(1, k / 600), now, f.callout);
         if (!finished && k > (skipRef.current ? 700 : FOUND_MS) + FADE_MS) {
           finished = true;
           finishRef.current?.();
@@ -257,7 +259,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs
     pct = Math.round(12 * screen + 18 * map + 62 * lp + (status.phase === "confirm" ? 6 : 0));
   }
   const lpInfo = hs?.lpInfo;
-  const steps = tariffMode ? [
+  const steps = buildSteps ? buildSteps(status) : tariffMode ? [
     ["Loaded 8,760-hour demand, solar and wind profiles", true],
     [`Screening ${status.screened}/${total || "…"} solar × wind mixes, cheapest battery at each`, status.screened > 0],
     [`25-year tariff at every mix · ${status.mapped}/${total || "…"} full financial models (DFR checked in every year)`, status.mapped > 0],
@@ -285,7 +287,7 @@ export default function OptimizerTheatre({ feed, onFinish, onCancel, onSkipHighs
           <div>
             <span className="theatre-brand"><img src="/brand/joulewise-logo-dark.png" alt="Joulewise" /></span>
             <span className="rtc-index">OPTIMIZING</span>
-            <h2>{tariffMode ? "Solving for the least 25-year tariff" : "Searching for the least-cost mix"}</h2>
+            <h2>{title || (tariffMode ? "Solving for the least 25-year tariff" : "Searching for the least-cost mix")}</h2>
           </div>
           <div className="theatre-actions">
             {hs && !hs.done && onSkipHighs && <button type="button" className="rtc-reset" onClick={onSkipHighs} title="Stop waiting for HiGHS and finish with the search results"><FastForward size={13} /> Continue without HiGHS</button>}
@@ -378,8 +380,8 @@ function drawBox(g, proj, axes, zLo, zHi) {
   }
   g.fillStyle = "#c2c2bc";
   g.font = "500 11px 'Inter Tight', sans-serif";
-  label(g, proj(0.5, nearV + (nearV ? 0.2 : -0.2), 0), "SOLAR  MW", "center");
-  label(g, proj(nearU + (nearU ? 0.2 : -0.2), 0.5, 0), "WIND  MW", "center");
+  label(g, proj(0.5, nearV + (nearV ? 0.2 : -0.2), 0), axes.xLabel || "SOLAR  MW", "center");
+  label(g, proj(nearU + (nearU ? 0.2 : -0.2), 0.5, 0), axes.yLabel || "WIND  MW", "center");
   // z ticks on the back corner
   const corner = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => ({ u, v, d: proj(u, v, 0)[2], x: proj(u, v, 0)[0] })).sort((a, b) => a.d - b.d)[0];
   g.strokeStyle = "rgba(255,255,255,0.22)";
@@ -394,11 +396,11 @@ function drawBox(g, proj, axes, zLo, zHi) {
   const [zx, zy] = proj(corner.u, corner.v, 1);
   g.textAlign = "right";
   g.fillStyle = "#c2c2bc";
-  g.fillText("₹/kWh", zx - 8, zy - 14);
+  g.fillText(axes.zUnit || "₹/kWh", zx - 8, zy - 14);
   g.restore();
 }
 
-function drawColorbar(g, W, H, zLo, zHi) {
+function drawColorbar(g, W, H, zLo, zHi, missLabel = "misses DFR") {
   const x = W - 46;
   const y0 = H * 0.16;
   const h = H * 0.56;
@@ -416,10 +418,10 @@ function drawColorbar(g, W, H, zLo, zHi) {
   g.fillRect(x, y0 - 18, 12, 8);
   g.textAlign = "right";
   g.fillStyle = "#86867f";
-  g.fillText("misses DFR", x - 6, y0 - 11);
+  g.fillText(missLabel, x - 6, y0 - 11);
 }
 
-function drawFound(g, proj, u, v, h, best, k, now) {
+function drawFound(g, proj, u, v, h, best, k, now, callout) {
   const [x, y] = proj(u, v, h);
   const [fx, fy] = proj(u, v, 0);
   g.save();
@@ -438,7 +440,7 @@ function drawFound(g, proj, u, v, h, best, k, now) {
   g.fillStyle = "#d4ff3f";
   g.fill();
   // callout
-  const lines = [
+  const lines = callout ? callout(best) : [
     `Solar   ${nf(best.sizes.solarMw)} MW`,
     `Wind    ${nf(best.sizes.windMw)} MW`,
     `BESS    ${nf(best.sizes.bessMw)} MW · ${nf(best.sizes.bessMwh)} MWh`,

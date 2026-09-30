@@ -12,7 +12,7 @@ export default async function Scenarios({ searchParams }) {
   const user = await currentUser();
   if (!user) redirect("/login?next=/scenarios");
   const sp = await searchParams;
-  const module = ["rtc", "fdre"].includes(sp?.module) ? sp.module : "";
+  const module = ["rtc", "fdre", "bess"].includes(sp?.module) ? sp.module : "";
   const rows = plain(await listScenarios({ module }));
   return (
     <PageShell user={user} active="scenarios" eyebrow="Library" title="Saved scenarios">

@@ -53,7 +53,7 @@ export default function ScenarioLibrary({ initial, initialModule }) {
     <>
       <div className="toolbar">
         <div className="seg">
-          {[["", "All"], ["rtc", "Round the Clock"], ["fdre", "FDRE"]].map(([v, l]) => (
+          {[["", "All"], ["rtc", "Round the Clock"], ["bess", "BESS Tender"], ["fdre", "FDRE"]].map(([v, l]) => (
             <button key={v} type="button" className={module === v ? "active" : ""} onClick={() => setModule(v)}>{l}</button>
           ))}
         </div>

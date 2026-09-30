@@ -22,6 +22,8 @@ services:
     build:
       context: .
       dockerfile: deploy/docker/engine.Dockerfile
+      args:
+        INSTALL_DOCLING: ${INSTALL_DOCLING:-true}
     restart: unless-stopped
 
   web:

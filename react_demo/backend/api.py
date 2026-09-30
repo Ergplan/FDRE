@@ -30,6 +30,7 @@ import fdre_eya as YA
 import fdre_wind_eya as WYA
 import fdre_tender_rag as TRAG
 import fdre_rtc_lp as RLP
+import fdre_bess_tender as BESS
 
 WIND_SAMPLE_PATH = pathlib.Path("/Users/rachitagarwal/Downloads/Wind Generation Bikaner.csv")
 DIST_DIR = ROOT / "react_demo" / "dist"
@@ -885,6 +886,21 @@ def parse_tender(req: TenderUploadRequest) -> dict[str, Any]:
             "rag_status": parsed["rag_status"],
         }
     except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/bess/parse")
+def parse_bess_tender(req: TenderUploadRequest) -> dict[str, Any]:
+    """BESS tender intelligence: requirements with page/clause sources (Docling when installed)."""
+    try:
+        payload = base64.b64decode(req.file.content_base64)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="The file could not be decoded.") from exc
+    if len(payload) > 60 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="The file is larger than 60 MB.")
+    try:
+        return BESS.parse_bess_tender(req.file.name, payload, parser=req.parser)
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

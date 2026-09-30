@@ -41,6 +41,7 @@ import {
 import "./styles.css";
 import { THEME_NAME } from "./chartTheme";
 import RtcTab from "./rtc/RtcTab";
+import BessTab from "./bess/BessTab";
 import SaveDialog from "./scenarios/SaveDialog";
 import Brand from "./Brand";
 import { ALL_TAB_IDS, usesEngine } from "../lib/tabs";
@@ -3199,6 +3200,7 @@ export default function App({ user = null, initialScenario = null }) {
   const [activeTab, setActiveTab] = useState(() => {
     if (initialScenario?.scenario?.module === "fdre") return "results";
     if (initialScenario?.scenario?.module === "rtc") return "rtc";
+    if (initialScenario?.scenario?.module === "bess") return "bessTender";
     return allowed.has("rtc") ? "rtc" : firstAllowed;
   });
   const [fdreLinked, setFdreLinked] = useState(null);
@@ -3515,7 +3517,8 @@ export default function App({ user = null, initialScenario = null }) {
 
   const resultForTabs = optimizedResult || customResult;
   const tabs = [
-    ["rtc", Clock3, "Round the Clock", "New"],
+    ["rtc", Clock3, "Round the Clock"],
+    ["bessTender", BatteryCharging, "BESS Tender", "New"],
     ["tender", FileText, "Tender Upload"],
     ["project", Settings2, "Project Configuration"],
     ["yield", BarChart3, "Yield Assessment"],
@@ -3545,11 +3548,12 @@ export default function App({ user = null, initialScenario = null }) {
         allowed={allowed}
       />
       <main>
-        {notice && canView && activeTab !== "rtc" && <div className="loading">{notice}</div>}
-        {error && canView && activeTab !== "rtc" && <div className="alert">{error}</div>}
-        {loading && canView && activeTab !== "rtc" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
+        {notice && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="loading">{notice}</div>}
+        {error && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="alert">{error}</div>}
+        {loading && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
         {!canView && <Restricted label={tabs.find((t) => t[0] === activeTab)?.[2] || "This tab"} contacts={user?.adminContacts} />}
+        {canView && activeTab === "bessTender" && <BessTab initialScenario={initialScenario?.scenario?.module === "bess" ? initialScenario : null} />}
         {canView && activeTab === "rtc" && <RtcTab user={user} initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
         {canView && activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {canView && activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}

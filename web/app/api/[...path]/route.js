@@ -18,7 +18,7 @@ async function forward(req, { params }) {
   const { path } = await params;
   // Round the Clock users may call only its solver (/api/rtc/*); other engine routes need an
   // engine-backed tab
-  const rtcRoute = path[0] === "rtc" && user.allowedTabs.includes("rtc");
+  const rtcRoute = (path[0] === "rtc" && user.allowedTabs.includes("rtc")) || (path[0] === "bess" && user.allowedTabs.includes("bessTender"));
   if (!rtcRoute && !usesEngine(user.allowedTabs)) throw new HttpError(403, "Contact Administrator: no access to the FDRE engine tabs.");
   const incoming = new URL(req.url);
   const target = new URL(`/api/${path.map(encodeURIComponent).join("/")}${incoming.search}`, ENGINE_URL);

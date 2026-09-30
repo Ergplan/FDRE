@@ -21,9 +21,20 @@ export const SUMMARY_FIELDS = [
   { key: "curtailMu", label: "Curtailed year 1", unit: "MU", digits: 1 },
   { key: "minPeakAvailability", label: "Min peak availability", unit: "%", pct: true, digits: 1 },
   { key: "penaltyGwh", label: "Penalty energy", unit: "GWh", digits: 2 },
+  { key: "powerMw", label: "BESS contracted power", unit: "MW", digits: 0 },
+  { key: "energyMwh", label: "BESS contracted energy", unit: "MWh", digits: 0 },
+  { key: "contractYears", label: "Contract term", unit: "years", digits: 0 },
+  { key: "day1DcMwh", label: "Day-one battery (DC)", unit: "MWh", digits: 0 },
+  { key: "oversizePct", label: "Day-one oversize", unit: "%", digits: 1 },
+  { key: "augIntervalYears", label: "Augment every", unit: "years", digits: 0 },
+  { key: "augMwh", label: "Augmentation added", unit: "MWh", digits: 0 },
+  { key: "vgfCr", label: "VGF", unit: "₹ cr", digits: 0 },
+  { key: "chargeLakhPerMwMonth", label: "Capacity charge", unit: "₹ lakh/MW/month", digits: 3 },
+  { key: "ceilingLakhPerMwMonth", label: "Ceiling tariff", unit: "₹ lakh/MW/month", digits: 3 },
+  { key: "lcos", label: "LCOS", unit: "₹/kWh", digits: 2 },
 ];
 
-export const MODULE_LABEL = { rtc: "Round the Clock", fdre: "FDRE" };
+export const MODULE_LABEL = { rtc: "Round the Clock", fdre: "FDRE", bess: "BESS Tender" };
 
 export function formatField(field, value) {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) return "–";

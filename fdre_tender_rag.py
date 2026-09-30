@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import math
+import os
 import re
 import logging
 from dataclasses import dataclass
@@ -72,16 +73,20 @@ def extract_text_from_upload(name: str, payload: bytes) -> tuple[str, list[dict[
     return text, pages
 
 
-def _extract_docling(name: str, payload: bytes) -> tuple[str, list[dict[str, Any]]]:
+def _extract_docling(name: str, payload: bytes, do_ocr: bool = True) -> tuple[str, list[dict[str, Any]]]:
     from docling.datamodel.base_models import DocumentStream, InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     options = PdfPipelineOptions()
-    options.do_ocr = True
+    options.do_ocr = do_ocr
     options.do_table_structure = True
     options.enable_remote_services = False
     options.document_timeout = 180
+    # models baked into the engine image (docling-tools models download), so no runtime download
+    artifacts = os.environ.get("DOCLING_ARTIFACTS_PATH")
+    if artifacts and Path(artifacts).is_dir() and any(Path(artifacts).iterdir()):
+        options.artifacts_path = artifacts
     converter = DocumentConverter(
         allowed_formats=[InputFormat.PDF, InputFormat.DOCX],
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)},
@@ -109,8 +114,18 @@ def extract_tender_document(name: str, payload: bytes, parser: str = "auto"):
         raise ValueError("Unknown tender parser.")
     warning = None
     if parser != "standard" and Path(name).suffix.lower() in {".pdf", ".docx"}:
+        ocr_note = None
         try:
-            text, pages = _extract_docling(name, payload)
+            try:
+                text, pages = _extract_docling(name, payload)
+            except ImportError:
+                raise
+            except Exception:
+                # OCR models may be unavailable (no internet for the first download): layout and
+                # table recognition still work for digital PDFs without OCR
+                logging.getLogger(__name__).warning("Docling with OCR failed; retrying without OCR", exc_info=True)
+                text, pages = _extract_docling(name, payload, do_ocr=False)
+                ocr_note = "Docling ran without OCR (its OCR models could not be loaded): scanned pages have no text."
             if Path(name).suffix.lower() == ".pdf":
                 native_pages = []
                 try:
@@ -119,7 +134,8 @@ def extract_tender_document(name: str, payload: bytes, parser: str = "auto"):
                         page["native_text"] = native["text"]
                 except Exception:
                     pass
-            return text, pages, {"requested": parser, "engine": "Docling", "warning": "Review table contents against the original PDF; reconstructed cells may omit or repeat text." if Path(name).suffix.lower() == ".pdf" else None}
+            table_note = "Review table contents against the original PDF; reconstructed cells may omit or repeat text." if Path(name).suffix.lower() == ".pdf" else None
+            return text, pages, {"requested": parser, "engine": "Docling" if not ocr_note else "Docling (no OCR)", "warning": " ".join(x for x in (ocr_note, table_note) if x) or None}
         except ImportError:
             warning = "Docling is unavailable. Standard extraction was used. Install requirements-docling.txt to enable enhanced parsing."
         except Exception:

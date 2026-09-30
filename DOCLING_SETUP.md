@@ -28,3 +28,12 @@ warning. No-text documents are rejected rather than populated with tender defaul
 Docling improves extraction only. The existing clause retrieval and tender field
 mapping remain responsible for interpretation. Review extracted conditions before
 optimization: uploading a new tender does not implement unsupported tender rules.
+
+## Docker (engine image)
+
+The engine image installs Docling with CPU-only PyTorch and downloads its layout, table and
+OCR models at build time into `/opt/docling-models` (`DOCLING_ARTIFACTS_PATH`), so tender
+parsing needs no internet at runtime. The install is optional: if it fails, the image still
+builds and parsing uses the standard extractor. Skip it with `INSTALL_DOCLING=false`. If the
+OCR models cannot be loaded, Docling runs without OCR (layout and tables only) before falling
+back to the standard extractor. The BESS Tender tab uses the same extraction.
