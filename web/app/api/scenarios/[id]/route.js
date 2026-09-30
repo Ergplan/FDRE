@@ -1,5 +1,6 @@
 import { handler, requireUser } from "@/lib/auth";
 import { addVersion, deleteScenario, getScenario, updateScenarioMeta } from "@/lib/scenarios";
+import { logEvent } from "@/lib/activity";
 
 export const GET = handler(async (req, { params }) => {
   await requireUser();
@@ -11,7 +12,9 @@ export const GET = handler(async (req, { params }) => {
 export const PUT = handler(async (req, { params }) => {
   const user = await requireUser();
   const { id } = await params;
-  return Response.json(await addVersion(user, id, await req.json()));
+  const saved = await addVersion(user, id, await req.json());
+  await logEvent({ user, kind: "scenario_save", detail: { scenarioId: id, version: saved.version }, req });
+  return Response.json(saved);
 });
 
 // Rename, describe or archive.

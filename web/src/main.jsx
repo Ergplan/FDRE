@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import TenderReview, { restoreTenderReviews, saveTenderReviews } from "./TenderReview";
+import { flushActivity, startActivityTracker, trackEvent } from "./activity";
 import * as echarts from "echarts";
 import {
   Activity,
@@ -557,6 +558,7 @@ function Sidebar({ tabs, activeTab, setActiveTab, user, onSave, canSave, linked,
           </button>
           <a href="/scenarios"><FolderOpen size={15} /> Saved scenarios</a>
           {user?.role === "admin" && <a href="/admin/users"><Users size={15} /> Users</a>}
+          {user?.role === "admin" && <a href="/admin/activity"><Activity size={15} /> Activity</a>}
         </nav>
         {linked && <p className="side-note">Open: {linked.name} · v{linked.version}</p>}
       </div>
@@ -564,7 +566,7 @@ function Sidebar({ tabs, activeTab, setActiveTab, user, onSave, canSave, linked,
       {user && (
         <div className="side-section side-user">
           <a href="/account" className="side-user-link"><UserRound size={15} /><span><strong>{user.name || user.email}</strong><small>{user.role}</small></span></a>
-          <button type="button" className="rtc-icon-btn" title="Sign out" onClick={async () => { await authApi.logout().catch(() => {}); window.location.href = "/login"; }}><LogOut size={15} /></button>
+          <button type="button" className="rtc-icon-btn" title="Sign out" onClick={async () => { await flushActivity(); await authApi.logout().catch(() => {}); window.location.href = "/login"; }}><LogOut size={15} /></button>
         </div>
       )}
     </aside>
@@ -3200,6 +3202,9 @@ export default function App({ user = null, initialScenario = null }) {
     return allowed.has("rtc") ? "rtc" : firstAllowed;
   });
   const [fdreLinked, setFdreLinked] = useState(null);
+  // usage log: active time and which tabs are opened
+  useEffect(() => { startActivityTracker(); }, []);
+  useEffect(() => { if (allowed.has(activeTab)) trackEvent("tab", { tab: activeTab }); }, [activeTab, allowed]);
   const [showSave, setShowSave] = useState(false);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState("Booting model");

@@ -7,6 +7,8 @@ export async function register() {
       const { seedProfiles } = await import("./lib/profiles");
       const n = await seedProfiles();
       if (n) console.log(`[db] loaded ${n} built-in resource profiles`);
+      const { purgeOldActivity } = await import("./lib/activity");
+      await purgeOldActivity().catch((err) => console.error(`[activity] purge: ${err.message}`));
       return;
     } catch (err) {
       console.error(`[db] migration attempt ${attempt} failed: ${err.message}`);

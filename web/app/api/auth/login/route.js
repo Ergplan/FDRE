@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { handler, HttpError, verifyPassword } from "@/lib/auth";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
+import { logEvent, startSession } from "@/lib/activity";
 
 // Simple in-memory brute-force brake: 10 failures per email+IP per 15 minutes.
 const failures = globalThis.__fdreLoginFailures || (globalThis.__fdreLoginFailures = new Map());
@@ -18,10 +19,13 @@ export const POST = handler(async (req) => {
   const user = rows[0];
   if (!user || !(await verifyPassword(String(password || ""), user.password_hash))) {
     failures.set(key, [...recent, now]);
+    await logEvent({ user: user ? { id: user.id, email: user.email } : null, email: String(email || "").slice(0, 200), kind: "login_failed", detail: { reason: user ? "wrong password" : "unknown email" }, req });
     throw new HttpError(401, "Email or password is incorrect.");
   }
   failures.delete(key);
   await query("UPDATE users SET last_login_at = now() WHERE id = $1", [user.id]);
-  (await cookies()).set(SESSION_COOKIE, await signSession(user), sessionCookieOptions());
+  const sid = await startSession(user, req);
+  await logEvent({ user, sessionId: sid, kind: "login", detail: { userAgent: String(req.headers.get("user-agent") || "").slice(0, 200) }, req });
+  (await cookies()).set(SESSION_COOKIE, await signSession(user, sid), sessionCookieOptions());
   return Response.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });

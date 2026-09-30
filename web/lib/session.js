@@ -10,8 +10,8 @@ function key() {
   return new TextEncoder().encode(secret);
 }
 
-export async function signSession(user) {
-  return new SignJWT({ email: user.email, role: user.role, epoch: user.session_epoch ?? 0 })
+export async function signSession(user, sid = null) {
+  return new SignJWT({ email: user.email, role: user.role, epoch: user.session_epoch ?? 0, ...(sid ? { sid } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
@@ -23,7 +23,7 @@ export async function verifySession(token) {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
-    return { id: payload.sub, email: payload.email, role: payload.role, epoch: payload.epoch ?? 0 };
+    return { id: payload.sub, email: payload.email, role: payload.role, epoch: payload.epoch ?? 0, sid: payload.sid || null };
   } catch {
     return null;
   }

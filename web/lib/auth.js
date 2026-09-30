@@ -36,7 +36,7 @@ export async function currentUser() {
   const { rows } = await query("SELECT id, email, name, role, session_epoch, tab_access FROM users WHERE id = $1", [session.id]);
   const user = rows[0];
   if (!user || user.session_epoch !== session.epoch) return null;
-  return { id: user.id, email: user.email, name: user.name, role: user.role, tab_access: user.tab_access };
+  return { id: user.id, email: user.email, name: user.name, role: user.role, tab_access: user.tab_access, sid: session.sid, session_epoch: user.session_epoch };
 }
 
 /** The signed-in user plus the dashboard tabs they may open and whom to contact for more. */
@@ -45,7 +45,7 @@ export async function currentUserWithAccess() {
   if (!user) return null;
   const defaults = await getSetting("default_tabs", null);
   const admins = await query("SELECT name, email FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 3");
-  const { tab_access, ...rest } = user;
+  const { tab_access, sid, session_epoch, ...rest } = user;
   return {
     ...rest,
     allowedTabs: resolveTabs(user, defaults),

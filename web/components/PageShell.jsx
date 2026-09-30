@@ -1,17 +1,19 @@
-import { FolderOpen, LayoutDashboard, UserRound, Users } from "lucide-react";
+import { Activity, FolderOpen, LayoutDashboard, UserRound, Users } from "lucide-react";
 import Brand from "@/src/Brand";
 import SignOutButton from "./SignOutButton";
+import ActivityPing from "./ActivityPing";
 
 /** Frame for the non-dashboard pages (library, compare, users, account). */
 export default function PageShell({ user, active, title, eyebrow, actions, children }) {
   const links = [
     ["dashboard", "/", LayoutDashboard, "Dashboard"],
     ["scenarios", "/scenarios", FolderOpen, "Saved scenarios"],
-    ...(user?.role === "admin" ? [["users", "/admin/users", Users, "Users"]] : []),
+    ...(user?.role === "admin" ? [["users", "/admin/users", Users, "Users"], ["activity", "/admin/activity", Activity, "Activity"]] : []),
     ["account", "/account", UserRound, "Account"],
   ];
   return (
     <div className="page">
+      {user && <ActivityPing />}
       <header className="topbar">
         <a href="/" className="topbar-brand" aria-label="Joulewise FDRE home"><Brand size="sm" /></a>
         <nav>

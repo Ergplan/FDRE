@@ -45,7 +45,21 @@ The app carries Joulewise branding on every page (logo files in `web/public/bran
 administrator sets which dashboard tabs other users can open under **Users → Tab access**.
 There is a deployment default plus optional per-user custom lists. Tabs a user may not open
 are greyed out with "Contact Administrator". Users without any engine-backed tab are also
-refused by the engine API. See `DOCLING_SETUP.md` for parser setup. Tender reviewer
+refused by the engine API.
+
+**Administration → Activity** (`/admin/activity`) shows who signed in when and how much they
+used the app, for the last 24 hours up to a year:
+
+- **By user:** sign-ins and failed sign-ins, active time and open time, and optimizer runs.
+  It also shows engine calls and compute time, scenario saves, exports and the most used tab.
+- **Sign-ins:** each session with its start, last seen, sign-out, active time, browser and IP.
+- **Event log:** filterable by user and event.
+
+Each view downloads as CSV. Active time counts minutes with the app visible and used within
+the last 5 minutes, reported by a heartbeat every minute. Sign-ins, engine calls, saves,
+exports and profile uploads are logged by the server. Tab views and optimizer runs are
+reported by the browser. Records are kept for 400 days (tables `user_sessions` and
+`activity_log`). See `DOCLING_SETUP.md` for parser setup. Tender reviewer
 drafts are stored in the browser and can be downloaded as JSON; they are not
 shared server-side records. CfD documents can be reviewed but their settlement
 and dispatch rules are not implemented by the FDRE optimizer.

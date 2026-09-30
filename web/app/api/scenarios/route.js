@@ -1,5 +1,6 @@
 import { handler, requireUser } from "@/lib/auth";
 import { createScenario, listScenarios } from "@/lib/scenarios";
+import { logEvent } from "@/lib/activity";
 
 export const GET = handler(async (req) => {
   await requireUser();
@@ -11,5 +12,6 @@ export const GET = handler(async (req) => {
 export const POST = handler(async (req) => {
   const user = await requireUser();
   const created = await createScenario(user, await req.json());
+  await logEvent({ user, kind: "scenario_save", detail: { scenario: created?.name, module: created?.module, version: 1 }, req });
   return Response.json({ scenario: created }, { status: 201 });
 });

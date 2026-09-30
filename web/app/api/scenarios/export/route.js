@@ -5,6 +5,8 @@ import { handler, HttpError, requireUser } from "@/lib/auth";
 import { getScenario } from "@/lib/scenarios";
 import { fieldsFor, MODULE_LABEL } from "@/lib/summaryFields";
 
+import { logEvent } from "@/lib/activity";
+
 export const dynamic = "force-dynamic";
 
 const RTC_LINES = [
@@ -31,12 +33,13 @@ function styleHeader(row) {
 }
 
 export const GET = handler(async (req) => {
-  await requireUser();
+  const user = await requireUser();
   const sp = new URL(req.url).searchParams;
   const ids = (sp.get("ids") || "").split(",").filter(Boolean).slice(0, 20);
   if (!ids.length) throw new HttpError(400, "ids are required.");
   const items = [];
   for (const id of ids) items.push(await getScenario(id, ids.length === 1 ? sp.get("version") : null));
+  await logEvent({ user, kind: "export", detail: { what: "scenarios.xlsx", scenarios: items.map((i) => i.scenario.name) }, req });
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "FDRE";

@@ -6,6 +6,7 @@ import https from "node:https";
 import { Readable } from "node:stream";
 import { currentUserWithAccess, handler, HttpError } from "@/lib/auth";
 import { usesEngine } from "@/lib/tabs";
+import { logEvent } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 const ENGINE_URL = process.env.ENGINE_URL || "http://127.0.0.1:8000";
@@ -25,9 +26,13 @@ async function forward(req, { params }) {
   const headers = { accept: req.headers.get("accept") || "*/*" };
   if (req.headers.get("content-type")) headers["content-type"] = req.headers.get("content-type");
   if (body) headers["content-length"] = String(body.length);
+  const started = Date.now();
+  const logged = req.method !== "GET" && req.method !== "HEAD"; // compute calls, not reads
   return new Promise((resolve) => {
     const lib = target.protocol === "https:" ? https : http;
     const upstream = lib.request(target, { method: req.method, headers, timeout: TIMEOUT_MS }, (res) => {
+      // usage: engine path, status and wall time until the (possibly streamed) response ends
+      if (logged) res.on("close", () => logEvent({ user, kind: "engine", detail: { path: path.join("/"), status: res.statusCode }, ms: Date.now() - started, req }));
       const out = new Headers();
       for (const h of ["content-type", "content-disposition", "content-length", "cache-control"]) if (res.headers[h]) out.set(h, res.headers[h]);
       resolve(new Response(Readable.toWeb(res), { status: res.statusCode || 502, headers: out }));

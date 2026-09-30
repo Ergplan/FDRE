@@ -4,6 +4,7 @@ import * as E from "./engine";
 import SaveDialog from "../scenarios/SaveDialog";
 import OptimizerTheatre from "./Theatre";
 import FinanceView from "./FinanceView";
+import { trackEvent } from "../activity";
 import { Answer, Alternatives, AgeingImpact, DispatchStory, EnergyFlow, SolverLog, TariffMap } from "./results";
 import { BessChapter, CHAPTERS, DfrChapter, EnergyChapter, ResourceChapter, TypeChapter, chapterSummary } from "./chapters";
 import { Section, SelectBox, nf, pf } from "./ui";
@@ -194,6 +195,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     const before = sizes;
     const tariffMode = state.objective === "tariff";
     feedRef.current = {
+      startedAt: performance.now(), objective: state.objective,
       axes: null, cells: [], tcells: [], tariffMode, done: false, result: null, error: null, progress: null,
       highs: { active: false, lines: [], progress: null, done: false, result: null, error: null, startedAt: null },
     };
@@ -232,6 +234,18 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     const f = feedRef.current;
     setTheatre(false);
     if (!f) return;
+    const r = f.result;
+    trackEvent("optimize", {
+      module: "rtc",
+      objective: f.objective,
+      ok: Boolean(r?.feasible),
+      error: f.error || undefined,
+      highs: r?.highs ? (r.highs.ok ? { seconds: r.highs.seconds, lowerBound: r.highs.lowerBound } : { error: r.highs.error }) : undefined,
+      sizes: r?.best?.sizes,
+      tariff: r?.best?.tariff,
+      designs: r?.evals,
+      models25yr: r?.stats?.tariffEvals,
+    }, performance.now() - f.startedAt);
     if (f.error) {
       setMessage(`Optimizer: ${f.error}`);
       return;
