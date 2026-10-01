@@ -196,7 +196,7 @@ the standard extractor.
 
 `/product` is a public page (no sign-in) pitching the product and its Free, Premium and Ultra
 plans. It is a static page in `web/public/product/` with screenshots in `img/`. The brochure
-`/product/Joulewise-product.pdf` is rendered from the same page with
+`/product/Joulewise-product.pdf` (A4 portrait, single column, readable on a phone) is rendered from the same page with
 `node tools/build_product_pdf.cjs [base-url]` while the app is running. Re-run that script
 after editing the page.
 

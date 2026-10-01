@@ -132,6 +132,55 @@
   .ultra-list b { display: block; margin-bottom: 6px; }
   .ultra-list span { color: var(--ink-2); font-size: 14px; }
 
+  /* value */
+  .value-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: stretch; }
+  table.hours { width: 100%; border-collapse: collapse; font-size: 15px; border: 1px solid var(--line); background: var(--panel); }
+  table.hours th, table.hours td { padding: 13px 16px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.hours th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  table.hours td:nth-child(2) { color: var(--muted); white-space: nowrap; }
+  table.hours td:nth-child(3) { white-space: nowrap; }
+  table.hours td b { color: var(--signal); }
+  table.hours tr.total td { font-weight: 700; color: var(--ink); border-bottom: 0; font-size: 17px; }
+  table.hours tr.total td:nth-child(2) { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--bad); }
+  .calc { border: 1px solid var(--signal); background: linear-gradient(180deg, rgba(212,255,63,0.06), transparent 60%), var(--panel); padding: 26px; display: flex; flex-direction: column; gap: 18px; }
+  .calc label { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 15px; color: var(--ink-2); }
+  .calc input { width: 96px; padding: 10px 12px; background: var(--bg); color: var(--ink); border: 1px solid var(--line-2); font: 600 18px var(--sans); }
+  .calc-out { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .calc-out div { background: var(--bg); padding: 18px 16px; }
+  .calc-out b { display: block; font-size: 40px; font-weight: 800; color: var(--signal); letter-spacing: -0.02em; line-height: 1; }
+  .calc-out span { display: block; margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+  .small { font-size: 13px; }
+  .trace { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 40px; margin-top: 64px; padding-top: 48px; border-top: 1px solid var(--line); }
+  .trace-head h3 { font-size: 28px; font-weight: 800; text-transform: uppercase; margin: 12px 0 14px; }
+  .trace-head p { color: var(--ink-2); }
+  .trace-list, .sec-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .trace-list li, .sec-list li { background: var(--panel); padding: 20px 18px; }
+  .trace-list b, .sec-list b { display: block; margin-bottom: 6px; color: var(--ink); }
+  .trace-list span, .sec-list span { color: var(--ink-2); font-size: 14px; }
+  .trace-list b::before { content: "↳ "; color: var(--signal); }
+
+  /* security & deployment */
+  .deploy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .deploy-card { border: 1px solid var(--line-2); background: var(--panel); padding: 28px 26px; }
+  .deploy-card .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border: 1px solid currentColor; color: var(--c); }
+  .deploy-card h3 { font-size: 24px; font-weight: 800; text-transform: uppercase; margin: 14px 0 10px; }
+  .deploy-card p { color: var(--ink-2); }
+  .deploy-card ul { list-style: none; padding: 0; margin: 16px 0 0; }
+  .deploy-card li { padding: 8px 0 8px 22px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-2); position: relative; }
+  .deploy-card li::before { content: "✓"; position: absolute; left: 0; color: var(--signal); font-weight: 700; }
+  .sec-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; margin-top: 24px; }
+  .sec-hero { border: 1px solid var(--line-2); padding: 30px 26px; background: radial-gradient(500px 240px at 0% 0%, rgba(90,180,232,0.12), transparent 70%), var(--panel); }
+  .sec-hero h3 { font-size: 30px; font-weight: 800; text-transform: uppercase; margin: 12px 0 14px; line-height: 1.05; }
+  .sec-hero p { color: var(--ink-2); }
+  .iso { margin-top: 24px; display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border: 1px solid var(--signal); }
+  .iso b { font-family: var(--mono); letter-spacing: 0.08em; color: var(--signal); }
+  .iso span { color: var(--ink-2); font-size: 14px; }
+  .sec-list li b::before { content: "■ "; color: var(--wind); font-size: 10px; vertical-align: 2px; }
+  .ultra-band { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: center; margin-top: 56px; padding-top: 48px; border-top: 1px solid var(--line); }
+  .ultra-band h3 { font-size: 28px; font-weight: 800; text-transform: uppercase; margin: 12px 0 14px; }
+  .ultra-band p { color: var(--ink-2); }
+  .ultra-band img { border: 1px solid var(--line-2); }
+
   .cta-band { padding: 96px 0; text-align: center; background: radial-gradient(800px 300px at 50% 0%, rgba(212,255,63,0.10), transparent 70%); }
   .cta-band h2 { max-width: 900px; margin: 16px auto 18px; }
   .cta-band .lead { margin: 0 auto 30px; }
@@ -145,31 +194,60 @@
     .stats, .flow, .aud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .stat:nth-child(2) { border-right: 0; }
     .modules, .tiers { grid-template-columns: 1fr; }
-    .block-head, .show, .show.rev, .ultra { grid-template-columns: 1fr; }
+    .block-head, .show, .show.rev, .ultra, .value-grid, .trace, .deploy, .sec-grid, .ultra-band { grid-template-columns: 1fr; }
     .show.rev .show-text { order: 0; }
     .block-head .lead { justify-self: start; }
     table.compare { font-size: 12.5px; }
     table.compare th, table.compare td { padding: 9px 6px; }
   }
   @media (max-width: 560px) {
-    .stats, .flow, .aud, .ultra-list { grid-template-columns: 1fr; }
+    .stats, .flow, .aud, .ultra-list, .trace-list, .sec-list { grid-template-columns: 1fr; }
+    table.hours { font-size: 13.5px; }
+    table.hours th, table.hours td { padding: 10px 10px; }
+    table.hours td:nth-child(2), table.hours td:nth-child(3) { white-space: normal; }
+    .hero h1 { font-size: 40px; }
+    h2 { font-size: 30px; }
     .stat { border-right: 0; border-bottom: 1px solid var(--line); }
   }
 
-  /* PDF / print: rendered on a 1200 px wide page with A4 proportions, so the desktop layout is kept */
+  /* PDF / print: true A4 portrait, single column and large type so it also reads well on a phone.
+     The A4 page is 794 CSS px wide, so the narrow-screen layout above applies; these rules tune it. */
+  @page { size: A4; margin: 0; }
   @media print {
     html, body { background: var(--bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-size: 15.5px; line-height: 1.5; }
+    .wrap { width: calc(100% - 64px); }
     .nav { position: static; }
-    .nav nav { display: none; }
-    .hero { padding: 64px 0 40px; }
-    section.block { padding: 64px 0; }
+    .nav nav, .nav .btn, .no-print { display: none !important; }
+    .hero { padding: 40px 0 28px; }
+    .hero h1 { font-size: 50px; line-height: 0.98; }
+    .lead { font-size: 16.5px; }
+    h2 { font-size: 34px; }
+    section.block { padding: 40px 0; }
+    .block-head { margin-bottom: 24px; gap: 14px; }
+    .hero-shot { margin-top: 28px; box-shadow: none; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat { padding: 20px 18px; border-bottom: 1px solid var(--line); }
+    .stat b { font-size: 30px; }
+    .show { margin-top: 36px; gap: 18px; }
+    .show-text h3, .trace-head h3, .ultra-band h3 { font-size: 24px; }
+    .modules, .flow, .aud, .trace-list, .sec-list { grid-template-columns: 1fr 1fr; }
+    .calc-out b { font-size: 34px; }
+    .tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .tier { padding: 18px 14px; }
+    .tier h3 { font-size: 22px; }
+    .tier .price { font-size: 18px; }
+    .tier .for { font-size: 13px; }
+    .tier li { font-size: 12.5px; padding: 6px 0 6px 18px; }
+    .tier .btn { padding: 9px 8px; font-size: 10.5px; }
+    .show-text ul li { font-size: 14px; }
+    .tier .for { min-height: 0; }
+    table.compare { font-size: 13px; margin-top: 28px; }
     .page-break { break-before: page; }
-    .show, .tier, .step, .module, .aud div, .ultra-list div, table.compare tr, figure, .stats { break-inside: avoid; }
-    .hero-shot { box-shadow: none; }
-    .tiers { break-inside: avoid; }
-    .no-print { display: none !important; }
-    .block-head, h2, h3, .eyebrow { break-inside: avoid; break-after: avoid; }
-    .chips { break-inside: avoid; }
+    .show, .tier, .step, .module, .aud div, .deploy-card, .sec-hero, .sec-list li, .trace-list li, table.hours, .calc, .chips,
+    table.compare tr, figure, .stats, .ultra-band, .iso { break-inside: avoid; }
+    .block-head, h2, h3, .eyebrow { break-after: avoid; }
+    .cta-band { padding: 48px 0; }
   }
 </style>
 </head>
@@ -179,11 +257,12 @@
   <div class="wrap">
     <a href="#top" aria-label="Joulewise"><img src="/brand/joulewise-logo-dark.png" alt="Joulewise"></a>
     <nav>
+      <a href="#value">Value</a>
       <a href="#how">How it works</a>
       <a href="#product">Product</a>
       <a href="#tenders">Tenders</a>
       <a href="#tiers">Plans</a>
-      <a href="#ultra">On-premise</a>
+      <a href="#security">Security</a>
     </nav>
     <a class="btn primary" href="/login">Start free</a>
   </div>
@@ -213,6 +292,53 @@
     <div class="stat"><b>23</b><span>BESS requirements read from the RfS, each with page and clause</span></div>
     <div class="stat"><b>381</b><span>battery strategies priced in a fraction of a second</span></div>
   </div>
+
+  <section class="block" id="value">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">The value</span><h2>Weeks of bid work, done in hours</h2></div>
+        <p class="lead">A bid team typically spends 80–140 analyst hours on each tender before a number reaches the bid committee. Joulewise brings that to about four hours of review, so the team spends its time on judgement rather than spreadsheets.</p>
+      </div>
+      <div class="value-grid">
+        <table class="hours">
+          <thead><tr><th>Per tender</th><th>Typical manual effort</th><th>With Joulewise</th></tr></thead>
+          <tbody>
+            <tr><td>Read the RfS and amendments, extract requirements</td><td>16–24 h</td><td><b>~1 h</b> review</td></tr>
+            <tr><td>Build the sizing model and resource profiles</td><td>24–40 h</td><td><b>minutes</b></td></tr>
+            <tr><td>Run 10–20 sizing cases</td><td>20–40 h</td><td><b>minutes</b> each</td></tr>
+            <tr><td>Financial model and tariff for the target IRR</td><td>12–24 h</td><td><b>in every run</b></td></tr>
+            <tr><td>Compliance checklist, risk register, bid pack</td><td>8–16 h</td><td><b>1–2 h</b></td></tr>
+            <tr class="total"><td>Total</td><td>80–140 h</td><td><b>~4 h</b></td></tr>
+          </tbody>
+        </table>
+        <div class="calc" id="calc">
+          <span class="eyebrow">Your team</span>
+          <label>Tenders bid per year <input type="number" id="calc-n" value="12" min="1" max="500"></label>
+          <div class="calc-out">
+            <div><b id="calc-h">1,296</b><span>analyst hours saved a year</span></div>
+            <div><b id="calc-w">32</b><span>person-weeks back for the team</span></div>
+          </div>
+          <p class="muted small">Indicative: 108 hours saved per tender, the mid-point of the table. Your numbers depend on tender complexity and how your team works today.</p>
+        </div>
+      </div>
+
+      <div class="trace">
+        <div class="trace-head">
+          <span class="eyebrow">Full traceability</span>
+          <h3>Every number can be traced to where it came from</h3>
+          <p>Bid committees, lenders and auditors can follow any figure back to its source without asking an analyst.</p>
+        </div>
+        <ul class="trace-list">
+          <li><b>Tender → value</b><span>Every requirement shows its page, clause and the tender text it was read from.</span></li>
+          <li><b>Overrides</b><span>Edited and locked values are marked, so you always know what came from the tender and what from your team.</span></li>
+          <li><b>Optimizer runs</b><span>The solver log records what was searched, every improvement, the HiGHS output and the final checks. You can download it.</span></li>
+          <li><b>Financial model</b><span>Year-by-year revenue, costs, debt, tax and DSCR, exported to Excel or CSV. Nothing is hidden in a macro.</span></li>
+          <li><b>Versions</b><span>Every save is a version with its inputs and results. Compare, restore or export any of them.</span></li>
+          <li><b>People</b><span>Sign-ins, runs, saves and exports are recorded per user, with an audit export.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
   <section class="block" id="how">
     <div class="wrap">
@@ -375,16 +501,17 @@
             <li>EYA report</li>
             <li>Full logs and history management</li>
             <li>Up to 5 users per organisation</li>
+            <li>Dedicated cloud workspace for your organisation</li>
           </ul>
           <a class="btn primary" href="mailto:?subject=Joulewise%20Premium">Talk to us</a>
         </div>
         <div class="tier">
           <h3>Ultra</h3>
-          <div class="price">Custom <small>on-premise</small></div>
+          <div class="price">Custom <small>on-premise or cloud</small></div>
           <p class="for">For organisations where many teams collaborate on many tenders.</p>
           <ul>
             <li>Everything in Premium</li>
-            <li>On-premise deployment on your servers</li>
+            <li>On-premise on your servers, or a dedicated cloud</li>
             <li>Multiple teams, collaboration across them</li>
             <li>Users and access set by your administrators</li>
             <li>Activity and audit across the organisation</li>
@@ -419,28 +546,61 @@
           <tr><td>Logs and history management</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
           <tr><td>Users</td><td class="part">1</td><td class="hl">Up to 5 per organisation</td><td>Multiple teams</td></tr>
           <tr><td>Multi-team collaboration</td><td class="n">–</td><td class="hl n">–</td><td class="y">✓</td></tr>
-          <tr><td>Deployment</td><td class="part">Cloud</td><td class="hl">Cloud</td><td>On-premise</td></tr>
+          <tr><td>Deployment</td><td class="part">Cloud</td><td class="hl">Dedicated cloud</td><td>On-premise or dedicated cloud</td></tr>
+          <tr><td>Encryption at rest and in transit</td><td class="y">✓</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Isolated database per organisation</td><td class="part">Shared, access-controlled</td><td class="hl y">✓</td><td class="y">✓</td></tr>
           <tr><td>Bid advisory support</td><td class="n">–</td><td class="hl n">–</td><td class="y">✓</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <section class="block page-break" id="ultra">
-    <div class="wrap ultra">
-      <div>
-        <span class="eyebrow">Ultra · on-premise</span>
-        <h2 style="margin: 14px 0 18px">Your servers. Your tenders. Every team.</h2>
-        <p class="lead">Tender documents and bid economics are sensitive. Ultra runs the whole platform inside your network, with the same engine and workflow, for every team that touches a bid.</p>
-        <div class="shots" style="margin-top: 28px"><img src="/product/img/activity.jpg" alt="Activity: who signed in, when and how much they used"></div>
+  <section class="block page-break" id="security">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">Security and deployment</span><h2>Your bid strategy stays yours</h2></div>
+        <p class="lead">What you plan to bid is the most sensitive number in the company. Each organisation gets its own isolated environment, so no other customer, and no one outside your organisation, can see what you are working on.</p>
       </div>
-      <div class="ultra-list">
-        <div><b>On-premise</b><span>Runs as containers on your servers, with its own database per deployment.</span></div>
-        <div><b>Teams and access</b><span>Administrators decide who sees which module.</span></div>
-        <div><b>Activity and audit</b><span>Sign-ins, active time, optimizer runs, saves and exports per user, with CSV export.</span></div>
-        <div><b>Versioned scenarios</b><span>Every save is a version, so you can compare, restore and export to Excel.</span></div>
-        <div><b>Custom tender families</b><span>New RfS rules, penalties and compliance checks for your markets.</span></div>
-        <div><b>Bid advisory</b><span>Support from people who model and bid these tenders.</span></div>
+
+      <div class="deploy">
+        <div class="deploy-card">
+          <span class="tag" style="--c: var(--wind)">Cloud</span>
+          <h3>Dedicated cloud</h3>
+          <p>A workspace of your own, with its own database, in an Indian data centre. Nothing to install, and updates are applied for you.</p>
+          <ul><li>Premium and Ultra</li><li>Separate database and application per organisation</li><li>Daily encrypted backups</li></ul>
+        </div>
+        <div class="deploy-card">
+          <span class="tag" style="--c: var(--signal)">On-premise</span>
+          <h3>Inside your network</h3>
+          <p>The full platform runs as containers on your own servers. Tender documents and bid economics never leave your premises.</p>
+          <ul><li>Ultra</li><li>No outbound data: parsing and optimization run locally</li><li>Your backup, retention and access policies</li></ul>
+        </div>
+      </div>
+
+      <div class="sec-grid">
+        <div class="sec-hero">
+          <span class="eyebrow">Encryption</span>
+          <h3>AES-256 at rest. TLS 1.3 in transit.</h3>
+          <p>Data is encrypted to the same standards banks and governments rely on: AES-256 for stored data, databases and backups, and TLS 1.3 for every connection between your browser and the platform.</p>
+          <div class="iso"><b>ISO/IEC 27001</b><span>Certification in progress for our information security management system.</span></div>
+        </div>
+        <ul class="sec-list">
+          <li><b>Isolated by design</b><span>One database per organisation. No shared tables and no cross-customer queries.</span></li>
+          <li><b>No one else sees your thinking</b><span>Your tenders, scenarios and bids are visible only to the people your administrator allows.</span></li>
+          <li><b>Never used to train models</b><span>Your documents and results are not shared with third parties or used for training.</span></li>
+          <li><b>Strong credentials</b><span>Passwords are stored as memory-hard scrypt hashes. Sessions are signed and can be revoked by an administrator.</span></li>
+          <li><b>Least-privilege access</b><span>Administrators decide who sees which module, down to the individual user.</span></li>
+          <li><b>Audit trail</b><span>Every sign-in, failed sign-in, run, save and export is recorded and exportable.</span></li>
+        </ul>
+      </div>
+
+      <div class="ultra-band">
+        <div>
+          <span class="eyebrow">Ultra</span>
+          <h3>Many teams, many tenders, one platform</h3>
+          <p>For developers and advisory firms where several teams bid in parallel: shared libraries and profiles, team-level access, organisation-wide activity and custom tender families, on-premise or in a dedicated cloud.</p>
+        </div>
+        <img src="/product/img/activity.jpg" alt="Activity: who signed in, when and how much they used">
       </div>
     </div>
   </section>
@@ -465,5 +625,19 @@
     <span class="muted" style="margin-left:auto">Screens shown use sample inputs and a sample tender.</span>
   </div>
 </footer>
+<script>
+  (function () {
+    var n = document.getElementById("calc-n");
+    if (!n) return;
+    var fmt = new Intl.NumberFormat("en-IN");
+    function update() {
+      var t = Math.max(0, Math.min(500, Number(n.value) || 0));
+      document.getElementById("calc-h").textContent = fmt.format(t * 108);
+      document.getElementById("calc-w").textContent = fmt.format(Math.round((t * 108) / 40));
+    }
+    n.addEventListener("input", update);
+    update();
+  })();
+</script>
 </body>
 </html>
