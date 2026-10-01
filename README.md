@@ -192,6 +192,14 @@ installs Docling with CPU-only PyTorch and pre-downloads its layout, table and O
 (`DOCLING_ARTIFACTS_PATH`). Set `INSTALL_DOCLING=false` to skip this; tender parsing then uses
 the standard extractor.
 
+## Product page and PDF
+
+`/product` is a public page (no sign-in) pitching the product and its Free, Premium and Ultra
+plans. It is a static page in `web/public/product/` with screenshots in `img/`. The brochure
+`/product/Joulewise-product.pdf` is rendered from the same page with
+`node tools/build_product_pdf.cjs [base-url]` while the app is running. Re-run that script
+after editing the page.
+
 ## Streamlit Application
 
 Streamlit application and Python engine for modelling the uploaded NHPC Tranche-II Firm & Dispatchable Renewable Energy (FDRE) RfS against the uploaded Rajasthan project configuration.

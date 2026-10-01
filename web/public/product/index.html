@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Joulewise · Power tender intelligence and bid optimization</title>
+<meta name="description" content="Joulewise reads power sales tenders, sizes the plant, prices the bid over its full term and shows the margin, for RTC, FDRE, peak, BESS and hybrid tenders.">
+<link rel="icon" href="/brand/joulewise-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a; --panel: #111111; --panel-2: #161616; --line: #262626; --line-2: #333;
+    --ink: #f4f4f1; --ink-2: #c2c2bc; --muted: #86867f; --faint: #55554f;
+    --signal: #d4ff3f; --solar: #f5b83d; --wind: #5ab4e8; --bess: #a98bff; --teal: #4fd1c5; --bad: #ff6b5f; --good: #7ddc9a;
+    --sans: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+  .wrap { width: min(1200px, calc(100% - 32px)); margin: 0 auto; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--signal); }
+  h1, h2, h3 { margin: 0; letter-spacing: -0.02em; line-height: 1.05; }
+  h2 { font-size: clamp(30px, 4vw, 48px); font-weight: 800; text-transform: uppercase; }
+  h3 { font-size: 20px; font-weight: 700; }
+  p { margin: 0; }
+  .lead { color: var(--ink-2); font-size: 18px; max-width: 760px; }
+  .muted { color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border: 1px solid var(--ink); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; font-weight: 500; }
+  .btn.primary { background: var(--signal); border-color: var(--signal); color: #0a0a0a; }
+  .btn.ghost:hover { background: var(--ink); color: var(--bg); }
+
+  /* nav */
+  .nav { position: sticky; top: 0; z-index: 10; background: rgba(10,10,10,0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+  .nav img { height: 28px; width: auto; }
+  .nav nav { display: flex; gap: 22px; margin-left: auto; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+  .nav nav a { text-decoration: none; }
+  .nav nav a:hover { color: var(--signal); }
+  .nav .btn { padding: 9px 16px; }
+
+  /* hero */
+  .hero { position: relative; padding: 84px 0 56px; border-bottom: 1px solid var(--line); overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(1000px 500px at 85% -10%, rgba(212,255,63,0.10), transparent 60%), radial-gradient(800px 500px at -10% 110%, rgba(169,139,255,0.10), transparent 60%); pointer-events: none; }
+  .hero h1 { font-size: clamp(42px, 7vw, 92px); font-weight: 800; text-transform: uppercase; line-height: 0.95; margin: 18px 0 22px; max-width: 1050px; }
+  .hero h1 em { font-style: normal; color: var(--signal); }
+  .hero .cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 32px; }
+  .hero-shot { margin-top: 56px; border: 1px solid var(--line-2); box-shadow: 0 40px 120px rgba(0,0,0,0.6); }
+  .hero-shot figcaption { padding: 10px 14px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); background: var(--panel); }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+  .stat { padding: 30px 26px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat span { display: block; font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+
+  section.block { padding: 88px 0; border-bottom: 1px solid var(--line); }
+  .block-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: end; margin-bottom: 44px; }
+  .block-head .lead { justify-self: end; }
+
+  /* flow */
+  .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .step { background: var(--panel); padding: 26px 22px 28px; }
+  .step .n { font-family: var(--mono); font-size: 12px; color: var(--step, var(--signal)); letter-spacing: 0.12em; }
+  .step h3 { margin: 12px 0 10px; }
+  .step p { color: var(--ink-2); font-size: 14.5px; }
+  .step::before { content: ""; display: block; height: 3px; background: var(--step, var(--signal)); margin: -26px -22px 22px; }
+
+  /* modules */
+  .modules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .module { background: var(--panel); padding: 26px 24px; }
+  .module .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border: 1px solid currentColor; color: var(--c, var(--signal)); }
+  .module h3 { margin: 14px 0 8px; }
+  .module p { color: var(--ink-2); font-size: 14.5px; }
+
+  /* showcase */
+  .show { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; margin-top: 64px; }
+  .show.rev { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .show.rev .show-text { order: 2; }
+  .show-text h3 { font-size: 28px; font-weight: 800; text-transform: uppercase; margin: 12px 0 14px; }
+  .show-text p { color: var(--ink-2); }
+  .show-text ul { margin: 18px 0 0; padding: 0; list-style: none; }
+  .show-text li { padding: 9px 0 9px 22px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14.5px; position: relative; }
+  .show-text li::before { content: ""; position: absolute; left: 0; top: 17px; width: 8px; height: 8px; background: var(--c, var(--signal)); }
+  .shots { display: grid; gap: 12px; }
+  .shots img { border: 1px solid var(--line-2); }
+
+  /* tiers */
+  .tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .tier { display: flex; flex-direction: column; border: 1px solid var(--line-2); background: var(--panel); padding: 30px 26px; }
+  .tier.featured { border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal), 0 30px 80px rgba(212,255,63,0.08); }
+  .tier .badge { align-self: flex-start; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; background: var(--signal); color: #0a0a0a; padding: 4px 9px; margin-bottom: 14px; }
+  .tier h3 { font-size: 30px; font-weight: 800; text-transform: uppercase; }
+  .tier .price { margin: 14px 0 6px; font-size: 26px; font-weight: 700; }
+  .tier .price small { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .tier .for { color: var(--ink-2); font-size: 14.5px; min-height: 66px; }
+  .tier ul { list-style: none; margin: 20px 0 26px; padding: 0; flex: 1; }
+  .tier li { padding: 8px 0 8px 24px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-2); position: relative; }
+  .tier li::before { content: "✓"; position: absolute; left: 0; color: var(--signal); font-weight: 700; }
+  .tier li.no { color: var(--faint); }
+  .tier li.no::before { content: "–"; color: var(--faint); }
+  .tier .btn { justify-content: center; }
+
+  table.compare { width: 100%; border-collapse: collapse; margin-top: 44px; font-size: 14px; }
+  table.compare th, table.compare td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.compare thead th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line-2); }
+  table.compare thead th:not(:first-child), table.compare td:not(:first-child) { text-align: center; width: 18%; }
+  table.compare td:first-child { color: var(--ink-2); }
+  table.compare tr.group td { padding-top: 26px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--signal); border-bottom-color: var(--line-2); }
+  .y { color: var(--signal); font-weight: 700; }
+  .n { color: var(--faint); }
+  table.compare td.part { color: var(--ink-2); font-size: 12.5px; }
+  table.compare thead th.hl, table.compare td.hl { background: rgba(212,255,63,0.04); }
+
+  /* tenders & audiences */
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { border: 1px solid var(--line-2); padding: 10px 14px; font-size: 14px; background: var(--panel); }
+  .chip b { color: var(--signal); font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; margin-right: 8px; }
+  .aud { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 40px; }
+  .aud div { background: var(--panel); padding: 24px 22px; }
+  .aud h3 { font-size: 17px; margin-bottom: 8px; }
+  .aud p { color: var(--ink-2); font-size: 14px; }
+
+  /* ultra */
+  .ultra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+  .ultra-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .ultra-list div { background: var(--panel); padding: 20px 18px; }
+  .ultra-list b { display: block; margin-bottom: 6px; }
+  .ultra-list span { color: var(--ink-2); font-size: 14px; }
+
+  .cta-band { padding: 96px 0; text-align: center; background: radial-gradient(800px 300px at 50% 0%, rgba(212,255,63,0.10), transparent 70%); }
+  .cta-band h2 { max-width: 900px; margin: 16px auto 18px; }
+  .cta-band .lead { margin: 0 auto 30px; }
+  .cta-band .cta { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  footer img { height: 20px; width: auto; }
+
+  @media (max-width: 960px) {
+    .nav nav { display: none; }
+    .stats, .flow, .aud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat:nth-child(2) { border-right: 0; }
+    .modules, .tiers { grid-template-columns: 1fr; }
+    .block-head, .show, .show.rev, .ultra { grid-template-columns: 1fr; }
+    .show.rev .show-text { order: 0; }
+    .block-head .lead { justify-self: start; }
+    table.compare { font-size: 12.5px; }
+    table.compare th, table.compare td { padding: 9px 6px; }
+  }
+  @media (max-width: 560px) {
+    .stats, .flow, .aud, .ultra-list { grid-template-columns: 1fr; }
+    .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+
+  /* PDF / print: rendered on a 1200 px wide page with A4 proportions, so the desktop layout is kept */
+  @media print {
+    html, body { background: var(--bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .nav { position: static; }
+    .nav nav { display: none; }
+    .hero { padding: 64px 0 40px; }
+    section.block { padding: 64px 0; }
+    .page-break { break-before: page; }
+    .show, .tier, .step, .module, .aud div, .ultra-list div, table.compare tr, figure, .stats { break-inside: avoid; }
+    .hero-shot { box-shadow: none; }
+    .tiers { break-inside: avoid; }
+    .no-print { display: none !important; }
+    .block-head, h2, h3, .eyebrow { break-inside: avoid; break-after: avoid; }
+    .chips { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a href="#top" aria-label="Joulewise"><img src="/brand/joulewise-logo-dark.png" alt="Joulewise"></a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#product">Product</a>
+      <a href="#tenders">Tenders</a>
+      <a href="#tiers">Plans</a>
+      <a href="#ultra">On-premise</a>
+    </nav>
+    <a class="btn primary" href="/login">Start free</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Power tender intelligence · bid optimization · bid advisory</span>
+      <h1>Bid power tenders with <em>the answer,</em> not a guess.</h1>
+      <p class="lead">Joulewise reads the tender, sizes the plant, prices the bid over its full term and shows you the margin. It covers round-the-clock, FDRE, peak, battery storage and hybrid power sales, from the first read of the RfS to the bid you submit.</p>
+      <div class="cta">
+        <a class="btn primary" href="/login">Start free: Round the Clock</a>
+        <a class="btn ghost" href="#tiers">Compare plans</a>
+        <a class="btn ghost no-print" href="/product/Joulewise-product.pdf" download>Download PDF</a>
+      </div>
+      <figure class="hero-shot">
+        <img src="/product/img/rtc-theatre.jpg" alt="The optimizer building a 25-year tariff surface while the HiGHS solver log streams beside it">
+        <figcaption>Optimizing a 2,455 MU/yr round-the-clock supply in Beed, Maharashtra: the 25-year tariff surface builds while the HiGHS linear programme solves beside it.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="wrap stats">
+    <div class="stat"><b>25 years</b><span>hourly dispatch and full financial model for every shortlisted design</span></div>
+    <div class="stat"><b>70,000+</b><span>variable HiGHS model with a proven lower bound on the tariff</span></div>
+    <div class="stat"><b>23</b><span>BESS requirements read from the RfS, each with page and clause</span></div>
+    <div class="stat"><b>381</b><span>battery strategies priced in a fraction of a second</span></div>
+  </div>
+
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">How it works</span><h2>From RfS to bid in one flow</h2></div>
+        <p class="lead">One story for every tender, with each step feeding the next and every number traceable to the clause it came from.</p>
+      </div>
+      <div class="flow">
+        <div class="step" style="--step: var(--signal)"><span class="n">01 · READ</span><h3>Read the tender</h3><p>Upload the RfS and its amendments. Layout-aware parsing with table recognition and OCR pulls out the requirements, deadlines, securities, penalties and risks.</p></div>
+        <div class="step" style="--step: var(--teal)"><span class="n">02 · CONFIRM</span><h3>Confirm the requirements</h3><p>Every value shows its confidence, page and clause. Edit or lock anything; locked values survive a corrigendum.</p></div>
+        <div class="step" style="--step: var(--bess)"><span class="n">03 · OPTIMIZE</span><h3>Size and price</h3><p>Solar, wind and battery sizes, oversizing and augmentation are optimized against the full-term tariff, with degradation, debt, tax and penalties included.</p></div>
+        <div class="step" style="--step: var(--solar)"><span class="n">04 · BID</span><h3>Bid and advise</h3><p>The tariff or capacity charge at your target IRR, the margin to the ceiling, a compliance checklist, the financial model and saved, versioned scenarios for the bid committee.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="product">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">The product</span><h2>One workspace for every power sales bid</h2></div>
+        <p class="lead">Purpose-built modules that share one engine, one data model and one audit trail.</p>
+      </div>
+      <div class="modules">
+        <div class="module" style="--c: var(--signal)"><span class="tag">Round the Clock</span><h3>Firm supply sizing</h3><p>Least-tariff solar + wind + BESS for any demand profile and DFR target, with the HiGHS global optimum and an exact 25-year check.</p></div>
+        <div class="module" style="--c: var(--bess)"><span class="tag">BESS Tender</span><h3>Standalone storage bids</h3><p>Capacity charge in ₹/MW/month, oversizing and augmentation plan, RTE and availability compliance, VGF and ceiling margin.</p></div>
+        <div class="module" style="--c: var(--teal)"><span class="tag">FDRE</span><h3>Peak and firm dispatchable RE</h3><p>Peak-hour availability, annual CUF bands, penalties at 1.5× tariff, and the full RfS rule set modelled hour by hour.</p></div>
+        <div class="module" style="--c: var(--solar)"><span class="tag">Tender intelligence</span><h3>Parsing and risk</h3><p>Requirements, eligibility, securities, timelines, amendments and risk flags, each linked back to the source clause.</p></div>
+        <div class="module" style="--c: var(--wind)"><span class="tag">Yield</span><h3>EYA report</h3><p>Wind and solar energy yield with loss waterfalls, P50/P75/P90 and a printable report, fed straight into the optimizer.</p></div>
+        <div class="module" style="--c: var(--good)"><span class="tag">Finance</span><h3>Bankable financial model</h3><p>P&amp;L, cash flow, debt, DSCR, WDV tax, working capital and augmentation capex, with the tariff solved for the equity IRR. Export to Excel or CSV.</p></div>
+      </div>
+
+      <div class="show">
+        <div class="show-text" style="--c: var(--signal)">
+          <span class="eyebrow">Round the Clock</span>
+          <h3>The cheapest plant that meets the DFR every year</h3>
+          <p>A HiGHS linear programme finds the global optimum of the 25-year tariff, and the exact financial model then prices its neighbours. You see the answer and the proof.</p>
+          <ul>
+            <li>A proven floor: no design in range can beat the stated tariff</li>
+            <li>Tariff map across every solar × wind size</li>
+            <li>What ageing costs: degradation and augmentation, in ₹/kWh</li>
+            <li>Shadow price of DFR: what each extra point would add to the tariff</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <img src="/product/img/rtc-answer.jpg" alt="Round the Clock answer: sizes, tariff and the HiGHS lower bound">
+          <img src="/product/img/rtc-tariff-map.jpg" alt="Tariff for every solar and wind size">
+        </div>
+      </div>
+
+      <div class="show rev">
+        <div class="show-text" style="--c: var(--bess)">
+          <span class="eyebrow">BESS Tender</span>
+          <h3>From the RfS to the capacity charge</h3>
+          <p>Upload a storage tender and confirm what it asks for. Joulewise then prices every oversizing and augmentation strategy over the contract term and returns the lowest compliant capacity charge.</p>
+          <ul>
+            <li>Requirements with confidence, page and clause</li>
+            <li>Energy at the delivery point kept every year, block by block</li>
+            <li>Bid against the ceiling, with VGF and penalties priced in</li>
+            <li>Every strategy on one map; click to load any of them</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <img src="/product/img/bess-answer.jpg" alt="BESS bid: day-one battery, augmentation, capital cost and capacity charge">
+          <img src="/product/img/bess-trajectory.jpg" alt="Energy over the contract term with augmentation blocks">
+        </div>
+      </div>
+
+      <div class="show">
+        <div class="show-text" style="--c: var(--solar)">
+          <span class="eyebrow">Tender intelligence</span>
+          <h3>Every number traceable to its clause</h3>
+          <p>Layout-aware parsing (Docling) reads tables and scanned pages; clause-aware retrieval finds the requirements and risks. Nothing is a black box: open any value and read the tender text behind it.</p>
+          <ul>
+            <li>Penalties, securities, bid limits and timelines</li>
+            <li>Risk flags with severity and bid implication</li>
+            <li>Amendments tracked against the base tender</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <img src="/product/img/bess-requirements.jpg" alt="Extracted requirements with sources">
+        </div>
+      </div>
+
+      <div class="show rev">
+        <div class="show-text" style="--c: var(--teal)">
+          <span class="eyebrow">Dispatch and audit</span>
+          <h3>See every hour, and every decision</h3>
+          <p>Day, month and year dispatch, including surplus charging the battery, curtailment and its reasons. The optimizer log records what was searched and why the answer won.</p>
+          <ul>
+            <li>Hour-by-hour flows and state of charge</li>
+            <li>Solver log with HiGHS output, downloadable</li>
+            <li>Saved scenarios with version history and comparison</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <img src="/product/img/rtc-dispatch.jpg" alt="Hour-by-hour dispatch with battery charging">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="tenders">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">Every kind of power sales tender</span><h2>Built for the Indian power market</h2></div>
+        <p class="lead">One platform for bid preparation and bid advisory across tender families, from central agencies to state discoms and C&amp;I buyers.</p>
+      </div>
+      <div class="chips">
+        <span class="chip"><b>RTC</b>Round-the-clock RE supply with DFR</span>
+        <span class="chip"><b>FDRE</b>Firm and dispatchable RE, peak supply</span>
+        <span class="chip"><b>BESS</b>Standalone storage, VGF, capacity charge</span>
+        <span class="chip"><b>HYBRID</b>Solar–wind hybrid with or without storage</span>
+        <span class="chip"><b>PEAK</b>Peak power and assured peak supply</span>
+        <span class="chip"><b>SOLAR / WIND</b>Plain-vanilla RE auctions</span>
+        <span class="chip"><b>C&amp;I</b>Open-access and captive PPAs</span>
+        <span class="chip"><b>e-RA</b>Reverse-auction tariff strategy</span>
+      </div>
+      <div class="aud">
+        <div><h3>Developers &amp; IPPs</h3><p>Bid the lowest compliant tariff with confidence in the margin, the risks and the lender case.</p></div>
+        <div><h3>Bid advisory firms</h3><p>Run many tenders for many clients with traceable, repeatable analysis and versioned deliverables.</p></div>
+        <div><h3>Utilities &amp; procurers</h3><p>Benchmark expected tariffs and test tender design before issuing the RfS.</p></div>
+        <div><h3>Lenders &amp; investors</h3><p>Check sizing, degradation, augmentation and DSCR behind a bid or an acquisition.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block page-break" id="tiers">
+    <div class="wrap">
+      <div class="block-head">
+        <div><span class="eyebrow">Plans</span><h2>Free · Premium · Ultra</h2></div>
+        <p class="lead">Start free with Round the Clock. Upgrade when you are bidding for real, and bring it on-premise when many teams work on many tenders.</p>
+      </div>
+      <div class="tiers">
+        <div class="tier">
+          <h3>Free</h3>
+          <div class="price">₹0 <small>forever</small></div>
+          <p class="for">Explore round-the-clock sizing and see how firm supply is built.</p>
+          <ul>
+            <li>Round the Clock optimizer, unlimited runs</li>
+            <li>One RTC profile, one State</li>
+            <li>Base-level optimization</li>
+            <li>Results and dispatch on screen</li>
+            <li class="no">Financial model download</li>
+            <li class="no">Tender upload and parsing</li>
+          </ul>
+          <a class="btn ghost" href="/login">Start free</a>
+        </div>
+        <div class="tier featured">
+          <span class="badge">For bid teams</span>
+          <h3>Premium</h3>
+          <div class="price">Per organisation <small>annual</small></div>
+          <p class="for">Everything a bid team needs, from tender to bid, for up to 5 users.</p>
+          <ul>
+            <li>All profiles and all States</li>
+            <li>Tender upload, parsing and risk assessment</li>
+            <li>Calendar links for tender milestones</li>
+            <li>Tender data linked back to the optimization</li>
+            <li>Full financial modelling and downloads</li>
+            <li>Voice chat with the model</li>
+            <li>EYA report</li>
+            <li>Full logs and history management</li>
+            <li>Up to 5 users per organisation</li>
+          </ul>
+          <a class="btn primary" href="mailto:?subject=Joulewise%20Premium">Talk to us</a>
+        </div>
+        <div class="tier">
+          <h3>Ultra</h3>
+          <div class="price">Custom <small>on-premise</small></div>
+          <p class="for">For organisations where many teams collaborate on many tenders.</p>
+          <ul>
+            <li>Everything in Premium</li>
+            <li>On-premise deployment on your servers</li>
+            <li>Multiple teams, collaboration across them</li>
+            <li>Users and access set by your administrators</li>
+            <li>Activity and audit across the organisation</li>
+            <li>Custom tender families and rules</li>
+            <li>Bid advisory support</li>
+          </ul>
+          <a class="btn ghost" href="mailto:?subject=Joulewise%20Ultra">Contact sales</a>
+        </div>
+      </div>
+
+      <table class="compare">
+        <thead><tr><th>Capability</th><th>Free</th><th class="hl">Premium</th><th>Ultra</th></tr></thead>
+        <tbody>
+          <tr class="group"><td colspan="4">Optimization</td></tr>
+          <tr><td>Round the Clock optimizer runs</td><td>Unlimited</td><td class="hl">Unlimited</td><td>Unlimited</td></tr>
+          <tr><td>Resource profiles</td><td class="part">One RTC profile</td><td class="hl">All, plus your uploads</td><td>All, plus your uploads</td></tr>
+          <tr><td>States</td><td class="part">One</td><td class="hl">All</td><td>All</td></tr>
+          <tr><td>Optimization depth</td><td class="part">Base level</td><td class="hl">25-year tariff, HiGHS</td><td>25-year tariff, HiGHS</td></tr>
+          <tr><td>FDRE and BESS Tender modules</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr class="group"><td colspan="4">Tender intelligence</td></tr>
+          <tr><td>Tender upload and parsing</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Risk assessment</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Calendar links for milestones</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Tender data linked to the optimization</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr class="group"><td colspan="4">Analysis and reports</td></tr>
+          <tr><td>Results and dispatch on screen</td><td class="y">✓</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Full financial model</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Financial model download</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>EYA report</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Voice chat</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr class="group"><td colspan="4">Teams and control</td></tr>
+          <tr><td>Logs and history management</td><td class="n">–</td><td class="hl y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Users</td><td class="part">1</td><td class="hl">Up to 5 per organisation</td><td>Multiple teams</td></tr>
+          <tr><td>Multi-team collaboration</td><td class="n">–</td><td class="hl n">–</td><td class="y">✓</td></tr>
+          <tr><td>Deployment</td><td class="part">Cloud</td><td class="hl">Cloud</td><td>On-premise</td></tr>
+          <tr><td>Bid advisory support</td><td class="n">–</td><td class="hl n">–</td><td class="y">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block page-break" id="ultra">
+    <div class="wrap ultra">
+      <div>
+        <span class="eyebrow">Ultra · on-premise</span>
+        <h2 style="margin: 14px 0 18px">Your servers. Your tenders. Every team.</h2>
+        <p class="lead">Tender documents and bid economics are sensitive. Ultra runs the whole platform inside your network, with the same engine and workflow, for every team that touches a bid.</p>
+        <div class="shots" style="margin-top: 28px"><img src="/product/img/activity.jpg" alt="Activity: who signed in, when and how much they used"></div>
+      </div>
+      <div class="ultra-list">
+        <div><b>On-premise</b><span>Runs as containers on your servers, with its own database per deployment.</span></div>
+        <div><b>Teams and access</b><span>Administrators decide who sees which module.</span></div>
+        <div><b>Activity and audit</b><span>Sign-ins, active time, optimizer runs, saves and exports per user, with CSV export.</span></div>
+        <div><b>Versioned scenarios</b><span>Every save is a version, so you can compare, restore and export to Excel.</span></div>
+        <div><b>Custom tender families</b><span>New RfS rules, penalties and compliance checks for your markets.</span></div>
+        <div><b>Bid advisory</b><span>Support from people who model and bid these tenders.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div class="wrap">
+      <span class="eyebrow">Joulewise</span>
+      <h2>Know your number before the reverse auction does.</h2>
+      <p class="lead">Start free with Round the Clock today, or talk to us about Premium and Ultra for your next tender.</p>
+      <div class="cta">
+        <a class="btn primary" href="/login">Start free</a>
+        <a class="btn ghost" href="mailto:?subject=Joulewise%20demo">Book a demo</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="/brand/joulewise-logo-dark.png" alt="Joulewise">
+    <span>Power tender intelligence, bid optimization and bid advisory.</span>
+    <span class="muted" style="margin-left:auto">Screens shown use sample inputs and a sample tender.</span>
+  </div>
+</footer>
+</body>
+</html>

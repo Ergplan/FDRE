@@ -3,7 +3,8 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "./lib/session";
 
-const PUBLIC = ["/login", "/setup"];
+// /product is the public product page (static files in public/product)
+const PUBLIC = ["/login", "/setup", "/product"];
 
 export async function proxy(request) {
   const { pathname, search } = request.nextUrl;
