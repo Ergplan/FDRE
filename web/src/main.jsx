@@ -3209,6 +3209,15 @@ export default function App({ user = null, initialScenario = null }) {
   useEffect(() => { if (allowed.has(activeTab)) trackEvent("tab", { tab: activeTab }); }, [activeTab, allowed]);
   const [showSave, setShowSave] = useState(false);
   const [notice, setNotice] = useState("");
+  // Long engine runs finish in the background: only jump to their result tab if the user is
+  // still where the run started (or already on that tab); otherwise leave them where they are.
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  const TAB_NAMES = { optimization: "Optimization", results: "Results", customDispatch: "Custom Dispatch", finance: "Financial Inputs", validation: "Optimizer Validation" };
+  const showResult = (startTab, target, what) => {
+    if (activeTabRef.current === startTab || activeTabRef.current === target) setActiveTab(target);
+    else setNotice(`${what} finished. Open ${TAB_NAMES[target] || target} to see it.`);
+  };
   const [loading, setLoading] = useState("Booting model");
   const [error, setError] = useState("");
   const [settings, setSettings] = useState({
@@ -3297,6 +3306,7 @@ export default function App({ user = null, initialScenario = null }) {
   }, [defaults, settings]);
 
   async function optimize(project = sidebarProject, navigate = true) {
+    const startTab = activeTabRef.current;
     if (!project || !defaults?.project) return;
     setError("");
     const bounds = optimizerBoundsFromSettings(settings);
@@ -3323,7 +3333,7 @@ export default function App({ user = null, initialScenario = null }) {
       setScenarioResult(null);
       setValidationResult(null);
       setScenarioInputs(defaultScenarioInputs(settings));
-      if (navigate) setActiveTab("optimization");
+      if (navigate) showResult(startTab, "optimization", "FDRE optimization");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3332,6 +3342,7 @@ export default function App({ user = null, initialScenario = null }) {
   }
 
   async function evaluateCustom() {
+    const startTab = activeTabRef.current;
     if (!sidebarProject) return;
     setError("");
     setLoading("Evaluating sidebar custom case");
@@ -3343,7 +3354,7 @@ export default function App({ user = null, initialScenario = null }) {
         wind_p_level: settings.windLevel,
       });
       setCustomResult(evaluated);
-      setActiveTab("results");
+      showResult(startTab, "results", "Evaluation");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3352,6 +3363,7 @@ export default function App({ user = null, initialScenario = null }) {
   }
 
   async function runCustomDispatch() {
+    const startTab = activeTabRef.current;
     if (!defaults?.project) return;
     setError("");
     setLoading("Running custom dispatch");
@@ -3369,7 +3381,7 @@ export default function App({ user = null, initialScenario = null }) {
       });
       setDispatchResult(evaluated);
       setCustomResult(evaluated);
-      setActiveTab("customDispatch");
+      showResult(startTab, "customDispatch", "Custom dispatch");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3378,6 +3390,7 @@ export default function App({ user = null, initialScenario = null }) {
   }
 
   async function financeRerun() {
+    const startTab = activeTabRef.current;
     if (!optimizedResult?.project) return;
     setError("");
     setLoading("Recalculating finance on fixed optimized sizing");
@@ -3390,7 +3403,7 @@ export default function App({ user = null, initialScenario = null }) {
         wind_p_level: settings.windLevel,
       });
       setFinanceResult(rerun);
-      setActiveTab("finance");
+      showResult(startTab, "finance", "Finance re-run");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3429,6 +3442,7 @@ export default function App({ user = null, initialScenario = null }) {
   }
 
   async function runValidation() {
+    const startTab = activeTabRef.current;
     if (!optimizedResult?.project) return;
     setError("");
     setValidationLoading("Validating optimizer result");
@@ -3442,7 +3456,7 @@ export default function App({ user = null, initialScenario = null }) {
         fixed_bess_duration_hours: optimizedResult.optimizer?.fixed_bess_duration_hours || (settings.forceTwoHourBess ? 2 : null),
       });
       setValidationResult(validation);
-      setActiveTab("validation");
+      showResult(startTab, "validation", "Optimizer validation");
     } catch (err) {
       setError(err.message);
     } finally {
