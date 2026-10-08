@@ -49,7 +49,8 @@ export const SOURCE_FIELDS = {
   biomass: [
     { key: "availability", label: "Availability", unit: "%", pct, min: 1, max: 100, step: 1, group: "Operation", hint: "Highest hourly output" },
     { key: "cuf", label: "CUF (fuel-limited)", unit: "%", pct, min: 1, max: 100, step: 1, group: "Operation", hint: "Most energy per year" },
-    { key: "minLoad", label: "Minimum stable load", unit: "%", pct, min: 0, max: 100, step: 5, group: "Operation", hint: "The plant runs all year at least this much" },
+    { key: "minLoad", label: "Minimum stable load", unit: "%", pct, min: 0, max: 100, step: 5, group: "Operation", hint: "Technical minimum: the plant runs all year at least this much" },
+    { key: "ramp", label: "Ramp rate", unit: "%/min", pct, min: 0.05, max: 10, step: 0.05, group: "Operation", hint: "Most the output may change per minute, % of capacity (IEGC 2023: at least 1%/min for thermal units)" },
     { key: "capex", label: "Capex", unit: "₹ cr/MW", min: 0, step: 0.1, group: "Cost" },
     { key: "om", label: "O&M", unit: "₹ lakh/MW/yr", min: 0, step: 1, group: "Cost" },
     { key: "fuel", label: "Fuel cost", unit: "₹/kWh", min: 0, step: 0.05, group: "Cost", hint: "per kWh generated" },
@@ -58,7 +59,8 @@ export const SOURCE_FIELDS = {
   thermal: [
     { key: "availability", label: "Availability", unit: "%", pct, min: 1, max: 100, step: 1, group: "Operation", hint: "Highest hourly output" },
     { key: "cuf", label: "Maximum CUF", unit: "%", pct, min: 1, max: 100, step: 1, group: "Operation", hint: "Most energy per year" },
-    { key: "minLoad", label: "Technical minimum", unit: "%", pct, min: 0, max: 100, step: 5, group: "Operation", hint: "Lowest output while scheduled (0 if fully flexible)" },
+    { key: "minLoad", label: "Technical minimum", unit: "%", pct, min: 0, max: 100, step: 5, group: "Operation", hint: "Lowest output, all year (IEGC 2023: 55% for thermal units)" },
+    { key: "ramp", label: "Ramp rate", unit: "%/min", pct, min: 0.05, max: 10, step: 0.05, group: "Operation", hint: "Most the output may change per minute, % of capacity (IEGC 2023: at least 1%/min)" },
     { key: "capex", label: "Capex", unit: "₹ cr/MW", min: 0, step: 0.1, group: "Cost", hint: "0 when the power is bought under contract" },
     { key: "fixed", label: "Fixed / capacity charge", unit: "₹ lakh/MW/yr", min: 0, step: 1, group: "Cost" },
     { key: "energy", label: "Energy (variable) charge", unit: "₹/kWh", min: 0, step: 0.05, group: "Cost" },
@@ -101,11 +103,12 @@ export const AUTO_MAX = { solar: 12, wind: 6, hydro: 1, biomass: 1, thermal: 0.4
  */
 export const BENCHMARK_NOTE = "Industry benchmark (CERC norms, 2025–26 market prices), not from the tender";
 export const BENCHMARKS = {
-  solar: { cuf: 0.25, dcAc: 1.4, degradation: 0.005, capex: 3.5, om: 4 },
+  solar: { cuf: 0.25, dcAc: 1.4, degradation: 0.005, capex: 4.0, om: 4 },
   wind: { cuf: 0.33, capex: 6.5, om: 9 },
   hydro: { cuf: 0.45, availability: 1, capex: 0, fixed: 150, energy: 1.2, escalation: 0.02 },
-  biomass: { availability: 0.9, cuf: 0.8, minLoad: 0.3, capex: 7, om: 40, fuel: 4.5, fuelEscalation: 0.05 },
-  thermal: { availability: 0.85, cuf: 0.85, minLoad: 0, capex: 0, fixed: 150, energy: 3, rec: 0.15, escalation: 0.03 },
+  // biomass and thermal: technical minimum 55% and ramp 1%/min, the IEGC 2023 norms for thermal (steam) units
+  biomass: { availability: 0.9, cuf: 0.8, minLoad: 0.55, ramp: 0.01, capex: 7, om: 40, fuel: 4.5, fuelEscalation: 0.05 },
+  thermal: { availability: 0.85, cuf: 0.85, minLoad: 0.55, ramp: 0.01, capex: 0, fixed: 150, energy: 3, rec: 0.15, escalation: 0.03 },
   bess: { duration: "4", rte: 0.87, minSoc: 0.05, maxSoc: 0.95, degradation: 0.02, augmentation: "annual", capex: 1.2, om: 1.2 },
   fin: { targetEquityIrr: 0.14, debtFraction: 0.7, interestRate: 0.09, tenorYears: 15, taxRate: 0.2517, omEscalation: 0.05, insurancePct: 0.003, tariffEscalation: 0 },
   costs: { preopPct: 0.05, evacuationCr: 0 },
@@ -417,12 +420,15 @@ export function modelInputs(state, terms) {
   };
   if (on("biomass")) vars.biomassMw = range("biomass");
   for (const id of ["hydro", "thermal"]) if (on(id)) vars[`${id}Mw`] = range(id);
-  const biomass = on("biomass") ? { availability: s.biomass.availability, maxPlf: s.biomass.cuf, minLoad: s.biomass.minLoad || 0 } : null;
+  // ramp rate per minute → the most the output may change from one hour to the next
+  const perHour = (ramp) => (isNum(ramp) ? Math.min(1, ramp * 60) : undefined);
+  const biomass = on("biomass") ? { availability: s.biomass.availability, maxPlf: s.biomass.cuf, minLoad: s.biomass.minLoad || 0, rampPerHour: perHour(s.biomass.ramp) } : null;
   const plants = ["hydro", "thermal"].filter(on).map((id) => ({
     id,
     green: id === "hydro",
     availability: s[id].availability,
     minLoad: id === "thermal" ? s.thermal.minLoad || 0 : 0,
+    ...(id === "thermal" && isNum(s.thermal.ramp) ? { rampPerHour: perHour(s.thermal.ramp) } : {}),
     cuf: s[id].cuf,
     ...(id === "hydro" && Array.isArray(s.hydro.monthlyCuf) && s.hydro.monthlyCuf.every(isNum) ? { cuf: null, monthlyCuf: s.hydro.monthlyCuf } : {}),
     capexCrPerMw: s[id].capex,
@@ -560,9 +566,9 @@ export function fillBenchmarks(state, terms) {
     target[f.key] = take(`${f.section}.${f.key}`, target[f.key], BENCHMARKS[f.section][f.key]);
   }
   const market = { ...state.market };
+  // market sale is left off: switch it on to sell what the tender allows
   if (terms?.sale && terms.sale !== "not_allowed" && market.sell === null) {
-    market.sell = true;
-    market.source = "GDAM";
+    market.sell = false;
     filled["market.sell"] = true;
   }
   return { ...state, src, fin, costs, market, filled, lp: null };

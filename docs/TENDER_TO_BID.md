@@ -131,6 +131,9 @@ battery fade. When the procurer picks the peak hours, the peak floor holds in ea
 A dispatchable renewable generator with its own size and hourly output:
 
 * output ≤ availability × MW in every hour, ≥ minimum stable load × MW (it runs all year),
+* ramp rate: the output moves at most ramp × 60 min × MW from one hour to the next (the
+  benchmark is 1% of capacity per minute and a 55% technical minimum, the IEGC 2023 norms for
+  thermal steam units; thermal takes the same ramp input),
 * yearly output ≤ fuel-limited PLF × 8,760 × MW,
 * capex (₹ cr/MW), O&M (₹ lakh/MW/yr) and fuel (₹/kWh generated, escalating) are costs; fuel
   enters the LP objective and the financial model's operating cost ("Biomass fuel" line).

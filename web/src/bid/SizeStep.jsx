@@ -82,6 +82,19 @@ function DispatchWeek({ hourly, peak, market, peakAny }) {
   );
 }
 
+/** Largest hour-to-hour change and the average daily swing (max − min) of a plant's output, as shares of its capacity. */
+function rampStats(series, mw) {
+  let maxStep = 0;
+  for (let t = 1; t < series.length; t += 1) maxStep = Math.max(maxStep, Math.abs(series[t] - series[t - 1]) / mw);
+  let swing = 0;
+  const days = Math.floor(series.length / 24);
+  for (let d = 0; d < days; d += 1) {
+    const day = series.slice(d * 24, d * 24 + 24);
+    swing += (Math.max(...day) - Math.min(...day)) / mw;
+  }
+  return { maxStep, swing: days ? swing / days : 0 };
+}
+
 /** Step 4: the least-tariff plant from the bidder's sources that meets every tender requirement. */
 export default function SizeStep({ state, terms, run, startSizing, stopSizing, hourly, goto, prices, missing }) {
   const lp = state.lp;
@@ -134,7 +147,9 @@ export default function SizeStep({ state, terms, run, startSizing, stopSizing, h
               {on.filter((s) => s.id !== "bess").map((s) => {
                 const mw = Math.max(0, lp.sizes[SIZE_KEY[s.id]] || 0);
                 const mu = lp.perYear?.[0]?.[`${s.id}Mu`];
-                return <Stat key={s.id} label={s.title} value={`${nf(mw, 0)} MW`} detail={[`${nf(mw / (total || 1), 2)} × contracted`, mu !== undefined ? `${nf(mu, 0)} MU in year 1` : null].filter(Boolean).join(" · ")} />;
+                const ramp = hourly?.[s.id] && mw > 0.5 && ["biomass", "thermal"].includes(s.id) ? rampStats(hourly[s.id], mw) : null;
+                return <Stat key={s.id} label={s.title} value={`${nf(mw, 0)} MW`} detail={[`${nf(mw / (total || 1), 2)} × contracted`, mu !== undefined ? `${nf(mu, 0)} MU in year 1` : null,
+                  ramp ? `largest hourly change ${nf(ramp.maxStep * 100, 0)}% · daily swing ${nf(ramp.swing * 100, 0)}%` : null].filter(Boolean).join(" · ")} />;
               })}
               {state.sources.bess && <Stat label="Battery" value={`${nf(lp.sizes.bessMw, 0)} MW / ${nf(lp.sizes.bessMwh, 0)} MWh`} detail={lp.sizes.bessMw > 0 ? `${nf(lp.sizes.bessMwh / lp.sizes.bessMw, 1)} h` : "none"} />}
               <Stat label="25-year tariff (HiGHS)" value={`₹${nf(lp.tariff, 3)}/kWh`} detail={`no design below ₹${nf(lp.lowerBound, 3)}`} />

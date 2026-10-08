@@ -296,3 +296,18 @@ def test_plants_cost_reaches_the_tariff():
 def test_plant_ids_are_checked():
     with pytest.raises(M.LpInputError):
         M.solve(_plants_payload([{**HYDRO, "id": "solar"}], solarMw={"min": 0, "max": 10}))
+
+
+def test_biomass_ramp_rate_limits_the_hourly_change():
+    """A steam plant's ramp rate caps how far its output moves from one hour to the next."""
+    common = dict(
+        vars={"solarMw": {"locked": True, "value": 150}, "windMw": {"locked": True, "value": 0},
+              "bessMw": {"locked": True, "value": 0}, "biomassMw": {"min": 0, "max": 300}},
+        returnHourly=True,
+    )
+    free = M.solve(_payload(biomass={"availability": 0.9, "maxPlf": 0.85, "minLoad": 0}, **common))
+    slow = M.solve(_payload(biomass={"availability": 0.9, "maxPlf": 0.85, "minLoad": 0, "rampPerHour": 0.1}, **common))
+    step = lambda r: np.abs(np.diff(np.array(r["hourly"]["biomass"]))).max() / r["sizes"]["biomassMw"]
+    assert step(free) > 0.15  # without a limit it follows the solar
+    assert step(slow) <= 0.1 + 1e-3
+    assert slow["perYear"][0]["dfr"] >= 0.8 - 1e-6

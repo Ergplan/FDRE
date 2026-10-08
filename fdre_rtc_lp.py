@@ -368,6 +368,9 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         bio_avail = min(1.0, max(0.0, float(bio.get("availability") if bio.get("availability") is not None else 0.9)))
         bio_min = min(bio_avail, max(0.0, float(bio.get("minLoad") or 0)))
         bio_plf = min(bio_avail, max(0.0, float(bio.get("maxPlf") if bio.get("maxPlf") is not None else bio_avail)))
+        # rampPerHour: the most the output may change from one hour to the next, as a share of
+        # capacity (a steam plant's ramp rate, e.g. 1%/min = 0.6 per hour); absent: no limit
+        bio_ramp = min(1.0, max(0.0, float(bio["rampPerHour"]))) if bio.get("rampPerHour") is not None else None
         fuel = max(0.0, float(fin.get("biomassFuelRsPerKwh") or 0))
         fuel_esc = (1 + float(fin.get("biomassFuelEscalation") or 0)) ** (np.arange(1, n + 1) - 1)
 
@@ -403,6 +406,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             "fixed": max(0.0, float(item.get("fixedLakhPerMw") or 0)),
             "variable": max(0.0, float(item.get("energyRsPerKwh") or 0)) + max(0.0, float(item.get("recRsPerKwh") or 0)),
             "escalation": float(item.get("escalation") or 0),
+            "ramp": min(1.0, max(0.0, float(item["rampPerHour"]))) if item.get("rampPerHour") is not None else None,
         })
     green_min = float(payload.get("greenShareMin") or 0)
     non_green = [pl for pl in plants if not pl["green"]]
@@ -507,6 +511,17 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         rows_j.append(c)
         rows_v.append(val)
 
+    def add_ramp(cols: np.ndarray, size_col: int, share: float) -> None:
+        """|out_t - out_(t-1)| <= share x MW for every hour after the first (two rows each)."""
+        nonlocal n_row
+        k = HOURS - 1
+        for sign in (1.0, -1.0):
+            r = n_row + np.arange(k)
+            add(r, cols[1:], np.full(k, sign)); add(r, cols[:-1], np.full(k, -sign))
+            add(r, np.full(k, size_col), np.full(k, -share))
+            row_lo.append(np.full(k, -np.inf)); row_hi.append(np.zeros(k))
+            n_row += k
+
     def rule_groups(rule: dict) -> list[tuple[int, np.ndarray]]:
         """(month or -1, hour mask) for each floor row of a rule."""
         months = range(12) if rule["basis"] == "monthly" else [-1]
@@ -565,6 +580,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
                 add(r, c_pl, ones); add(r, np.full(HOURS, pl["col"]), np.full(HOURS, -pl["min"]))
                 row_lo.append(np.zeros(HOURS)); row_hi.append(np.full(HOURS, np.inf))
                 n_row += HOURS
+            if pl["ramp"] is not None and pl["ramp"] < 1.0:
+                add_ramp(c_pl, pl["col"], pl["ramp"])
             # energy within the CUF: per month (monthlyCuf) or per year (cuf), in GWh
             groups = [(MONTH_OF_HOUR == m, pl["monthlyCuf"][m]) for m in range(12)] if pl["monthlyCuf"] else (
                 [(np.ones(HOURS, bool), pl["cuf"])] if pl["cuf"] is not None and pl["cuf"] < pl["avail"] else [])
@@ -602,6 +619,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
                 add(r, c_bio, ones); add(r, np.full(HOURS, BM_COL), np.full(HOURS, -bio_min))
                 row_lo.append(np.zeros(HOURS)); row_hi.append(np.full(HOURS, np.inf))
                 n_row += HOURS
+            if bio_ramp is not None and bio_ramp < 1.0:
+                add_ramp(c_bio, BM_COL, bio_ramp)
             # yearly fuel limit: output <= PLF x 8760 x MW (in GWh for scaling)
             add(np.full(HOURS, n_row), c_bio, np.full(HOURS, 1e-3))
             add(np.array([n_row]), np.array([BM_COL]), np.array([-1e-3 * bio_plf * HOURS]))
