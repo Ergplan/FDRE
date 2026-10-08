@@ -50,8 +50,14 @@ const FIN_LINES = [
   ["DSCR", "dscr", 2],
 ];
 
-export default function FinanceView({ state, patch, set, lockProps, finance, sizes }) {
+export default function FinanceView({ state, patch, set, lockProps, finance, sizes, extraLines = null }) {
   const { fin } = state;
+  // extraLines: [label, key, fmt, sign] rows a caller adds after "Other fixed" (Tender to Bid: biomass fuel)
+  const lines = useMemo(() => {
+    if (!extraLines?.length) return FIN_LINES;
+    const at = FIN_LINES.findIndex((l) => l[1] === "other") + 1;
+    return [...FIN_LINES.slice(0, at), ...extraLines, ...FIN_LINES.slice(at)];
+  }, [extraLines]);
   const rows = finance.rows;
   const years = rows.map((r) => `Y${r.year}`);
   const plOption = useMemo(() => ({
@@ -86,16 +92,16 @@ export default function FinanceView({ state, patch, set, lockProps, finance, siz
 
   function exportCsv() {
     const head = ["Line item", "Y0", ...years];
-    const lines = [head.join(",")];
+    const csv = [head.join(",")];
     const y0 = { "Free cash to equity": -finance.equity, "Project cash flow (unlevered)": -finance.capex.total, "Closing balance": finance.debt };
-    for (const [label, key] of FIN_LINES) {
-      if (!key) { lines.push(`"${label}"`); continue; }
-      lines.push([`"${label}"`, y0[label] ?? "", ...rows.map((r) => (r[key] === null ? "" : Number(r[key]).toFixed(4)))].join(","));
+    for (const [label, key] of lines) {
+      if (!key) { csv.push(`"${label}"`); continue; }
+      csv.push([`"${label}"`, y0[label] ?? "", ...rows.map((r) => (r[key] === null ? "" : Number(r[key]).toFixed(4)))].join(","));
     }
-    lines.push("");
-    lines.push(`"Solar MW",${sizes.solarMw}`, `"Wind MW",${sizes.windMw}`, `"BESS MW",${sizes.bessMw}`, `"BESS MWh",${sizes.bessMwh}`);
-    lines.push(`"Project cost cr",${finance.capex.total.toFixed(2)}`, `"Tariff Rs/kWh",${finance.tariff.toFixed(4)}`, `"Equity IRR",${finance.equityIrr.toFixed(5)}`, `"Project IRR",${finance.projectIrr.toFixed(5)}`);
-    downloadText("rtc_financial_model_25y.csv", lines.join("\n"));
+    csv.push("");
+    csv.push(`"Solar MW",${sizes.solarMw}`, `"Wind MW",${sizes.windMw}`, `"BESS MW",${sizes.bessMw}`, `"BESS MWh",${sizes.bessMwh}`);
+    csv.push(`"Project cost cr",${finance.capex.total.toFixed(2)}`, `"Tariff Rs/kWh",${finance.tariff.toFixed(4)}`, `"Equity IRR",${finance.equityIrr.toFixed(5)}`, `"Project IRR",${finance.projectIrr.toFixed(5)}`);
+    downloadText("rtc_financial_model_25y.csv", csv.join("\n"));
   }
 
   const fmtCell = (v, fmt, sign = 1) => {
@@ -170,7 +176,7 @@ export default function FinanceView({ state, patch, set, lockProps, finance, siz
               <tr><th>Line item</th><th>Y0</th>{years.map((y) => <th key={y}>{y}</th>)}</tr>
             </thead>
             <tbody>
-              {FIN_LINES.map(([label, key, fmt, sign, strong], i) => {
+              {lines.map(([label, key, fmt, sign, strong], i) => {
                 if (!key) return <tr key={i} className="rtc-model-group"><td colSpan={years.length + 2}>{label}</td></tr>;
                 const y0 = label === "Free cash to equity" ? -finance.equity : label === "Project cash flow (unlevered)" ? -finance.capex.total : label === "Closing balance" ? finance.debt : null;
                 return (

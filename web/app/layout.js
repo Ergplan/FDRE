@@ -1,5 +1,6 @@
 import "@/src/styles.css";
 import "@/src/app.css";
+import "@/src/bid.css";
 
 export const metadata = {
   title: { default: "Joulewise · FDRE Optimizer", template: "%s · Joulewise FDRE" },

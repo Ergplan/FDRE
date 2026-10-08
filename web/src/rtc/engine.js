@@ -733,6 +733,7 @@ export function capexCr(sizes, costs) {
     + sizes.windMw * costs.windCrPerMw
     + sizes.bessMwh * costs.bessCrPerMwh
     + sizes.bessMw * (costs.bessPcsCrPerMw || 0)
+    + (sizes.biomassMw || 0) * (costs.biomassCrPerMw || 0) // Tender to Bid only; 0 for Round the clock
     + (costs.evacuationCr || 0);
   return { hard, preop: hard * (costs.preopPct || 0), total: hard * (1 + (costs.preopPct || 0)) };
 }
@@ -759,7 +760,8 @@ function augmentationScheduleCr(sizes, costs, bess, years) {
 }
 
 function omCr(sizes, fin) {
-  return (sizes.solarMw * fin.solarOmLakhPerMw + sizes.windMw * fin.windOmLakhPerMw + sizes.bessMwh * fin.bessOmLakhPerMwh) / 100;
+  return (sizes.solarMw * fin.solarOmLakhPerMw + sizes.windMw * fin.windOmLakhPerMw + sizes.bessMwh * fin.bessOmLakhPerMwh
+    + (sizes.biomassMw || 0) * (fin.biomassOmLakhPerMw || 0)) / 100;
 }
 
 /**
@@ -1345,7 +1347,9 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
     const om = omBase * esc;
     const insurance = capex.hard * fin.insurancePct;
     const other = (fin.otherFixedCr || 0) * esc;
-    const opex = om + insurance + other;
+    // biomass fuel (Tender to Bid): Rs/kWh of biomass generation, escalating; 0 for Round the clock
+    const fuel = (op.biomassMWh || 0) * (fin.biomassFuelRsPerKwh || 0) * (1 + (fin.biomassFuelEscalation || 0)) ** (y - 1) * RS_CR_PER_MWH_AT_1RS;
+    const opex = om + insurance + other + fuel;
     const ebitda = revenue - opex;
     // book depreciation (SLM), augmentation depreciated over remaining life
     if (aug[y] > 0) augBookDep += aug[y] / Math.max(1, years - y + 1);
@@ -1415,6 +1419,8 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
       om,
       insurance,
       other,
+      fuel,
+      biomassMu: (op.biomassMWh || 0) / 1000,
       opex,
       ebitda,
       bookDep,
@@ -1440,14 +1446,23 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
   return { rows, equityFlows, projectFlows, capex, debt0, equity0, payback };
 }
 
-export function runFinancialModel(ctx, sizes, { costs, fin, bess, dfrTarget, tariffLocked }) {
-  const ops = simulateLifetime(ctx, sizes, fin, bess);
+export function runFinancialModel(ctx, sizes, { costs, fin, bess, dfrTarget, tariffLocked, ops: givenOps = null, solveBy = "irr" }) {
+  // givenOps: year-by-year energy from another dispatch (the Tender to Bid HiGHS run)
+  const ops = givenOps || simulateLifetime(ctx, sizes, fin, bess);
   const solveTariff = () => {
     let lo = 0.5;
     let hi = 30;
     for (let i = 0; i < 70; i += 1) {
       const mid = (lo + hi) / 2;
-      const r = irr(cashflows(ops, sizes, costs, fin, bess, dfrTarget, mid).equityFlows);
+      const flows = cashflows(ops, sizes, costs, fin, bess, dfrTarget, mid).equityFlows;
+      // solveBy "npv" (Tender to Bid): equity NPV at the target IRR, which stays defined when a
+      // trial tariff gives an IRR beyond the IRR search range; "irr" is the Round-the-clock rule
+      if (solveBy === "npv") {
+        if (npvAt(fin.targetEquityIrr, flows) < 0) lo = mid;
+        else hi = mid;
+        continue;
+      }
+      const r = irr(flows);
       if (!Number.isFinite(r) || r < fin.targetEquityIrr) lo = mid;
       else hi = mid;
     }

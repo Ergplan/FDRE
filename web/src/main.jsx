@@ -16,6 +16,7 @@ import {
   Database,
   Download,
   FileText,
+  Gavel,
   FolderOpen,
   Lock,
   LogOut,
@@ -42,10 +43,14 @@ import "./styles.css";
 import { THEME_NAME } from "./chartTheme";
 import RtcTab from "./rtc/RtcTab";
 import BessTab from "./bess/BessTab";
+import BidTab from "./bid/BidTab";
 import SaveDialog from "./scenarios/SaveDialog";
 import Brand from "./Brand";
 import { ALL_TAB_IDS, usesEngine } from "../lib/tabs";
 import { authApi } from "./scenarios/client";
+
+// tabs that show their own progress and errors (not the FDRE engine banner)
+const OWN_STATUS_TABS = new Set(["rtc", "bessTender", "tenderBid"]);
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -3533,6 +3538,7 @@ export default function App({ user = null, initialScenario = null }) {
   const tabs = [
     ["rtc", Clock3, "Round the Clock"],
     ["bessTender", BatteryCharging, "BESS Tender", "New"],
+    ["tenderBid", Gavel, "Tender to Bid", "New"],
     ["tender", FileText, "Tender Upload"],
     ["project", Settings2, "Project Configuration"],
     ["yield", BarChart3, "Yield Assessment"],
@@ -3562,12 +3568,13 @@ export default function App({ user = null, initialScenario = null }) {
         allowed={allowed}
       />
       <main>
-        {notice && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="loading">{notice}</div>}
-        {error && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="alert">{error}</div>}
-        {loading && canView && activeTab !== "rtc" && activeTab !== "bessTender" && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
+        {notice && canView && !OWN_STATUS_TABS.has(activeTab) && <div className="loading">{notice}</div>}
+        {error && canView && !OWN_STATUS_TABS.has(activeTab) && <div className="alert">{error}</div>}
+        {loading && canView && !OWN_STATUS_TABS.has(activeTab) && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
         {!canView && <Restricted label={tabs.find((t) => t[0] === activeTab)?.[2] || "This tab"} contacts={user?.adminContacts} />}
         {canView && activeTab === "bessTender" && <BessTab initialScenario={initialScenario?.scenario?.module === "bess" ? initialScenario : null} />}
+        {canView && activeTab === "tenderBid" && <BidTab user={user} />}
         {canView && activeTab === "rtc" && <RtcTab user={user} initialScenario={initialScenario?.scenario?.module === "rtc" ? initialScenario : null} />}
         {canView && activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {canView && activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
