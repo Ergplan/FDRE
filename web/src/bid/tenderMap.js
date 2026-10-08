@@ -119,7 +119,7 @@ export function buildProposals(result) {
   add({
     id: "solar.min", group: "Sources", label: "Mandatory solar capacity", hit: solarMult, value: solarMult?.value,
     display: solarMult ? `${solarMult.value} × contracted capacity` : null,
-    note: "Sets the smallest solar size; surplus solar may be sold, so surplus sales are switched on",
+    note: "Sets the smallest solar size. Its surplus may be sold in the market over its own connection, so surplus sales are on with that connection as extra export capacity",
     apply: (s, v) => {
       const min = Math.round(v * s.plantMw);
       const cur = s.vars.solarMw;
@@ -127,7 +127,7 @@ export function buildProposals(result) {
         ...s,
         sources: { ...s.sources, solar: true },
         vars: { ...s.vars, solarMw: { ...cur, locked: false, min, max: Math.max(cur.max, Math.round(min * 1.5)), value: Math.max(cur.value, min) } },
-        fin: { ...s.fin, sellSurplus: true },
+        fin: { ...s.fin, sellSurplus: true, extraExportMw: min },
       };
     },
   });

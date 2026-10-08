@@ -5,7 +5,7 @@ import { LiveChart } from "../rtc/charts";
 import { SizeCard } from "../rtc/chapters";
 import ProfileLibrary from "../rtc/ProfileLibrary";
 import { DATA_COLORS } from "../chartTheme";
-import { Field, SelectBox, Section, Stat, nf, pf } from "../rtc/ui";
+import { Field, SelectBox, Section, Stat, SwitchBox, nf, pf } from "../rtc/ui";
 import { BIOMASS_COLOR, activeRules, energyMix, peakHours, peakLabel, scaledVars } from "./model";
 import { SourceChip } from "./RequirementsStep";
 
@@ -158,6 +158,14 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
             <Field label="Peak hours per day" unit="h" value={state.peak.hours} onChange={(v) => patch("peak", { hours: Math.max(1, Math.min(12, Math.round(v))) })} step={1} min={1} max={12} hint="Used by floors measured in peak hours" />
             <SourceChip source={prov["peak.hours"]} />
           </div>
+        </div>
+        <div className="rtc-grid rtc-grid-3">
+          <div className="bid-input-with-src">
+            <SwitchBox label="Sell surplus in the market" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })} hint="Energy the contract and the battery cannot take" />
+            <SourceChip source={prov["solar.min"]} compact />
+          </div>
+          <Field label="Market price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} step={0.05} min={0} disabled={!fin.sellSurplus} />
+          <Field label="Extra export capacity" unit="MW" value={fin.extraExportMw} onChange={(v) => patch("fin", { extraExportMw: v })} step={10} min={0} disabled={!fin.sellSurplus} hint="Connection for market sales beyond the contracted capacity" />
         </div>
         <RulesEditor state={state} setState={setState} prov={prov} />
         <button type="button" className="secondary" onClick={() => setState((s) => ({ ...s, vars: scaledVars(s.plantMw, s.vars) }))}>Rescale size ranges to the capacity</button>

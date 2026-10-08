@@ -57,6 +57,7 @@ assert.equal(applied.peak.hours, 4);
 assert.equal(applied.vars.solarMw.min, 3000, "solar at least twice the contracted capacity");
 assert.ok(applied.vars.solarMw.max >= 4500);
 assert.equal(applied.fin.sellSurplus, true);
+assert.equal(applied.fin.extraExportMw, 3000, "mandated solar sells surplus over its own connection");
 assert.equal(applied.guarantees.emdPerMwInr, 100000);
 assert.equal(applied.ceilingTariff, null);
 assert.equal(applied.provenance["rule.annual"].quote, "Supply of minimum 80% CUF for each Accounting Year");
