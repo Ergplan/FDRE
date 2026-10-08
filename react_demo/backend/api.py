@@ -1008,6 +1008,47 @@ async def rtc_lp(request: Request) -> StreamingResponse:
                              headers={"cache-control": "no-cache, no-transform", "x-accel-buffering": "no"})
 
 
+import fdre_dispatch15 as D15  # noqa: E402
+
+
+@app.post("/api/bid/dispatch15")
+async def bid_dispatch15_start(request: Request) -> dict:
+    """Tender to Bid: start the 15-minute dispatch of a sized plant for every PPA year (a job).
+    Body: {payload: the sizing request, sizes: {solarMw, ...}, tariff: Rs/kWh, years?: [1..n]}."""
+    try:
+        body = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Body must be JSON") from exc
+    if not isinstance(body, dict) or not isinstance(body.get("payload"), dict) or not isinstance(body.get("sizes"), dict):
+        raise HTTPException(status_code=400, detail="payload and sizes are required")
+    years = body.get("years")
+    if years is not None and not (isinstance(years, list) and all(isinstance(y, int) for y in years)):
+        raise HTTPException(status_code=400, detail="years must be a list of PPA years")
+    try:
+        tariff = float(body.get("tariff"))
+        job_id = D15.start(body["payload"], body["sizes"], tariff, years)
+    except (TypeError, ValueError, D15.DispatchError, RLP.LpInputError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"job_id": job_id}
+
+
+@app.get("/api/bid/dispatch15/{job_id}")
+def bid_dispatch15_status(job_id: str) -> dict:
+    job = D15.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="No such 15-minute dispatch run (runs are kept for 24 hours)")
+    return job
+
+
+@app.get("/api/bid/dispatch15/{job_id}/zip")
+def bid_dispatch15_zip(job_id: str) -> FileResponse:
+    path = D15.zip_file(job_id)
+    job = D15.get(job_id)
+    if path is None or job is None or job.get("status") != "done":
+        raise HTTPException(status_code=404, detail="The 15-minute dispatch is not ready")
+    return FileResponse(path, media_type="application/zip", filename="dispatch_15min_all_years.zip")
+
+
 from .tender_intel_routes import router as tender_intel_router  # noqa: E402  (tender intelligence, /api/bid|rtc/tender)
 app.include_router(tender_intel_router)  # registered before the SPA catch-all below so these routes win
 

@@ -469,6 +469,7 @@ export function lpPayload(state, terms, { solarCf, windCf }, prices = null) {
     returnLifetime: true,
     returnHourly: true,
     tariffGuess: state.lp?.tariff || 5.5,
+    timeLimitS: 1200, // HiGHS budget for all Dinkelbach iterations together
   };
   delete payload.costs.plants;
   if (m.biomass) payload.biomass = m.biomass;
@@ -491,6 +492,13 @@ export function lpPayload(state, terms, { solarCf, windCf }, prices = null) {
   if (rules.some((r) => r.hours === "peak")) payload.peakMask = Array.from(peakMask(terms.peak));
   else if (rules.some((r) => r.hours === "any") && terms.peak?.windows?.length) payload.peakMask = Array.from(anyMask(terms.peak));
   return payload;
+}
+
+/** Start the 15-minute dispatch of the sized plant for every PPA year (an engine job). */
+export function dispatch15Request(payload, lp) {
+  const { returnHourly, returnLifetime, tariffGuess, timeLimitS, ...rest } = payload;
+  const sizes = Object.fromEntries(Object.entries(lp.sizes || {}).map(([k, v]) => [k, Math.max(0, Number(v) || 0)]));
+  return { payload: rest, sizes, tariff: lp.tariff };
 }
 
 /** POST the request and read the NDJSON stream (log lines, progress, result). */

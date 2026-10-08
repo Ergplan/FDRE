@@ -119,6 +119,23 @@ def interpolation_weights(rep: list[int], n: int) -> np.ndarray:
 
 # ----------------------------------------------------------------------------- finance
 
+def net_battery(charge: np.ndarray, discharge: np.ndarray, direct: np.ndarray, eta: float):
+    """Remove simultaneous charging and discharging without changing the state of charge or the
+    energy delivered: the overlap is served directly instead (it needs less generation)."""
+    ch, dis, dr = (np.array(a, float) for a in (charge, discharge, direct))
+    both = (ch > 1e-6) & (dis > 1e-6)
+    e2 = eta * eta
+    a = both & (ch * e2 >= dis)  # charging wins: keep the net charge
+    dr[a] += dis[a]
+    ch[a] -= dis[a] / e2
+    dis[a] = 0.0
+    b = both & ~a  # discharging wins: keep the net discharge
+    dr[b] += e2 * ch[b]
+    dis[b] -= e2 * ch[b]
+    ch[b] = 0.0
+    return np.maximum(ch, 0.0), np.maximum(dis, 0.0), dr
+
+
 def _crf(rate: float, n: int) -> float:
     if rate <= 0:
         return 1 / n
@@ -591,6 +608,18 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
                 add(np.array([n_row]), np.array([pl["col"]]), np.array([-1e-3 * share * idx.size]))
                 row_lo.append(np.array([-np.inf])); row_hi.append(np.array([0.0]))
                 n_row += 1
+        if non_green:
+            # the battery charges from renewable output only (RE-RTC: "Charges through RE only"):
+            # ch - s*S - w*W [- biomass] - green plants <= 0
+            r = n_row + t
+            add(r, c_ch, ones); add(r, np.zeros(HOURS, int), -sgen); add(r, np.ones(HOURS, int), -wgen)
+            if has_bio:
+                add(r, c_bio, -ones)
+            for pl in plants:
+                if pl["green"]:
+                    add(r, pl["cols"][-1], -ones)
+            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
+            n_row += HOURS
         if sell and non_green and not solar_only:
             # only renewable output is sold: ex - s*S - w*W [- biomass] - green plants <= 0
             r = n_row + t
@@ -860,6 +889,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     status_text = ""
     lower = -math.inf
     all_cols = np.arange(n_col, dtype=np.int32)
+    stopped = None  # (iteration, status) when HiGHS stops an iteration after an earlier one solved
     for it in range(1, int(payload.get("maxIterations") or 8) + 1):
         if it > 1:
             cost_vec, energy_vec, cost_const, energy_w = objective(tariff_weights(fin, taxed_in), lam)
@@ -877,6 +907,10 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         info = h.getInfo()
         if status != highspy.HighsModelStatus.kOptimal:
             note("highs", f"Iteration {it}: HiGHS stopped with status '{status_text}'")
+            if x is not None:
+                stopped = (it, status_text)
+                note("highs", f"The design is iteration {it - 1}'s, solved to optimality at λ ₹{iterations[-1]['lambda']:.4f}/kWh; "
+                              f"its tariff is within ₹{max(0.0, iterations[-1]['tariff'] - lower):.4f}/kWh of the proven lower bound")
             if status == highspy.HighsModelStatus.kInfeasible:
                 note("highs", "No design within the size ranges meets the DFR in every modelled year: widen the ranges or lower the DFR")
             break
@@ -967,12 +1001,16 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
 
     sizes = sizes_of(x)
     seconds = time.perf_counter() - started
-    note("highs", f"Optimal after {len(iterations)} Dinkelbach iteration{'s' if len(iterations) != 1 else ''} in {seconds:.1f} s: "
+    note("highs", f"{'Stopped' if stopped else 'Optimal'} after {len(iterations)} Dinkelbach iteration{'s' if len(iterations) != 1 else ''} in {seconds:.1f} s: "
                   f"{describe(sizes)} "
                   f"· 25-year tariff ₹{lam:.4f}/kWh (no design can be below ₹{lower:.4f}/kWh)")
+    if stopped:
+        status_text = (f"{stopped[1]} in iteration {stopped[0]}; design of iteration {stopped[0] - 1} "
+                       f"(within ₹{max(0.0, lam - lower):.3f}/kWh of the best possible)")
     result = {
         "ok": True,
         "status": status_text,
+        "stoppedEarly": bool(stopped),
         "sizes": sizes,
         "tariff": lam,
         "lowerBound": lower,
@@ -1019,14 +1057,19 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         bgen = x[bio_cols[0]] if has_bio else np.zeros(HOURS)
         pgen = {pl["id"]: x[pl["cols"][0]] for pl in plants}
         exp = x[base + 4 * HOURS + t] if sell else np.zeros(HOURS)
-        curtail = np.maximum(0.0, sgen + wgen + bgen + sum(pgen.values(), np.zeros(HOURS)) - x[c_dir] - x[c_ch] - exp)
+        h_ch, h_dis, h_dir = x[c_ch], x[c_dis], x[c_dir]
+        if rules:
+            # Tender to Bid: an hour that both charges and discharges (an LP tie: the energy would
+            # be curtailed anyway) is shown as its net, with the same state of charge and delivery
+            h_ch, h_dis, h_dir = net_battery(h_ch, h_dis, h_dir, eta)
+        curtail = np.maximum(0.0, sgen + wgen + bgen + sum(pgen.values(), np.zeros(HOURS)) - h_dir - h_ch - exp)
         soc = (x[c_soc] + min_soc * e_mwh * f["bessFactor"]) / e_mwh if e_mwh > 1e-9 else np.zeros(HOURS)
         r2 = lambda a: np.round(np.asarray(a, float), 2).tolist()
         result["hourly"] = {
             "year": rep[0],
             "demand": r2(demand_by_year[0]),
             "solar": r2(sgen), "wind": r2(wgen), "biomass": r2(bgen),
-            "direct": r2(x[c_dir]), "charge": r2(x[c_ch]), "discharge": r2(x[c_dis]),
+            "direct": r2(h_dir), "charge": r2(h_ch), "discharge": r2(h_dis),
             "export": r2(exp), "curtail": r2(curtail), "soc": np.round(soc, 4).tolist(),
             **{pid: r2(v) for pid, v in pgen.items()},
         }

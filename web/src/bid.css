@@ -267,3 +267,12 @@
 .bid-q-note > span:first-child { flex: 1 1 420px; }
 .bid-q-note button { margin-left: auto; }
 @media (max-width: 700px) { .bid-q { padding: 12px; } .bid-q > header .rtc-switch { margin-left: auto; } }
+
+/* size step 4.5: 15-minute dispatch, every PPA year */
+.rtc-section-actions a.primary, .rtc-section-actions a.secondary { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.bid-d15 { display: grid; margin-top: 12px; border: 1px solid var(--line); background: var(--surface); max-height: 520px; overflow: auto; }
+.bid-d15-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(96px, 1fr); grid-template-columns: 56px; gap: 10px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--line); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.bid-d15-row.head { position: sticky; top: 0; z-index: 1; border-top: 0; background: var(--surface); color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; align-items: end; }
+.bid-d15-row.failed { background: rgba(255, 107, 95, 0.06); }
+.bid-d15-row .ok { color: var(--good); display: inline-flex; gap: 5px; align-items: center; }
+.bid-d15-row .bad { color: var(--bad); display: inline-flex; gap: 5px; align-items: center; }

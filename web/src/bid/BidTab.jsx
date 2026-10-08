@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowRight, CalendarDays, ChevronLeft, CircleDollarSign, FileSearch, Gavel, Layers, RotateCcw, Scale, X, Zap } from "lucide-react";
 import { trackEvent } from "../activity";
 import { nf } from "../rtc/ui";
-import { defaultBidState, loadMarketPrices, lpPayload, mergeBidState, missingInputs, capacityIssues, plantMw, resourceProfiles, runSizing } from "./model";
+import { defaultBidState, dispatch15Request, loadMarketPrices, lpPayload, mergeBidState, missingInputs, capacityIssues, plantMw, resourceProfiles, runSizing } from "./model";
 import { mergeReadings, tenderDates, tenderTerms } from "./tenderMap";
 import TenderStep, { getJson } from "./TenderStep";
 import CapacityStep from "./CapacityStep";
@@ -136,17 +136,21 @@ export default function BidTab({ user = null }) {
     setMessage("");
   }
 
+  /** The IEX price year when the bid sells at an IEX market (null for a flat price or no sale). */
+  async function marketPrices() {
+    if (!(state.market.sell && state.market.source !== "flat")) return null;
+    return prices || loadMarketPrices();
+  }
+
   async function startSizing() {
     if (run?.active) return;
     if (missingInputs(state, terms).length) return;
     let market = null;
-    if (state.market.sell && state.market.source !== "flat") {
-      try {
-        market = prices || (await loadMarketPrices());
-      } catch (err) {
-        setRun({ active: false, started: Date.now(), finished: Date.now(), log: [], error: `IEX prices could not be loaded (${err.message}); choose a flat price or try again.` });
-        return;
-      }
+    try {
+      market = await marketPrices();
+    } catch (err) {
+      setRun({ active: false, started: Date.now(), finished: Date.now(), log: [], error: `IEX prices could not be loaded (${err.message}); choose a flat price or try again.` });
+      return;
     }
     const payload = lpPayload(state, terms, resourceProfiles(state), market);
     const abort = new AbortController();
@@ -171,6 +175,19 @@ export default function BidTab({ user = null }) {
     } finally {
       abortRef.current = null;
     }
+  }
+
+  /** The sized plant, dispatched in 15-minute blocks for every PPA year (an engine job). */
+  async function startDispatch15() {
+    if (!state.lp) throw new Error("Size the plant first.");
+    const payload = lpPayload(state, terms, resourceProfiles(state), await marketPrices());
+    const { job_id: jobId } = await getJson("/api/bid/dispatch15", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(dispatch15Request(payload, state.lp)),
+    });
+    trackEvent("run", { module: "bid", action: "dispatch15" });
+    setState((s) => (s.lp ? { ...s, lp: { ...s.lp, d15: { jobId, started: Date.now() } } } : s));
   }
 
   function stopSizing() {
@@ -255,7 +272,7 @@ export default function BidTab({ user = null }) {
         {step.id === "dates" && <DatesStep {...props} />}
         {step.id === "capacity" && <CapacityStep {...props} />}
         {step.id === "sources" && <SourcesStep {...props} startSizing={startSizing} />}
-        {step.id === "size" && <SizeStep {...props} run={run} startSizing={startSizing} stopSizing={stopSizing} hourly={hourly} />}
+        {step.id === "size" && <SizeStep {...props} run={run} startSizing={startSizing} stopSizing={stopSizing} hourly={hourly} startDispatch15={startDispatch15} />}
         {step.id === "finance" && <FinanceStep {...props} />}
       </div>
 

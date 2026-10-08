@@ -7,6 +7,7 @@ import { Section, Stat, nf, pf } from "../rtc/ui";
 import { SIZE_KEY, SOURCES, anyHours, energyMix, marketLabel, peakHours, plantMw, sizesAtMax } from "./model";
 import { SOURCE_COLORS } from "./SourcesStep";
 import Checklist, { BidderInputs } from "./Checklist";
+import Dispatch15 from "./Dispatch15";
 
 function ComplianceTable({ lp }) {
   const years = lp.perYear || [];
@@ -29,7 +30,15 @@ function ComplianceTable({ lp }) {
   );
 }
 
-function DispatchWeek({ hourly, peak, market, peakAny }) {
+const DISPATCHABLE = ["biomass", "thermal", "hydro"];
+
+/**
+ * A week of the year-1 hourly dispatch. The stacked areas are the supply to the PPA, split by
+ * source (direct delivery shared by each source's output that hour, plus battery discharge) with
+ * market sales on top; the dashed lines are what biomass, thermal and hydro actually generated
+ * (their output also charges the battery). The tooltip gives the hour's full balance.
+ */
+function DispatchWeek({ hourly, peak, market, peakAny, sizes }) {
   const [week, setWeek] = useState(0);
   const option = useMemo(() => {
     if (!hourly) return null;
@@ -37,6 +46,7 @@ function DispatchWeek({ hourly, peak, market, peakAny }) {
     const end = Math.min(E.HOURS, start + 168);
     const idx = Array.from({ length: end - start }, (_, i) => start + i);
     const gens = ["solar", "wind", "hydro", "biomass", "thermal"].filter((k) => hourly[k]);
+    const title = (k) => SOURCES.find((x) => x.id === k)?.title || k;
     const split = (key) => idx.map((t) => {
       const g = gens.reduce((a, k) => a + hourly[k][t], 0);
       return g > 0 ? Number(((hourly.direct[t] * hourly[key][t]) / g).toFixed(2)) : 0;
@@ -52,29 +62,51 @@ function DispatchWeek({ hourly, peak, market, peakAny }) {
       }
     });
     const stack = (name, data, color) => ({ name, type: "line", stack: "supply", areaStyle: { color, opacity: 0.75 }, lineStyle: { width: 0 }, symbol: "none", itemStyle: { color }, data });
+    const dispatchable = gens.filter((k) => DISPATCHABLE.includes(k));
+    const row = (label, value, note = "") => `<div style="display:flex;gap:14px;justify-content:space-between"><span>${label}</span><b>${nf(value, 0)} MW${note ? ` <span style="font-weight:400;opacity:.7">${note}</span>` : ""}</b></div>`;
+    const head = (text) => `<div style="margin-top:6px;opacity:.6;font-size:11px;text-transform:uppercase;letter-spacing:.08em">${text}</div>`;
+    const tooltip = (params) => {
+      const t = idx[params[0]?.dataIndex ?? 0];
+      if (t === undefined) return "";
+      const parts = [`<b>${labels[t - start]}</b>`, head("Output")];
+      for (const k of gens) {
+        const mw = sizes?.[SIZE_KEY[k]] || 0;
+        parts.push(row(title(k), hourly[k][t], DISPATCHABLE.includes(k) && mw > 0 ? `${pf(hourly[k][t] / mw, 0)} of ${nf(mw, 0)} MW` : ""));
+      }
+      parts.push(head("Uses"));
+      parts.push(row("To the PPA directly", hourly.direct[t]));
+      parts.push(row("Battery charging", hourly.charge[t]));
+      if (hourly.export[t] > 0.5) parts.push(row(market ? `Sold on IEX ${market}` : "Sold", hourly.export[t]));
+      parts.push(row("Curtailed", hourly.curtail[t]));
+      parts.push(head("Supply to the PPA"));
+      parts.push(row("Battery discharging", hourly.discharge[t], hourly.soc ? `state of charge ${pf(hourly.soc[t], 0)}` : ""));
+      parts.push(row("Delivered", hourly.direct[t] + hourly.discharge[t], `contracted ${nf(hourly.demand[t], 0)} MW`));
+      return parts.join("");
+    };
     return {
       animation: false,
       grid: { left: 56, right: 16, top: 34, bottom: 46 },
       legend: { top: 0, right: 0 },
-      tooltip: { trigger: "axis", valueFormatter: (v) => `${nf(v, 1)} MW` },
+      tooltip: { trigger: "axis", formatter: tooltip },
       xAxis: { type: "category", data: labels, axisLabel: { interval: 23 } },
       yAxis: [{ type: "value", name: "MW" }, { type: "value", name: "₹/kWh", min: 0, splitLine: { show: false }, show: Boolean(hourly.price) }],
       series: [
-        { ...stack("Solar", split("solar"), DATA_COLORS.solar), markArea: { silent: true, itemStyle: { color: "rgba(212,255,63,0.06)" }, data: areas } },
-        ...gens.filter((k) => k !== "solar").map((k) => stack(SOURCES.find((x) => x.id === k).title, split(k), SOURCE_COLORS[k])),
-        stack("Battery", idx.map((t) => hourly.discharge[t]), DATA_COLORS.bess),
+        { ...stack(`${title("solar")} to PPA`, split("solar"), DATA_COLORS.solar), markArea: { silent: true, itemStyle: { color: "rgba(212,255,63,0.06)" }, data: areas } },
+        ...gens.filter((k) => k !== "solar").map((k) => stack(`${title(k)} to PPA`, split(k), SOURCE_COLORS[k])),
+        stack("Battery to PPA", idx.map((t) => hourly.discharge[t]), DATA_COLORS.bess),
         stack(market ? `Sold on IEX ${market}` : "Sold as surplus", idx.map((t) => hourly.export[t]), DATA_COLORS.surplus),
-        ...(hourly.price ? [{ name: `IEX ${market} price`, type: "line", yAxisIndex: 1, symbol: "none", data: idx.map((t) => hourly.price[t]), lineStyle: { color: "#f2b84b", width: 1.2 }, itemStyle: { color: "#f2b84b" }, tooltip: { valueFormatter: (v) => `₹${nf(v, 2)}/kWh` } }] : []),
+        ...dispatchable.map((k) => ({ name: `${title(k)} output`, type: "line", symbol: "none", data: idx.map((t) => hourly[k][t]), lineStyle: { color: SOURCE_COLORS[k], type: "dashed", width: 1.6 }, itemStyle: { color: SOURCE_COLORS[k] } })),
+        ...(hourly.price ? [{ name: `IEX ${market} price`, type: "line", yAxisIndex: 1, symbol: "none", data: idx.map((t) => hourly.price[t]), lineStyle: { color: "#f2b84b", width: 1.2 }, itemStyle: { color: "#f2b84b" } }] : []),
         { name: "Charging", type: "bar", data: idx.map((t) => -hourly.charge[t]), itemStyle: { color: "rgba(169,139,255,0.45)" }, barWidth: "90%" },
         { name: "Contracted supply", type: "line", step: "middle", data: idx.map((t) => hourly.demand[t]), lineStyle: { color: "#f4f4f1", type: "dashed", width: 1 }, itemStyle: { color: "#f4f4f1" }, symbol: "none" },
       ],
     };
-  }, [hourly, week, peak, market, peakAny]);
+  }, [hourly, week, peak, market, peakAny, sizes]);
   if (!hourly) return <p className="rtc-note">Run the sizing again to see the hour-by-hour dispatch (it is not kept when the page reloads).</p>;
   return (
     <div className="rtc-card">
       <div className="rtc-card-head">
-        <span>Year-1 dispatch · week {week + 1}{peakAny ? "" : " · peak window shaded"}</span>
+        <span>Year-1 dispatch · week {week + 1}{peakAny ? "" : " · peak window shaded"} · areas: supply to the PPA by source · dashed: plant output</span>
         <input type="range" min="0" max="51" value={week} onChange={(e) => setWeek(Number(e.target.value))} aria-label="Week of the year" />
       </div>
       <LiveChart option={option} height={300} />
@@ -96,7 +128,7 @@ function rampStats(series, mw) {
 }
 
 /** Step 4: the least-tariff plant from the bidder's sources that meets every tender requirement. */
-export default function SizeStep({ state, terms, run, startSizing, stopSizing, hourly, goto, prices, missing }) {
+export default function SizeStep({ state, terms, run, startSizing, stopSizing, startDispatch15, hourly, goto, prices, missing }) {
   const lp = state.lp;
   const mix = useMemo(() => energyMix(hourly), [hourly]);
   const running = Boolean(run?.active);
@@ -170,10 +202,11 @@ export default function SizeStep({ state, terms, run, startSizing, stopSizing, h
                 <Stat label="Curtailed" value={`${nf(mix.curtail / 1000, 0)} MU`} />
               </div>
             )}
-            <DispatchWeek hourly={hourly} peak={terms.peak} market={lp.market} peakAny={terms.peakAny} />
+            <DispatchWeek hourly={hourly} peak={terms.peak} market={lp.market} peakAny={terms.peakAny} sizes={lp.sizes} />
           </Section>
         </>
       )}
+      {lp && <Dispatch15 lp={lp} start={startDispatch15} />}
       {!lp && !running && <p className="rtc-note bid-hint">Size the plant to see the least-tariff design, the tender conditions it meets and the dispatch.</p>}
     </>
   );

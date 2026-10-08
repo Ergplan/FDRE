@@ -10,7 +10,7 @@ opens (its reading ships built in), so the work starts from what the tender requ
 | 2 Key dates | Every date the tender prints (schedule of bidding, award, PPA, greenshoe offer, supply start) on a calendar, with what is next, days to go and the page and quote of each | `tenderDates` in `tenderMap.js`, `DatesStep.jsx` |
 | 3 Bid capacity | The capacity you bid and whether the plant is sized for the greenshoe too, checked against the tender (WBSEDCL: 1,500 MW, no part capacity, 500 MW greenshoe at the same tariff) | `CapacityStep.jsx` |
 | 4 Supply sources | The sources you have: solar, wind, hydro, biomass, thermal (non-RE) and battery. For each, fixed capacity or the most the optimizer may build, its parameters (CUF, availability, minimum load, battery duration and efficiency) and its costs; then financing and, where the tender allows it, market sale. Every field starts empty | `SourcesStep.jsx`, `model.js` (`SOURCE_FIELDS`, `missingInputs`) |
-| 5 Size | HiGHS finds the least-tariff plant from your sources that meets every tender requirement, with the tender conditions table (met / not met) | `POST /api/rtc/lp` (`fdre_rtc_lp.py`), `SizeStep.jsx`, `Checklist.jsx` |
+| 5 Size | HiGHS finds the least-tariff plant from your sources that meets every tender requirement, with the tender conditions table (met / not met); then the plant is dispatched in 15-minute blocks for every PPA year, with a ZIP download | `POST /api/rtc/lp` (`fdre_rtc_lp.py`), `POST /api/bid/dispatch15` (`fdre_dispatch15.py`), `SizeStep.jsx`, `Dispatch15.jsx`, `Checklist.jsx` |
 | 6 Financials | The financial model of that plant: bid tariff at your equity IRR, capex by source, fuel, hydro and thermal costs (with RECs), guarantees, statements; **Download financial model (Excel)** | `engine.js runFinancialModel`, `FinanceStep.jsx`, `exportModel.js`, `POST /api/bid/model` |
 
 ## Constraints from the tender, inputs from the bidder
@@ -117,6 +117,59 @@ form RFP clause 1.1.10 asks for: titled "Queries/Request for Additional Informat
 page, RFP provision, clarification sought, rationale). The section shows the tender's query
 dates (last date for queries, pre-bid meeting, response) and says when the last date has passed.
 
+## 15-minute dispatch, every PPA year
+
+The sizing works in hours over representative years (year 1 and the years that bind). Section 4.5
+of the Size step, **Run the 15-minute dispatch**, takes the plant it chose and dispatches it in
+15-minute time blocks (96 a day, 35,040 a year) for every year of the PPA (`fdre_dispatch15.py`,
+one HiGHS LP per year, run on the engine as a job):
+
+* Biomass and thermal (and hydro) stay at or above their technical minimum in every block and
+  change by at most their ramp rate per block: ramp %/min × 15 (1%/min: 15% of MW per block).
+* The battery charges from renewable output only (RFQ 1.1.4: "Charges through RE only"), within
+  its power and energy, and never charges and discharges in the same block.
+* The tender's floors (80% a year, 70% each month, 90% in the peak hours WBSEDCL picks) are
+  checked on the 15-minute delivery. A floor the plant cannot meet in a year is reported with its
+  shortfall (the run does not fail), so a design that only works hour by hour shows up here.
+* Each year uses its own solar and wind degradation and battery capacity, and the tariff and fuel
+  escalation of that year. Among dispatches of equal value the one with the smoothest schedule to
+  the procurer is chosen (a negligible cost per MW of change from block to block).
+* Solar and wind profiles are hourly: each hour is split into four blocks along the hour's trend
+  (half the change from the previous to the next hour), keeping the hour's energy exactly and
+  every block between zero and the peak. Demand and market prices take the hour's value.
+
+Year 1 is solved from scratch (interior point, then crossover); each later year changes only
+costs, bounds and right-hand sides, so dual simplex restarts from the previous year's basis. For
+the WBSEDCL benchmark plant year 1 takes about 1.5 minutes and each later year a few seconds.
+
+The table shows, for every year, each floor achieved, any shortfall, the lowest biomass/thermal
+output against its technical minimum, the largest 15-minute change against its ramp limit,
+curtailment and sales. **Download 15-minute dispatch (ZIP)** gives one CSV per year
+(`dispatch_15min_year_NN.csv`: day, month, block 1–96, time, contracted supply, output of each
+source, battery charging, discharging and state of charge, direct and total delivery to the PPA,
+sales, curtailment, price), `summary_by_year.csv`, a README and the request used. Runs are kept
+on the engine for 24 hours.
+
+### Reading the hourly dispatch chart
+
+The stacked areas of the year-1 chart are the supply to the PPA by source: direct delivery is
+shared among the sources in proportion to their output that hour, plus battery discharge and
+sales. They are not each plant's output: a biomass plant at its 55% minimum whose output mostly
+charges the battery shows as a thin "Biomass to PPA" band. The dashed lines are the actual output
+of biomass, thermal and hydro, and the tooltip gives the hour's full balance (output by source with
+% of MW, direct supply, battery charging, sales, curtailment, discharge and state of charge).
+
+An hour that both charges and discharges the battery (an LP tie when the energy would be curtailed
+anyway) is shown as its net, with the same state of charge and delivery. When a non-RE plant is in
+the bid the sizing also limits charging to renewable output.
+
+### Solver time
+
+The sizing gives HiGHS 1,200 s for all its Dinkelbach iterations together. If the limit stops a
+later iteration, the design shown is the last one solved to optimality, and the status says so
+with its distance from the proven lower bound (for example "Time limit reached in iteration 3;
+design of iteration 2 (within ₹0.001/kWh of the best possible)").
+
 ## Financial model workbook
 
 After sizing, **Download financial model (Excel)** on Financials saves a workbook built from what
@@ -200,6 +253,10 @@ python tools/build_iex_prices.py --gdam GDAM.xlsx --dam DAM.xlsx --rtm RTM.xlsx 
   readings are shared (Recently extracted tenders), the Scenarios library is not used yet.
 * The greenshoe is modelled from the base supply start; its own start (01-04-2029 for WBSEDCL) is
   nine months later, so the sizing is slightly conservative.
+* The sizing itself is hourly; the 15-minute ramp and minimum are checked afterwards by the
+  15-minute dispatch (a design that fails there is reported, not resized automatically).
+* 15-minute solar and wind come from the hourly profiles (split along each hour's trend); measured
+  15-minute profiles cannot be uploaded yet. Market prices are hourly.
 
 ## Checks
 
@@ -211,6 +268,10 @@ python tools/build_iex_prices.py --gdam GDAM.xlsx --dam DAM.xlsx --rtm RTM.xlsx 
 * `tools/check_bid_model.mjs` — the WBSEDCL terms from the built-in reading, that every bidder
   input starts empty and sizing waits for it, the HiGHS request, and the financial model with
   hydro and thermal costs (RECs) and the NPV-based tariff solve.
+* `tests/test_dispatch15.py` — the 15-minute dispatch: the hour split keeps each hour's energy,
+  battery netting keeps charge and delivery, biomass holds its technical minimum and ramp per
+  block, every floor is met, the ZIP's files and rows, an unmet floor is reported, and charging
+  from renewables only when thermal supplies.
 * `tests/test_tender_intel.py` — the tender reader (see `docs/TENDER_INTEL.md`), and that every
   RFP provision the pre-bid queries quote is on its page.
 * `tools/check_bid_model.mjs` also checks the pre-bid queries: ten, each with clause, page,

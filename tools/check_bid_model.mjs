@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as E from "../web/src/rtc/engine.js";
 import {
-  BENCHMARKS, SOURCE_FIELDS, capacityIssues, capacityWarnings, defaultBidState, energyMix, fillBenchmarks, lpPayload, missingInputs,
+  BENCHMARKS, SOURCE_FIELDS, capacityIssues, capacityWarnings, defaultBidState, dispatch15Request, energyMix, fillBenchmarks, lpPayload, missingInputs,
   mergeBidState, modelInputs, opsFromLp, plantMw, resourceProfiles, scaleToCuf, solarMinMw,
 } from "../web/src/bid/model.js";
 import { buildProposals, isUsed, mergeReadings, tenderDates, tenderTerms } from "../web/src/bid/tenderMap.js";
@@ -163,6 +163,13 @@ assert.equal(noThermal.greenShareMin, undefined, "all-renewable bid: nothing to 
 assert.equal(noThermal.vars.thermalMw, undefined);
 const noSale = lpPayload({ ...filled, market: { ...filled.market, sell: false } }, terms, profiles);
 assert.equal(noSale.ctx.sellSurplus, false);
+assert.equal(payload.timeLimitS, 1200, "HiGHS gets 20 minutes for the whole sizing");
+// the 15-minute dispatch: the same request without the sizing-only options, the sizes and the tariff
+const d15 = dispatch15Request(payload, { sizes: { solarMw: 4100.5, windMw: -1e-9, bessMw: 900, bessMwh: 3600 }, tariff: 6.9 });
+assert.deepEqual(d15.sizes, { solarMw: 4100.5, windMw: 0, bessMw: 900, bessMwh: 3600 }, "sizes are clamped at zero");
+assert.equal(d15.tariff, 6.9);
+assert.ok(d15.payload.compliance && d15.payload.biomass && d15.payload.plants && d15.payload.ctx.solarCf.length === 8760);
+for (const key of ["returnHourly", "returnLifetime", "tariffGuess", "timeLimitS"]) assert.equal(d15.payload[key], undefined, key);
 
 // ---- financial model from the LP's lifetime energy, with hydro and thermal costs
 const m = modelInputs(filled, terms);
