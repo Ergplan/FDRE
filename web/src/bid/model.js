@@ -28,10 +28,10 @@ export function scaledVars(plantMw, prev = null) {
     return { value, min: Math.min(old?.min ?? 0, max), max, step, locked: false };
   };
   return {
-    solarMw: spec("solarMw", Math.round(p * 4), Math.round(p * 1.6)),
-    windMw: spec("windMw", Math.round(p * 3), Math.round(p * 1.0)),
-    bessMw: spec("bessMw", Math.round(p * 1.5), Math.round(p * 0.4)),
-    bessMwh: spec("bessMwh", Math.round(p * 6), Math.round(p * 1.6)),
+    solarMw: spec("solarMw", Math.round(p * 8), Math.round(p * 1.6)),
+    windMw: spec("windMw", Math.round(p * 4), Math.round(p * 1.0)),
+    bessMw: spec("bessMw", Math.round(p * 3), Math.round(p * 0.4)),
+    bessMwh: spec("bessMwh", Math.round(p * 12), Math.round(p * 1.6)),
     biomassMw: spec("biomassMw", Math.round(p * 1), Math.round(p * 0.2)),
   };
 }
@@ -46,7 +46,11 @@ export function defaultBidState() {
     accepted: {}, // proposal id -> true/false chosen on the Requirements screen
     provenance: {}, // model input -> { label, path, page, quote, status }
     plantMw,
-    peak: { start: 18, hours: 4 },
+    baseMw: plantMw, // the tender's base capacity; plantMw adds the greenshoe when it is sized
+    greenshoeMw: 0,
+    // setBy: who fixes the peak hours (tender, procurer, supplier); windows: the tender's peak
+    // windows, within which the procurer picks the hours
+    peak: { start: 18, hours: 4, setBy: null, windows: [] },
     rules: DEFAULT_RULES.map((r) => ({ ...r })),
     sources: { solar: true, wind: true, biomass: true, bess: true },
     vars: scaledVars(plantMw),
@@ -65,7 +69,10 @@ export function defaultBidState() {
     ceilingTariff: null,
     guarantees: { emdPerMwInr: null, pbgPerMwInr: null },
     // surplus sold on the exchange at hourly IEX prices (GDAM / DAM / RTM), or at a flat price
-    market: { source: "GDAM", escalation: 0 },
+    // sellFrom: what may be sold in the market: "all" surplus, or "solar" only (set from a tender
+    // that lets only its mandated solar be scheduled in the market). The PPA is always supplied
+    // first in every hour; only what it cannot take is sold.
+    market: { source: "GDAM", escalation: 0, sellFrom: "all" },
     notes: [], // tender facts shown but not modelled
     lp: null, // last sizing (without the hourly dispatch)
   };
@@ -94,6 +101,26 @@ export function peakHours(peak) {
 
 export function peakMask(peak) {
   const hours = new Set(peakHours(peak));
+  const mask = new Uint8Array(E.HOURS);
+  for (let t = 0; t < E.HOURS; t += 1) if (hours.has(E.HOUR_OF_DAY[t])) mask[t] = 1;
+  return mask;
+}
+
+/** Hours of the day a peak floor measured over "any" hours applies to: the tender's windows, or all. */
+export function anyHours(peak) {
+  const windows = peak?.windows || [];
+  if (!windows.length) return Array.from({ length: 24 }, (_, h) => h);
+  const out = new Set();
+  for (const w of windows) {
+    const a = Number(String(w.start).slice(0, 2));
+    const b = Number(String(w.end).slice(0, 2));
+    for (let h = a; h !== b; h = (h + 1) % 24) out.add(h);
+  }
+  return [...out].sort((x, y) => x - y);
+}
+
+export function anyMask(peak) {
+  const hours = new Set(anyHours(peak));
   const mask = new Uint8Array(E.HOURS);
   for (let t = 0; t < E.HOURS; t += 1) if (hours.has(E.HOUR_OF_DAY[t])) mask[t] = 1;
   return mask;
@@ -147,6 +174,15 @@ export function marketSeries(state, prices) {
   return m ? m.hourlyRsPerMwh.map((v) => v / 1000) : null;
 }
 
+/** Sizes the optimizer left at the top of their range: it would have built more. */
+export function sizesAtMax(lp, vars, sources) {
+  const keys = { solarMw: "solar", windMw: "wind", biomassMw: "biomass", bessMw: "bess", bessMwh: "bess" };
+  return Object.entries(keys)
+    .filter(([k, src]) => sources[src] && lp?.sizes?.[k] !== undefined && vars[k] && !vars[k].locked && vars[k].max > 0
+      && lp.sizes[k] >= vars[k].max - Math.max(0.5, (vars[k].step || 1) / 2))
+    .map(([k]) => k);
+}
+
 export function marketLabel(state, prices) {
   const src = state.market?.source;
   if (!src || src === "flat") return `flat ₹${state.fin.surplusPrice}/kWh`;
@@ -196,12 +232,28 @@ export function lpPayload(state, { solarCf, windCf }, prices = null) {
     payload.vars.biomassMw = spec("biomassMw");
     payload.biomass = { ...state.biomass };
   }
-  const series = state.fin.sellSurplus ? marketSeries(state, prices) : null;
+  // with a tender read, sell outside the PPA only where the tender allows it
+  const saleProv = state.provenance?.["market.sale"];
+  const saleAllowed = !state.tender || Boolean(saleProv && !/not allowed/i.test(saleProv.display || ""));
+  const selling = Boolean(state.fin.sellSurplus) && saleAllowed;
+  payload.ctx.sellSurplus = selling;
+  payload.fin.sellSurplus = selling;
+  const series = selling ? marketSeries(state, prices) : null;
   if (series) {
     payload.ctx.surplusPrice = series.map((v) => Math.round(v * 1000) / 1000);
     payload.fin.surplusEscalation = state.market.escalation || 0;
   }
+  if (selling) {
+    payload.ppaFirst = true; // supply the PPA before selling anything
+    if (state.market?.sellFrom === "solar") {
+      payload.exportSources = "solar";
+      // the mandated solar sells over its own interconnection: only its output limits the sale
+      const solarCap = vars.solarMw.locked ? vars.solarMw.value : Math.max(vars.solarMw.max, vars.solarMw.value);
+      payload.ctx.extraExportMw = Math.max(payload.ctx.extraExportMw || 0, solarCap);
+    }
+  }
   if (rules.some((r) => r.hours === "peak")) payload.peakMask = Array.from(peakMask(state.peak));
+  else if (rules.some((r) => r.hours === "any") && state.peak?.windows?.length) payload.peakMask = Array.from(anyMask(state.peak));
   return payload;
 }
 

@@ -36,8 +36,11 @@ def _block_index(text: str) -> int:
     return int(hh) * 4 + int(mm) // 15
 
 
-def read_blocks(path: Path) -> dict[dt.date, dict[int, float]]:
-    """{date: {block: MCP Rs/MWh}}; duplicate rows for a block are averaged."""
+def read_blocks(path: Path) -> tuple[dict[dt.date, dict[int, float]], dict[dt.date, dict[int, float]]]:
+    """({date: {block: MCP Rs/MWh}}, {date: {block: cleared volume MW}}); duplicate rows for a
+    block are averaged. The cleared volume is "Total MCV" (GDAM) or "MCV" (DAM, RTM): the
+    average MW cleared in the block (IEX labels the GDAM column MWh; its magnitude, about
+    0.9 GW at night, is the market's MW, matching its monthly volumes of 600-900 MU)."""
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb.worksheets[0]
     rows = ws.iter_rows(values_only=True)
@@ -45,19 +48,29 @@ def read_blocks(path: Path) -> dict[dt.date, dict[int, float]]:
     i_date = head.index("Date")
     i_block = head.index("Time Block")
     i_mcp = next(i for i, h in enumerate(head) if h.startswith("MCP"))
+    i_mcv = next((i for i, h in enumerate(head) if h.startswith("Total MCV")), None)
+    if i_mcv is None:
+        i_mcv = next(i for i, h in enumerate(head) if h.startswith("MCV"))
     sums: dict[tuple[dt.date, int], list[float]] = defaultdict(list)
+    vols: dict[tuple[dt.date, int], list[float]] = defaultdict(list)
     for r in rows:
         if r[i_date] is None or r[i_mcp] is None:
             continue
         d = r[i_date] if isinstance(r[i_date], dt.date) else dt.date.fromisoformat(str(r[i_date])[:10])
         if isinstance(d, dt.datetime):
             d = d.date()
-        sums[(d, _block_index(r[i_block]))].append(float(r[i_mcp]))
+        key = (d, _block_index(r[i_block]))
+        sums[key].append(float(r[i_mcp]))
+        if r[i_mcv] is not None:
+            vols[key].append(float(r[i_mcv]))
     out: dict[dt.date, dict[int, float]] = defaultdict(dict)
+    vol: dict[dt.date, dict[int, float]] = defaultdict(dict)
     for (d, b), vals in sums.items():
         out[d][b] = sum(vals) / len(vals)
+        if vols.get((d, b)):
+            vol[d][b] = sum(vols[(d, b)]) / len(vols[(d, b)])
     wb.close()
-    return out
+    return out, vol
 
 
 def hourly_year(blocks: dict[dt.date, dict[int, float]]) -> tuple[list[int], dict]:
@@ -121,9 +134,10 @@ def main() -> None:
     for key, path in (("GDAM", args.gdam), ("DAM", args.dam), ("RTM", args.rtm)):
         if path is None:
             continue
-        blocks = read_blocks(path)
+        blocks, volumes = read_blocks(path)
         dates = sorted(blocks)
         prices, how = hourly_year(blocks)
+        mcv, _ = hourly_year(volumes)
         markets[key] = {
             "label": LABELS[key],
             "source": f"IEX {key} 15-minute market-clearing price (MCP), {dates[0]} to {dates[-1]}",
@@ -132,7 +146,9 @@ def main() -> None:
             "days": len(dates),
             **how,
             **summary(prices),
+            "meanMcvMw": round(sum(mcv) / len(mcv)),
             "hourlyRsPerMwh": prices,
+            "hourlyMcvMw": mcv,
         }
         print(f"{key}: {dates[0]}..{dates[-1]} ({len(dates)} days), mean Rs {markets[key]['meanRsPerMwh']}/MWh, "
               f"{how['blocksFilled']} blocks filled, days by year {how['daysFromYear']}, days filled {how['daysFilled']}")

@@ -42,6 +42,25 @@ function Quote({ evidence }) {
   );
 }
 
+/** Which reader produced the values: the tender engine's model reading, or the rules fallback. */
+export function ReadingBanner({ result }) {
+  if (!result) return null;
+  if (result.mode === "llm") {
+    return (
+      <div className="bid-mode" data-testid="bid-mode-llm">
+        <CheckCircle2 size={14} />
+        <span>Read by the tender engine's model reading{result.model ? ` (${result.model})` : ""}: {result.usage?.calls || 0} calls, every value checked against its quote on the page.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="bid-mode rules" data-testid="bid-mode-rules">
+      <TriangleAlert size={14} />
+      <span><strong>Not read by the tender engine's model.</strong> These values come from the rule-based fallback because the engine has no ANTHROPIC_API_KEY. Each value still carries its page quote, but only headline fields are read. Set the key on the engine and read the tender again for the full reading.</span>
+    </div>
+  );
+}
+
 /** Step 2: what the tender asks for, how it sets the model, and every field read. */
 export default function RequirementsStep({ state, setState, onApply, goto }) {
   const result = state.tender?.result;
@@ -67,6 +86,7 @@ export default function RequirementsStep({ state, setState, onApply, goto }) {
 
   return (
     <>
+      <ReadingBanner result={result} />
       <Section index="2" title="What the tender sets" note={`${used} model inputs from the tender · hover a page chip for its quote`}
         actions={<button type="button" className="primary" onClick={() => onApply(proposals)} data-testid="bid-apply">Apply to model and size <ArrowRight size={14} /></button>}>
         <div className="bid-req-table" role="table">

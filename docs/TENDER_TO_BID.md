@@ -13,6 +13,44 @@ four steps. It is separate from Round the Clock and the FDRE tabs, and does not 
 Every model input set from the tender shows a page chip; hover it for the quote it rests on.
 A dashed red chip means the quote was not found on the page and the value should be checked.
 
+## Tender first: nothing the tender does not state
+
+Every tender condition in the model comes from a field the tender engine extracted with a quote
+located on its page; the Requirements screen shows each with its page chip, and you tick what is
+applied. What the tender does not state is shown as not stated and is not modelled:
+
+* **Market sales** follow `market_sale_scope`: for WBSEDCL only the mandated solar may be scheduled
+  in the market (RfQ p. 11), so only solar surplus is sold. No clause, no sale; the sale switch is
+  locked off and the engine request carries no sale.
+* **PPA first**: every hour the PPA is supplied before anything is sold (the optimizer never values a
+  sale above the PPA tariff). Where the tender states the priority it is cited; WBSEDCL does not, so
+  it is shown as "your instruction".
+* **Peak hours**: when the procurer decides them ("as decided by WBSEDCL", p. 10) the 90% floor is
+  checked in every hour it may pick, each hour of the day in every month; when the tender prints
+  windows, every hour inside them.
+* **Greenshoe**: sized for base + greenshoe (1,500 + 500 MW for WBSEDCL), the most the tender can
+  procure at one tariff; untick it on the Requirements screen to size the base only. EMD is on the
+  bid (base) capacity, PBG on the sized capacity.
+* **Inputs the tender does not set** (costs, financing, resource profiles, IEX prices, battery and
+  biomass technology) are listed openly on the Size step as the bidder's own numbers.
+* The **Tender conditions** table puts each condition beside what the sized plant delivers, with
+  ✓ met / ✗ not met, on the Size and Financials steps.
+
+### Guardrails on the reading
+
+* The model must quote; every quote is searched on the PDF page (capped confidence and review when
+  not found; rejected without a quote); every number and date must be printed in its own quote
+  (`value_in_quotes`, an FDRE addition); types, ranges and cross-field rules are plain Python.
+* The Requirements and Tender steps say which reader produced the values. Without
+  `ANTHROPIC_API_KEY` the engine falls back to the rule-based reader and the screen says so.
+  `TENDER_INTEL_REQUIRE_LLM=1` switches the fallback off: a read that cannot use the model fails.
+
+## Recently extracted tenders
+
+Each tender read is saved (`tender_reads`, migration 006) and listed on the Tender step for every
+Tender to Bid user, so a tender read once can be opened again. The WBSEDCL RfQ/RfP reading ships
+built in (`web/db/seed/tenders/`).
+
 ## Supply floors
 
 The tender's obligations become floors on delivered energy ÷ (contracted capacity × hours):
@@ -69,8 +107,10 @@ python tools/build_iex_prices.py --gdam GDAM.xlsx --dam DAM.xlsx --rtm RTM.xlsx 
 * Non-RE supply with RECs (some RE-RTC tenders allow up to 49%): the design is 100% renewable,
   which meets any minimum green share but may price above bidders who buy non-RE power.
 * Greenshoe capacity: sized for the base capacity; resize for base + greenshoe if needed.
-* Scenario saving: the tab keeps its state in the browser (per user and device); the shared
-  Scenarios library is not used yet.
+* Scenario saving: the model inputs and sizing live in the browser (per user and device); tender
+  readings are shared (Recently extracted tenders), the Scenarios library is not used yet.
+* The greenshoe is modelled from the base supply start; its own start (01-04-2029 for WBSEDCL) is
+  nine months later, so the sizing is slightly conservative.
 
 ## Checks
 

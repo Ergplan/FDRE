@@ -25,6 +25,8 @@ const fields = [
   field("sector.power.fdre.biomass_permitted", "Biomass permitted", true, 9, "(Solar, Wind, Hydro, Biomass,)"),
   field("sector.power.fdre.min_solar_capacity_multiple", "Solar multiple", 2, 11, "Solar Power Capacity equivalent to twice the contracted Supply Capacity"),
   field("sector.power.fdre.green_share_min_pct", "Green share", 51, 10, "a minimum 51% shall be Traceable Green Power"),
+  field("sector.power.fdre.market_sale_scope", "Market sale allowed", "mandated_solar", 11, "to schedule the entire Solar Power capacity so developed at its discretion, towards the RE RTC PPA or in the market"),
+  field("sector.power.fdre.peak_hours_set_by", "Peak hours set by", "procurer", 10, "4 hours in total in multiple stretches, as decided by WBSEDCL"),
   field("core.guarantees.emd_per_mw_inr", "EMD per MW", 100000, 5, "Amount of ₹1,00,000/- (Indian rupees One Lakh only) per MW"),
   field("core.guarantees.pbg_per_mw_inr", "PBG per MW", 2000000, 5, "Rupees Twenty Lakh only per MW"),
   { ...field("sector.power.common.tariff_ceiling_inr_per_kwh", "Ceiling tariff", null, 1, ""), status: "not_found", value: null, evidence: [] },
@@ -38,7 +40,7 @@ const synthetic = {
 const proposals = buildProposals(synthetic);
 const byId = Object.fromEntries(proposals.map((p) => [p.id, p]));
 assert.equal(byId.plantMw.value, 1500);
-assert.match(byId.plantMw.note, /Greenshoe/);
+assert.equal(byId.greenshoe.value, 500, "greenshoe offered as its own choice");
 assert.equal(byId["rule.annual"].value, 0.8);
 assert.equal(byId["rule.monthly"].value, 0.7);
 assert.equal(byId["rule.peak"].value, 0.9);
@@ -50,20 +52,33 @@ assert.equal(byId["rule.annual"].source.page, 10);
 
 const base = defaultBidState();
 const applied = applyProposals(base, proposals, {});
-assert.equal(applied.plantMw, 1500);
+assert.equal(applied.plantMw, 2000, "base 1,500 MW + 500 MW greenshoe: the most the tender can procure");
+assert.equal(applied.baseMw, 1500);
+assert.equal(applied.greenshoeMw, 500);
 assert.equal(applied.fin.years, 25);
-assert.deepEqual(applied.rules.map((r) => [r.id, r.target, r.enabled]), [["annual", 0.8, true], ["monthly", 0.7, true], ["peak", 0.9, true]]);
+assert.deepEqual(applied.rules.map((r) => [r.id, r.target, r.enabled, r.hours]), [["annual", 0.8, true, "all"], ["monthly", 0.7, true, "all"], ["peak", 0.9, true, "any"]]);
+assert.equal(applied.peak.setBy, "procurer", "WBSEDCL decides the peak hours: every hour it may pick is checked");
+assert.equal(applied.market.sellFrom, "solar", "only the mandated solar may be sold in the market");
 assert.equal(applied.peak.hours, 4);
-assert.equal(applied.vars.solarMw.min, 3000, "solar at least twice the contracted capacity");
-assert.ok(applied.vars.solarMw.max >= 4500);
+assert.equal(applied.vars.solarMw.min, 4000, "solar at least twice the contracted capacity (incl. greenshoe)");
+assert.ok(applied.vars.solarMw.max >= 8000);
+const baseOnly = applyProposals(base, proposals, { greenshoe: false });
+assert.equal(baseOnly.plantMw, 1500, "unticking the greenshoe sizes the base only");
+assert.equal(baseOnly.vars.solarMw.min, 3000);
 assert.equal(applied.fin.sellSurplus, true);
-assert.equal(applied.fin.extraExportMw, 3000, "mandated solar sells surplus over its own connection");
+assert.equal(applied.fin.extraExportMw, 4000, "mandated solar sells surplus over its own connection");
 assert.equal(applied.guarantees.emdPerMwInr, 100000);
 assert.equal(applied.ceilingTariff, null);
 assert.equal(applied.provenance["rule.annual"].quote, "Supply of minimum 80% CUF for each Accounting Year");
 assert.ok(applied.notes.some((n) => n.id === "green"), "facts that are not modelled are listed");
+// a tender that says nothing about market sales: nothing is sold
+const silent = { ...synthetic, sections: [{ name: "all", label: "All", fields: fields.filter((f) => !f.path.endsWith("market_sale_scope")) }] };
+const silentApplied = applyProposals(base, buildProposals(silent), {});
+assert.equal(silentApplied.fin.sellSurplus, false, "no sale unless the tender allows it");
+const silentPayload = lpPayload({ ...silentApplied, tender: { result: silent }, fin: { ...silentApplied.fin, sellSurplus: true } }, resourceProfiles(silentApplied));
+assert.equal(silentPayload.ctx.sellSurplus, false, "even if switched on, a tender that does not allow sales sells nothing");
 // a proposal the reviewer unticks is not applied
-const skipped = applyProposals(base, proposals, { "rule.monthly": false, plantMw: false });
+const skipped = applyProposals(base, proposals, { "rule.monthly": false, plantMw: false, greenshoe: false });
 assert.equal(skipped.plantMw, base.plantMw);
 assert.equal(skipped.rules.find((r) => r.id === "monthly").enabled, false);
 
@@ -74,11 +89,14 @@ const mask = peakMask({ start: 18, hours: 4 });
 assert.equal(mask.reduce((a, b) => a + b, 0), 365 * 4);
 const payload = lpPayload(applied, resourceProfiles(applied));
 assert.equal(payload.ctx.demand.length, E.HOURS);
-assert.equal(payload.ctx.demand[100], 1500);
+assert.equal(payload.ctx.demand[100], 2000);
 assert.equal(payload.compliance.length, 3);
-assert.equal(payload.peakMask.length, E.HOURS);
+assert.equal(payload.peakMask, undefined, "any hour of the day: no window mask");
+assert.equal(payload.compliance.find((r) => r.id === "peak").hours, "any");
+assert.equal(payload.ppaFirst, true);
+assert.equal(payload.exportSources, "solar");
 assert.ok(payload.vars.biomassMw && payload.biomass, "biomass offered when the tender allows it");
-assert.equal(payload.vars.solarMw.min, 3000);
+assert.equal(payload.vars.solarMw.min, 4000);
 assert.equal(payload.returnLifetime, true);
 const noBio = lpPayload({ ...applied, sources: { ...applied.sources, biomass: false, wind: false } }, resourceProfiles(applied));
 assert.equal(noBio.vars.biomassMw, undefined);

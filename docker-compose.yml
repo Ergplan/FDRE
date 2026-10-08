@@ -29,6 +29,8 @@ services:
       # Tender intelligence (tender_intel): without a key tenders are read in rules mode
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       TENDER_INTEL_MODEL: ${TENDER_INTEL_MODEL:-}
+      # 1 = read tenders only with the model (the ported tender_engine reading); never fall back to rules
+      TENDER_INTEL_REQUIRE_LLM: ${TENDER_INTEL_REQUIRE_LLM:-}
 
   web:
     build:

@@ -60,6 +60,23 @@ fields:
     min: 0
     max: 10
     help: Solar capacity the supplier must install, as a multiple of the contracted capacity.
+  sector.power.fdre.market_sale_scope:
+    section: fdre_profile
+    label: Market sale allowed
+    type: enum
+    enum: [mandated_solar, any_capacity, not_allowed]
+    help: "What the supplier may schedule or sell in the market (a power exchange or a third party) during the contract, as the tender states it: only the solar capacity the tender makes it install (mandated_solar), any of its capacity (any_capacity), or nothing (not_allowed). Leave empty when the tender does not say. Sales before the supply start date are not this field."
+  sector.power.fdre.ppa_priority_before_sale:
+    section: fdre_profile
+    label: PPA supplied before any sale
+    type: bool
+    help: "Whether the tender makes the supplier meet its supply to the procurer before selling any energy elsewhere (for example 'priority shall be accorded to meet the energy requirements as per PPA, before selling any quantum of energy in the open market', or a penalty for selling while the PPA demand is unmet). Leave empty when the tender does not say."
+  sector.power.fdre.peak_hours_set_by:
+    section: fdre_profile
+    label: Peak hours set by
+    type: enum
+    enum: [tender, procurer, supplier]
+    help: "Who fixes the peak hours: the tender prints them (tender), the procurer decides or declares them (procurer, for example 'as decided by WBSEDCL'), or the supplier chooses them (supplier). Leave empty when the tender does not say."
   sector.power.fdre.supply_start_date:
     section: fdre_profile
     label: Supply start date

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowRight, FileSearch, Loader2, Sparkles, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, FileSearch, FolderOpen, Loader2, Sparkles, Upload } from "lucide-react";
 import { Section, Stat, nf, pf } from "../rtc/ui";
+import { ReadingBanner } from "./RequirementsStep";
 
 const TYPE_LABEL = {
   auto: "Detect from the document",
@@ -46,6 +47,30 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
   const [error, setError] = useState("");
   const cancelled = useRef(false);
   const inputRef = useRef(null);
+  const [recent, setRecent] = useState(null);
+  const [opening, setOpening] = useState("");
+
+  async function loadRecent() {
+    try {
+      setRecent((await getJson("/api/tenders")).tenders || []);
+    } catch {
+      setRecent([]);
+    }
+  }
+  useEffect(() => { loadRecent(); }, []);
+
+  async function openSaved(item) {
+    setOpening(item.id);
+    setError("");
+    try {
+      const { tender } = await getJson(`/api/tenders/${item.id}`);
+      onRead({ name: tender.file_name, readAt: tender.created_at, result: tender.result, savedId: tender.id });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setOpening("");
+    }
+  }
 
   useEffect(() => {
     cancelled.current = false;
@@ -76,7 +101,13 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
       }
       if (cancelled.current) return;
       if (current.status === "failed") throw new Error(current.error || "The tender could not be read.");
-      onRead({ name: file.name, readAt: new Date().toISOString(), result: current.result });
+      // keep the reading for the team (Recently extracted tenders); the tab works without it
+      let savedId = null;
+      try {
+        const saved = await getJson("/api/tenders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fileName: file.name, result: current.result }) });
+        savedId = saved.tender?.id || null;
+      } catch { /* saving is best effort */ }
+      onRead({ name: file.name, readAt: new Date().toISOString(), result: current.result, savedId });
       setJob(null);
     } catch (err) {
       setJob(null);
@@ -112,13 +143,15 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
             <label className="rtc-field">
               <div className="rtc-field-top"><span>Reading</span></div>
               <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={busy}>
-                <option value="auto">{status?.llm_available ? "Full reading (language model)" : "Rule-based reading"}</option>
-                {status?.llm_available && <option value="rules">Rule-based reading only</option>}
+                <option value="auto">{status?.llm_available ? "Full reading (tender engine model)" : "Rule-based reading (no model key on the engine)"}</option>
+                {status?.llm_available && !status?.require_llm && <option value="rules">Rule-based reading only</option>}
               </select>
               <small>
-                {status?.llm_available
-                  ? "Every field is read with a quote from the page; quotes are checked against the PDF"
-                  : "Set ANTHROPIC_API_KEY on the engine for the full reading; rules read the key figures with page quotes"}
+                {status?.require_llm
+                  ? "This engine reads tenders only with the model; a read that cannot use it stops with an error"
+                  : status?.llm_available
+                    ? "Every field is read with a quote from the page; quotes are checked against the PDF"
+                    : "Set ANTHROPIC_API_KEY on the engine for the tender engine's full reading; rules read only the key figures, with page quotes"}
               </small>
             </label>
             <div className="bid-upload-go">
@@ -139,9 +172,30 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
         {status?.unavailable && <p className="rtc-note">The tender engine did not answer; reading may be unavailable.</p>}
       </Section>
 
+      <Section index="1.1" title="Recently extracted tenders" note="Read once, open again: each reading keeps its page quotes">
+        {recent === null && <p className="rtc-note"><Loader2 className="spin" size={13} /> Loading</p>}
+        {recent?.length === 0 && <p className="rtc-note">No tender has been read yet.</p>}
+        {recent?.length > 0 && (
+          <div className="bid-recent" role="table" data-testid="bid-recent">
+            <div className="bid-recent-row head" role="row"><span>Tender</span><span>Issuer</span><span>Capacity</span><span>Reading</span><span>Read</span><span /></div>
+            {recent.map((t) => (
+              <div key={t.id} className={`bid-recent-row ${state.tender?.savedId === t.id ? "current" : ""}`} role="row" data-testid={`recent-${t.seed_key || t.id}`}>
+                <span><strong>{t.tender_number || t.file_name}</strong><small>{t.title || t.file_name}</small></span>
+                <span>{t.issuer || "–"}</span>
+                <span>{t.capacity_mw ? `${nf(t.capacity_mw, 0)} MW` : "–"}</span>
+                <span><span className={`bid-chip ${t.mode === "llm" ? "" : "warn"}`}>{t.mode === "llm" ? "Model reading" : "Rule-based"}</span><small>{t.found ?? "–"} of {t.fields ?? "–"} fields</small></span>
+                <span><small>{t.seed_key ? "Built in" : (t.created_by_name || t.created_by_email || "")}</small><small>{new Date(t.created_at).toLocaleDateString()}</small></span>
+                <span><button type="button" className="secondary" onClick={() => openSaved(t)} disabled={Boolean(opening) || busy}>{opening === t.id ? <Loader2 className="spin" size={13} /> : <FolderOpen size={13} />} Open</button></span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
       {last && !busy && (
-        <Section index="1.1" title="Last tender read" note={state.tender.readAt ? new Date(state.tender.readAt).toLocaleString() : ""}>
+        <Section index="1.2" title="Last tender read" note={state.tender.readAt ? new Date(state.tender.readAt).toLocaleString() : ""}>
           <div className="bid-read-summary">
+            <ReadingBanner result={last} />
             <div className="bid-read-title">
               <strong>{state.tender.name}</strong>
               <span className="bid-chip"><Sparkles size={11} /> {last.mode === "llm" ? "Full reading" : "Rule-based reading"}</span>

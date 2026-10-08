@@ -347,6 +347,15 @@ def test_rules_mode_reads_the_wbsedcl_re_rtc_rfp():
     assert values.get("sector.power.fdre.storage_mandatory") is not True  # storage is optional here
     # the per-MW EMD and PBG are 20x apart: the ported rule flags it for review
     assert fields["core.guarantees.pbg_per_mw_inr"]["status"] == "needs_review"
+    # what may be sold outside the PPA, and who sets the peak hours, come from the tender itself
+    assert values.get("sector.power.fdre.market_sale_scope") == "mandated_solar"
+    _check_evidence(fields["sector.power.fdre.market_sale_scope"], pages, {11})
+    assert values.get("sector.power.fdre.peak_hours_set_by") == "procurer"
+    _check_evidence(fields["sector.power.fdre.peak_hours_set_by"], pages, {10})
+    assert fields["sector.power.fdre.ppa_priority_before_sale"]["status"] == "not_found"  # the RFP does not say
+    # every number and date read is printed in its own quote
+    checked = [o for o in result["rules"] if o["rule"] == "value_in_quotes"]
+    assert len(checked) >= 15 and all(o["passed"] for o in checked)
 
 
 # ----------------------------------------------------------------------------- model mode (fake SDK)
@@ -602,7 +611,7 @@ def _upload(path: Path, **extra) -> dict:
 def test_api_status_catalog_and_read(client, tmp_path, monkeypatch):
     for prefix in ("/api/bid/tender", "/api/rtc/tender"):
         status = client.get(f"{prefix}/status").json()
-        assert status == {"llm_available": False, "default_mode": "rules", "types": list(TENDER_TYPES)}
+        assert status == {"llm_available": False, "default_mode": "rules", "require_llm": False, "types": list(TENDER_TYPES)}
     cat = client.get("/api/bid/tender/catalog", params={"tender_type": "fdre"})
     assert cat.status_code == 200 and "fdre_profile" in [s["name"] for s in cat.json()["sections"]]
     assert client.get("/api/bid/tender/catalog", params={"tender_type": "nuclear"}).status_code == 422
@@ -656,3 +665,38 @@ def test_text_upload_is_read_in_rules_mode():
     assert result["values"]["sector.power.fdre.peak_hours_per_day"] == 4
     field = _by_path(result)["sector.power.common.ppa_tenure_years"]
     assert field["evidence"][0]["located"] and field["evidence"][0]["bbox"] is None  # no boxes outside PDFs
+
+
+def test_value_must_be_printed_in_its_quote():
+    """FDRE guardrail: a real quote cannot carry a number or date it does not print."""
+    from tender_intel.rules import dates_in, value_in_quotes
+    from tender_intel.schema import compile_type
+
+    fields = {f.path: f for f in compile_type("fdre").fields}
+    cap = fields["sector.power.common.total_capacity_mw"]
+    assert value_in_quotes(cap, 1200, ["Supply of 1200MW 'Firm & Dispatchable' power"]).passed
+    assert not value_in_quotes(cap, 1500, ["Supply of 1200MW 'Firm & Dispatchable' power"]).passed
+    emd = fields["core.guarantees.emd_per_mw_inr"]
+    assert value_in_quotes(emd, 100000, ["Amount of ₹1,00,000/- (Indian rupees One Lakh only) per MW"]).passed
+    deadline = fields["core.key_dates.bid_submission_deadline"]
+    assert value_in_quotes(deadline, "2024-04-12", ["Online Bid Submission Closing Date & Time 12.04.2024 (17:30 Hrs.)"]).passed
+    assert not value_in_quotes(deadline, "2024-04-13", ["Online Bid Submission Closing Date & Time 12.04.2024 (17:30 Hrs.)"]).passed
+    assert {"2028-07-01", "2029-04-01"} <= dates_in("SSD shall be 01-July-28. … SSD shall be 01-Apr-29.")
+    # text and choices are not checked by this rule
+    assert value_in_quotes(fields["core.identity.issuing_agency"], "NHPC Limited", ["ISSUED BY: NHPC Limited"]) is None
+
+
+def test_require_llm_never_falls_back_to_rules(monkeypatch):
+    from tender_intel.extract import resolve_mode
+
+    pdf = b"%PDF-1.4\n"
+    monkeypatch.setenv("TENDER_INTEL_REQUIRE_LLM", "1")
+    with pytest.raises(ValueError):
+        resolve_mode("t.pdf", pdf, "auto", False)  # no key
+    with pytest.raises(ValueError):
+        resolve_mode("t.pdf", pdf, "rules", True)  # rules asked for
+    with pytest.raises(ValueError):
+        resolve_mode("t.txt", b"plain text", "auto", True)  # not a PDF
+    assert resolve_mode("t.pdf", pdf, "auto", True) == "llm"
+    monkeypatch.setenv("TENDER_INTEL_REQUIRE_LLM", "")
+    assert resolve_mode("t.pdf", pdf, "auto", False) == "rules"

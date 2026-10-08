@@ -7,6 +7,7 @@ import { DATA_COLORS } from "../chartTheme";
 import { Section, Stat, nf, pf } from "../rtc/ui";
 import { activeRules, capexBySource, opsFromLp } from "./model";
 import { SourceChip } from "./RequirementsStep";
+import Checklist from "./Checklist";
 
 const FUEL_LINES = [["Biomass fuel", "fuel", 1, -1], ["Biomass generation (MU)", "biomassMu", 1]];
 
@@ -56,7 +57,8 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
   const ceiling = state.ceilingTariff;
   const headroom = ceiling ? ceiling - finance.tariff : null;
   const crore = (inr) => inr / 1e7;
-  const emd = state.guarantees?.emdPerMwInr ? crore(state.guarantees.emdPerMwInr * state.plantMw) : null;
+  const base = state.baseMw || state.plantMw;
+  const emd = state.guarantees?.emdPerMwInr ? crore(state.guarantees.emdPerMwInr * base) : null;
   const pbg = state.guarantees?.pbgPerMwInr ? crore(state.guarantees.pbgPerMwInr * state.plantMw) : null;
   const termChanged = (lp.lifetime?.length || 0) !== (fin.years || 25);
   const y1 = finance.rows[0];
@@ -81,18 +83,20 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
         </div>
       </Section>
 
-      <Section index="4.1" title="Money at stake" note="Capex by source and the guarantees the tender asks for">
+      <Checklist state={state} lp={lp} bidTariff={finance.tariff} index="4.1" />
+
+      <Section index="4.2" title="Money at stake" note="Capex by source and the guarantees the tender asks for">
         <div className="rtc-grid rtc-grid-4">
           <Stat label="Solar capex" value={`₹${nf(capex.solar, 0)} cr`} detail={`${nf(sizes.solarMw, 0)} MW`} />
           <Stat label="Wind capex" value={`₹${nf(capex.wind, 0)} cr`} detail={`${nf(sizes.windMw, 0)} MW`} />
           <Stat label="Biomass capex" value={`₹${nf(capex.biomass, 0)} cr`} detail={`${nf(sizes.biomassMw || 0, 0)} MW`} />
           <Stat label="Battery capex" value={`₹${nf(capex.bess, 0)} cr`} detail={`${nf(sizes.bessMwh, 0)} MWh`} />
           <div className="bid-input-with-src">
-            <Stat label="Bid security (EMD)" value={emd === null ? "Not stated" : `₹${nf(emd, 2)} cr`} detail={emd === null ? "" : `for ${nf(state.plantMw, 0)} MW`} />
+            <Stat label="Bid security (EMD)" value={emd === null ? "Not stated" : `₹${nf(emd, 2)} cr`} detail={emd === null ? "" : `for the ${nf(base, 0)} MW bid`} />
             <SourceChip source={prov["guarantees.emd"]} />
           </div>
           <div className="bid-input-with-src">
-            <Stat label="Performance guarantee (PBG)" value={pbg === null ? "Not stated" : `₹${nf(pbg, 2)} cr`} detail={pbg === null ? "" : `for ${nf(state.plantMw, 0)} MW`} />
+            <Stat label="Performance guarantee (PBG)" value={pbg === null ? "Not stated" : `₹${nf(pbg, 2)} cr`} detail={pbg === null ? "" : `for ${nf(state.plantMw, 0)} MW${state.greenshoeMw ? " incl. greenshoe" : ""}`} />
             <SourceChip source={prov["guarantees.pbg"]} />
           </div>
           <Stat label="Equity" value={`₹${nf(finance.equity, 0)} cr`} detail={`debt ₹${nf(finance.debt, 0)} cr`} />
@@ -105,7 +109,7 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
         )}
       </Section>
 
-      <Section index="4.2" title="Revenue stack" note={`PPA supply revenue and ${saleLabel.toLowerCase()} revenue, year by year`}>
+      <Section index="4.3" title="Revenue stack" note={`PPA supply revenue and ${saleLabel.toLowerCase()} revenue, year by year`}>
         <div className="rtc-grid rtc-grid-4" data-testid="bid-revenue">
           <Stat label="PPA supply, year 1" value={`₹${nf(y1.energyRevenue, 0)} cr`} detail={`${nf(y1.deliveredMu, 0)} MU at ₹${nf(y1.tariff, 3)}/kWh`} />
           <Stat label={`${saleLabel}, year 1`} value={`₹${nf(y1.surplusRevenue, 0)} cr`} detail={y1.excessMu > 0 ? `${nf(y1.excessMu, 0)} MU at ₹${nf((y1.surplusRevenue * 1e4) / (y1.excessMu * 1000), 2)}/kWh realised` : "nothing sold"} />

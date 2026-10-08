@@ -7,6 +7,9 @@ export async function register() {
       const { seedProfiles } = await import("./lib/profiles");
       const n = await seedProfiles();
       if (n) console.log(`[db] loaded ${n} built-in resource profiles`);
+      const { seedTenderReads } = await import("./lib/tenders");
+      const t = await seedTenderReads().catch((err) => { console.error(`[tenders] seed: ${err.message}`); return 0; });
+      if (t) console.log(`[db] loaded ${t} built-in tender readings`);
       const { purgeOldActivity } = await import("./lib/activity");
       await purgeOldActivity().catch((err) => console.error(`[activity] purge: ${err.message}`));
       return;

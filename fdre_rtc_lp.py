@@ -41,6 +41,7 @@ except ImportError:  # pragma: no cover - reported by solve()
 HOURS = 8760
 MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 MONTH_OF_HOUR = np.repeat(np.arange(12), [d * 24 for d in MONTH_DAYS])
+HOUR_OF_DAY = np.tile(np.arange(24), 365)
 RS_CR_PER_MWH_AT_1RS = 1e-4  # 1 MWh at Rs 1/kWh = Rs 1,000 = 1e-4 crore
 VAR_KEYS = ("solarMw", "windMw", "bessMw", "bessMwh")
 
@@ -368,14 +369,18 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         if target <= 0:
             continue
         hours = item.get("hours") or "all"
-        if hours not in ("all", "peak"):
-            raise LpInputError("compliance hours must be 'all' or 'peak'")
+        # "any": the floor must hold in whichever hours are chosen (the procurer decides the peak
+        # hours): it is applied to every hour of the day on its own, within peakMask if given
+        if hours not in ("all", "peak", "any"):
+            raise LpInputError("compliance hours must be 'all', 'peak' or 'any'")
         basis = item.get("basis") or "annual"
         if basis not in ("annual", "monthly"):
             raise LpInputError("compliance basis must be 'annual' or 'monthly'")
         rules.append({"id": str(item.get("id") or f"rule{len(rules) + 1}"), "label": str(item.get("label") or ""),
                       "target": min(1.0, target), "hours": hours, "basis": basis})
     peak_mask = None
+    if any(r["hours"] == "any" for r in rules) and payload.get("peakMask") is not None:
+        peak_mask = _series(payload.get("peakMask"), "peakMask") > 0.5
     if any(r["hours"] == "peak" for r in rules):
         peak_mask = _series(payload.get("peakMask"), "peakMask") > 0.5
         if not peak_mask.any():
@@ -392,6 +397,15 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     # absent the flat surplusPrice applies (Round the clock)
     price_series = _series(ctx.get("surplusPrice"), "surplusPrice") if sell and ctx.get("surplusPrice") is not None else None
     surplus_esc = (1 + float(fin.get("surplusEscalation") or 0)) ** (years_arr - 1)
+    # Optional hourly limit on surplus sold (MW), e.g. a share of the market's cleared volume, so
+    # a price-taker does not sell more than the market can absorb
+    sale_cap = np.maximum(0.0, _series(ctx.get("surplusCapMw"), "surplusCapMw")) if sell and ctx.get("surplusCapMw") is not None else None
+    # ppaFirst (Tender to Bid): the PPA is supplied before anything is sold, so the optimizer
+    # never values a sale above the tariff it would earn on the PPA (it gains nothing by
+    # diverting); sale revenue is still booked at the actual price. exportSources "solar": only
+    # solar output may be sold (a tender that lets the mandated solar be scheduled in the market)
+    ppa_first = bool(payload.get("ppaFirst")) and sell
+    solar_only = sell and payload.get("exportSources") == "solar"
     preop = 1 + float(costs.get("preopPct") or 0)
     ins = float(fin.get("insurancePct") or 0)
     evac = float(costs.get("evacuationCr") or 0)
@@ -437,12 +451,28 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         rows_j.append(c)
         rows_v.append(val)
 
+    def rule_groups(rule: dict) -> list[tuple[int, np.ndarray]]:
+        """(month or -1, hour mask) for each floor row of a rule."""
+        months = range(12) if rule["basis"] == "monthly" else [-1]
+        if rule["hours"] == "any":
+            cand = peak_mask if peak_mask is not None else np.ones(HOURS, bool)
+            out = []
+            for m in months:
+                in_m = (MONTH_OF_HOUR == m) if m >= 0 else np.ones(HOURS, bool)
+                for h in sorted(set(HOUR_OF_DAY[cand].tolist())):
+                    out.append((m, in_m & (HOUR_OF_DAY == h) & cand))
+            return out
+        hours_mask = peak_mask if rule["hours"] == "peak" else np.ones(HOURS, bool)
+        return [(m, ((MONTH_OF_HOUR == m) if m >= 0 else np.ones(HOURS, bool)) & hours_mask) for m in months]
+
     for yi, year in enumerate(rep):
         f = year_factors(year, fin, bess)
         base = n_size + yi * per_year
         c_dir, c_ch, c_dis, c_soc = (base + b * HOURS + t for b in range(4))
         c_ex = base + 4 * HOURS + t if sell else None
         c_bio = base + BIO_BLOCK * HOURS + t if has_bio else None
+        if sale_cap is not None:
+            col_hi[c_ex] = sale_cap
         if has_bio:
             bio_cols.append(c_bio)
         dem = demand * f["demandFactor"]
@@ -463,6 +493,12 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             add(r, c_bio, -ones)
         row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
         n_row += HOURS
+        if solar_only:
+            # sales come from solar output only: ex - s*S <= 0
+            r = n_row + t
+            add(r, c_ex, ones); add(r, np.zeros(HOURS, int), -sgen)
+            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
+            n_row += HOURS
         if has_bio:
             # biomass output within availability x MW, and above the minimum stable load
             r = n_row + t
@@ -512,10 +548,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         # one such floor per rule over its hours
         floors = rules or [{"id": "dfr", "target": dfr_target, "hours": "all", "basis": "monthly" if monthly else "annual"}]
         for rule in floors:
-            hours_mask = peak_mask if rule["hours"] == "peak" else np.ones(HOURS, bool)
-            groups = [(m, MONTH_OF_HOUR == m) for m in range(12)] if rule["basis"] == "monthly" else [(-1, np.ones(HOURS, bool))]
-            for m, mask in groups:
-                idx = t[mask & hours_mask]
+            for m, mask in rule_groups(rule):
+                idx = t[mask]
                 if idx.size == 0:
                     continue
                 add(np.full(idx.size, n_row), c_dir[idx], np.full(idx.size, 1e-3))  # GWh, for scaling
@@ -541,13 +575,13 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
 
     ex_cols = [n_size + yi * per_year + 4 * HOURS + t for yi in range(len(rep))] if sell else []
 
-    def objective(tw: dict) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+    def objective(tw: dict, lam_now: float = 0.0) -> tuple[np.ndarray, np.ndarray, float, np.ndarray]:
         """cost(x) (Rs cr, PV at the equity IRR) and energy(x) (Rs cr per Rs/kWh of tariff)."""
         rev_w = tw["rev"][1:]
         opex_w = tw["opex"][1:]
         energy_w = RS_CR_PER_MWH_AT_1RS * (weights.T @ (rev_w * tariff_esc))
         surplus_w = RS_CR_PER_MWH_AT_1RS * surplus_price * (weights.T @ rev_w)
-        market_w = RS_CR_PER_MWH_AT_1RS * (weights.T @ (rev_w * surplus_esc)) if price_series is not None else None
+        market_w = RS_CR_PER_MWH_AT_1RS * (weights.T @ (rev_w * surplus_esc)) if (price_series is not None or ppa_first) else None
         pv_om = float(opex_w @ om_esc)
         pv_flat = float(opex_w.sum())
 
@@ -573,7 +607,13 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         for yi, (c_dir, c_dis) in enumerate(deliver_cols):
             energy_vec[c_dir] = energy_w[yi]
             energy_vec[c_dis] = energy_w[yi]
-            if sell and price_series is not None:
+            if ppa_first:
+                # a sale is worth at most what the same MWh earns on the PPA (0.5% less, so the
+                # PPA wins a tie): supplying the PPA always comes first
+                prices = price_series if price_series is not None else np.full(HOURS, surplus_price)
+                cap = 0.995 * lam_now * energy_w[yi] / market_w[yi] if market_w[yi] > 0 else 0.0
+                cost_vec[ex_cols[yi]] = -market_w[yi] * np.minimum(prices, cap)
+            elif sell and price_series is not None:
                 cost_vec[ex_cols[yi]] = -market_w[yi] * price_series
             elif sell:
                 cost_vec[ex_cols[yi]] = -surplus_w[yi]
@@ -625,8 +665,10 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             return dfr_target * dem.sum()
         best = 0.0
         for rule in rules:
-            hours_mask = peak_mask if rule["hours"] == "peak" else np.ones(HOURS, bool)
-            best = max(best, rule["target"] * dem[hours_mask].sum())
+            covered = np.zeros(HOURS, bool)
+            for _, mask in rule_groups(rule):
+                covered |= mask
+            best = max(best, rule["target"] * dem[covered].sum())
         return best
 
     floor_mwh = np.array([energy_floor(d) for d in demand_by_year])
@@ -663,7 +705,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         return f"tax paid from year {paid[0]}" if paid and paid == list(range(paid[0], n + 1)) else (
             f"tax paid in years {', '.join(map(str, paid))}" if paid else "no tax paid in the PPA term")
 
-    cost_vec, energy_vec, cost_const, energy_w = objective(tariff_weights(fin, taxed_in))
+    cost_vec, energy_vec, cost_const, energy_w = objective(tariff_weights(fin, taxed_in), lam)
     lp = highspy.HighsLp()
     lp.num_col_ = n_col
     lp.num_row_ = n_row
@@ -686,7 +728,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     all_cols = np.arange(n_col, dtype=np.int32)
     for it in range(1, int(payload.get("maxIterations") or 8) + 1):
         if it > 1:
-            cost_vec, energy_vec, cost_const, energy_w = objective(tariff_weights(fin, taxed_in))
+            cost_vec, energy_vec, cost_const, energy_w = objective(tariff_weights(fin, taxed_in), lam)
             h.changeColsCost(n_col, all_cols, cost_vec - lam * energy_vec)
             if "solver" not in user_opts:
                 h.setOptionValue("solver", "simplex")
@@ -737,13 +779,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
 
     # reporting: DFR per modelled year, curtailment and the DFR shadow price
     def rule_outcome(rule: dict, delivered: np.ndarray, dem: np.ndarray) -> dict:
-        hours_mask = peak_mask if rule["hours"] == "peak" else np.ones(HOURS, bool)
-        if rule["basis"] == "monthly":
-            shares = [float(delivered[(MONTH_OF_HOUR == m) & hours_mask].sum() / max(1e-9, dem[(MONTH_OF_HOUR == m) & hours_mask].sum()))
-                      for m in range(12) if ((MONTH_OF_HOUR == m) & hours_mask).any()]
-            achieved = min(shares)
-        else:
-            achieved = float(delivered[hours_mask].sum() / max(1e-9, dem[hours_mask].sum()))
+        shares = [float(delivered[mask].sum() / max(1e-9, dem[mask].sum())) for _, mask in rule_groups(rule) if mask.any()]
+        achieved = min(shares) if shares else 1.0
         return {"id": rule["id"], "label": rule["label"], "target": rule["target"], "achieved": achieved,
                 "met": achieved >= rule["target"] - 1e-6}
 
@@ -767,6 +804,10 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         }
         if has_bio:
             row["biomassMu"] = float(x[bio_cols[yi]].sum() / 1000)
+        if sell and (ppa_first or price_series is not None):
+            # sold while the PPA still had room: should be nil with ppaFirst
+            room = np.maximum(0.0, np.minimum(dem, plant) - delivered)
+            row["divertedMu"] = float(np.minimum(x[ex_cols[yi]], room).sum() / 1000)
         if rules:
             row["rules"] = [rule_outcome(rule, delivered, dem) for rule in rules]
         year_rows.append(row)
@@ -801,6 +842,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         "perYear": year_rows,
         "dfrPricePerPoint": dfr_price,
         "model": {"columns": n_col, "rows": n_row, "nonzeros": int(A.nnz), "mode": mode},
+        "ppaFirst": ppa_first,
+        "exportSources": "solar" if solar_only else "all",
         "seconds": round(seconds, 2),
         "log": lines,
     }

@@ -36,7 +36,7 @@ from pydantic import BaseModel, create_model
 from tender_intel import rules_reader
 from tender_intel.pages import PDF_LOCK, is_pdf, read_pages
 from tender_intel.resolver import Match, PageText, locate, resolve_pair
-from tender_intel.rules import CROSS_FIELD_RULES, range_rule, structured_numbers_quoted
+from tender_intel.rules import CROSS_FIELD_RULES, VALUE_RULE, range_rule, structured_numbers_quoted, value_in_quotes
 from tender_intel.schema import TENDER_TYPES, FieldSpec, SectionSpec, TenderSchema, compile_type
 from tender_intel.section_map import (
     PROMPT_NAME as SECTION_MAP_PROMPT,
@@ -119,11 +119,25 @@ def detect_tender_type(pages: list[PageText]) -> tuple[str, dict[str, float]]:
     return (best if scores[best] > 0 else DEFAULT_TYPE), scores
 
 
+def require_llm() -> bool:
+    """TENDER_INTEL_REQUIRE_LLM=1: tenders are read only by the model (the tender_engine
+    reading); the rules reader is never used, and a read that cannot use the model fails."""
+    return os.environ.get("TENDER_INTEL_REQUIRE_LLM", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def resolve_mode(name: str, payload: bytes, mode: str, llm_ok: bool) -> str:
     """"llm" when asked for (or "auto" with a model available) and the file is a PDF;
-    "rules" otherwise. Raises ValueError for an unknown mode or "llm" without a model."""
+    "rules" otherwise. Raises ValueError for an unknown mode or "llm" without a model, and,
+    when the model reading is required, for anything that would be read by rules."""
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}; one of {list(MODES)}")
+    if require_llm():
+        if not llm_ok:
+            raise ValueError("This engine reads tenders only with the model (TENDER_INTEL_REQUIRE_LLM) and no ANTHROPIC_API_KEY is set.")
+        if mode == "rules":
+            raise ValueError("Rule-based reading is switched off on this engine (TENDER_INTEL_REQUIRE_LLM).")
+        if not is_pdf(name, payload):
+            raise ValueError("The model reading needs a PDF; upload the tender as PDF.")
     if mode == "llm" and not llm_ok:
         raise ValueError("mode=llm needs ANTHROPIC_API_KEY")
     if mode == "rules":
@@ -617,6 +631,15 @@ def finalise(schema: TenderSchema, drafts: dict[str, Draft], pages: list[PageTex
             if not outcome.passed:
                 item.issues.append(_issue("structured_numbers_quoted", outcome.message))
 
+    # FDRE addition: a single number or date must be printed in its own quotes
+    for item in typed.values():
+        outcome = value_in_quotes(item.spec, item.value, [quote.text for quote in item.draft.quotes])
+        if outcome is None:
+            continue
+        outcomes.append({"rule": VALUE_RULE, "fields": [item.spec.path], "passed": outcome.passed, "message": outcome.message, "warning": False})
+        if not outcome.passed:
+            item.issues.append(_issue(VALUE_RULE, outcome.message))
+
     for item in fields:
         if item.draft.value is None or item.status == "rejected":
             continue
@@ -696,11 +719,15 @@ def read_tender(
             client = LLMClient(sdk) if sdk is not None else default_client()
             model = client.model
         except Exception as exc:  # noqa: BLE001 - no model reachable: read by rules
+            if require_llm():
+                raise RuntimeError(f"The model could not be reached ({_short(exc)}); rule-based reading is switched off.") from exc
             warnings.append(f"The model could not be reached ({_short(exc)}); the tender was read in rules mode.")
             resolved, model = "rules", None
         else:
             drafts, succeeded = _llm_drafts(name, payload, pages, schema, client, report, warnings, usage)
             if succeeded == 0 and schema.sections:
+                if require_llm():
+                    raise RuntimeError("Every model call failed; rule-based reading is switched off. " + " ".join(warnings[-3:]))
                 warnings.append("Every model call failed; the tender was read in rules mode instead.")
                 resolved, model, drafts = "rules", None, None
     if drafts is None:

@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 
 from tender_intel import TENDER_TYPES, catalog, llm_available, read_tender  # noqa: E402
 from tender_intel import jobs  # noqa: E402
-from tender_intel.extract import MODES, resolve_mode  # noqa: E402
+from tender_intel.extract import MODES, require_llm, resolve_mode  # noqa: E402
 from tender_intel.pages import UnreadableDocument, check_readable  # noqa: E402
 
 MAX_UPLOAD_BYTES = 60 * 1024 * 1024
@@ -47,7 +47,7 @@ class TenderIntelReadRequest(BaseModel):
 
 def status() -> dict[str, Any]:
     available = llm_available()
-    return {"llm_available": available, "default_mode": "llm" if available else "rules", "types": list(TENDER_TYPES)}
+    return {"llm_available": available, "default_mode": "llm" if available else "rules", "require_llm": require_llm(), "types": list(TENDER_TYPES)}
 
 
 def tender_catalog(tender_type: str = Query("fdre")) -> dict[str, Any]:
@@ -87,12 +87,17 @@ def read(req: TenderIntelReadRequest, response: Response, sync: int = Query(0)) 
         check_readable(req.file.name, payload)
     except UnreadableDocument as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    resolved = resolve_mode(req.file.name, payload, req.mode, available)
+    try:
+        resolved = resolve_mode(req.file.name, payload, req.mode, available)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if sync:
         try:
             return read_tender(req.file.name, payload, tender_type=req.tender_type, mode=req.mode)
         except (UnreadableDocument, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:  # the model reading is required and could not run
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
         except LookupError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     job_id = jobs.start(req.file.name, payload, tender_type=req.tender_type, mode=req.mode)

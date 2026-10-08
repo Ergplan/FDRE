@@ -204,6 +204,63 @@ def unquoted_numbers(value: Any, spec: FieldSpec, quotes: Sequence[str]) -> list
     return missing
 
 
+VALUE_RULE = "value_in_quotes"
+_NUMBER_TYPES = frozenset({"int", "decimal", "money_inr", "percent", "mw", "mwh", "duration_months", "kv", "km"})
+
+
+def value_in_quotes(spec: FieldSpec, value: Any, quotes: Sequence[str]) -> RuleOutcome | None:
+    """FDRE addition, not in tender_engine: a single number or date must be printed in the
+    field's own quotes (as digits, in lakh/crore, or in words), so a real quote cannot carry a
+    value it does not state. Text, choices and yes/no are not checked here."""
+    if value is None or isinstance(value, bool) or not quotes:
+        return None
+    printed: set[float] = set()
+    for quote in quotes:
+        printed |= numbers_in(quote)
+    if spec.type in _NUMBER_TYPES and isinstance(value, int | float):
+        if any(_same(float(value), seen) for seen in printed):
+            return RuleOutcome((spec.path,), True, f"{value:g} is printed in its quote")
+        return RuleOutcome((spec.path,), False, f"{value:g} is not printed in its quote; check the value against the page")
+    if spec.type == "date" and isinstance(value, str) and len(value) == 10:
+        if value in dates_in(" ".join(quotes)):
+            return RuleOutcome((spec.path,), True, f"{value} is printed in its quote")
+        return RuleOutcome((spec.path,), False, f"{value} is not printed in its quote; check the date against the page")
+    return None
+
+
+_MONTHS = {m: i for i, names in enumerate(
+    [("jan", "january"), ("feb", "february"), ("mar", "march"), ("apr", "april"), ("may",), ("jun", "june"), ("jul", "july"),
+     ("aug", "august"), ("sep", "sept", "september"), ("oct", "october"), ("nov", "november"), ("dec", "december")], start=1) for m in names}
+_DATE_NUM = re.compile(r"(?<!\d)(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?!\d)")
+_DATE_NAME = re.compile(r"(?<!\d)(\d{1,2})(?:st|nd|rd|th)?[\s.,-]*([A-Za-z]{3,9})[\s.,'-]*(\d{4}|\d{2})(?!\d)")
+_DATE_ISO = re.compile(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)")
+
+
+def dates_in(text: str) -> set[str]:
+    """Every date a passage prints, day first as Indian documents write them, as YYYY-MM-DD; a
+    two-digit year is read as 20YY."""
+    import datetime as _dt
+
+    found: set[str] = set()
+
+    def keep(year: int, month: int, day: int) -> None:
+        year = year + 2000 if year < 100 else year
+        try:
+            found.add(_dt.date(year, month, day).isoformat())
+        except ValueError:
+            pass
+
+    for d, m, y in _DATE_NUM.findall(text):
+        keep(int(y), int(m), int(d))
+    for d, name, y in _DATE_NAME.findall(text):
+        month = _MONTHS.get(name.lower())
+        if month:
+            keep(int(y), month, int(d))
+    for y, m, d in _DATE_ISO.findall(text):
+        keep(int(y), int(m), int(d))
+    return found
+
+
 def structured_numbers_quoted(spec: FieldSpec, value: Any, quotes: Sequence[str]) -> RuleOutcome | None:
     """Every number of a structured value occurs in one of that field's own quotes."""
     if not spec.keys:

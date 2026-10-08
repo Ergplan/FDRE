@@ -72,10 +72,20 @@ export function buildProposals(result) {
   add({
     id: "plantMw", group: "Contract", label: "Contracted supply capacity", hit: cap, value: cap?.value,
     display: cap ? fmtMw(cap.value) : null,
-    note: [cap === maxBid && total ? `Tender total ${fmtMw(total.value)}; one bidder may offer up to ${fmtMw(maxBid.value)}` : null,
-      greenshoe ? `Greenshoe option of ${fmtMw(greenshoe.value)} not included in the sizing` : null].filter(Boolean).join(". ") || "Sizing is for this capacity; edit it to size for a different bid",
-    apply: (s, v) => ({ ...s, plantMw: v, vars: scaledVars(v, s.vars) }),
+    note: cap === maxBid && total ? `Tender total ${fmtMw(total.value)}; one bidder may offer up to ${fmtMw(maxBid.value)}` : "Base contracted capacity",
+    apply: (s, v) => ({ ...s, plantMw: v, baseMw: v, greenshoeMw: 0, vars: scaledVars(v, s.vars) }),
   });
+  if (greenshoe) {
+    add({
+      id: "greenshoe", group: "Contract", label: "Greenshoe option", hit: greenshoe, value: greenshoe.value,
+      display: `${fmtMw(greenshoe.value)} more at the same tariff, at the procurer's option`,
+      note: "Ticked: sized for base + greenshoe, the most the tender can procure, so the one tariff holds if the option is exercised. Untick to size the base only",
+      apply: (s, v) => {
+        const plantMw = (s.baseMw || s.plantMw) + v;
+        return { ...s, plantMw, greenshoeMw: v, vars: scaledVars(plantMw, s.vars) };
+      },
+    });
+  }
 
   // ---- supply rules
   const rule = (id, label, hit, basis, hours) => add({
@@ -96,11 +106,26 @@ export function buildProposals(result) {
     note: "The tender may let the procurer choose the hours; the window start is set on the Size step",
     apply: (s, v) => ({ ...s, peak: { ...s.peak, hours: Math.max(1, Math.min(24, Math.round(v))) } }),
   });
-  const block = first(index, result, [{ path: DP, key: "peak_blocks" }], (v) => (Array.isArray(v) && v[0]?.window_start ? v[0].window_start : null));
-  if (block) {
+  // Who fixes the peak hours decides how the peak floor is checked. When the procurer decides
+  // them, or the tender prints only windows within which they fall, the floor must hold in any
+  // hour that may be chosen: each hour of the day (within the windows) on its own.
+  const setBy = first(index, result, [`${F}.peak_hours_set_by`]);
+  const blocks = first(index, result, [{ path: DP, key: "peak_blocks" }], (v) => (Array.isArray(v) && v.some((b) => b.window_start && b.window_end) ? v : null));
+  const windows = blocks ? blocks.value.filter((b) => b.window_start && b.window_end).map((b) => ({ start: b.window_start, end: b.window_end, hours: b.hours ?? null })) : [];
+  const setByText = { procurer: "The procurer decides the hours", tender: "The tender prints the windows", supplier: "The supplier chooses the hours" };
+  if (setBy || windows.length) {
+    const who = setBy?.value || "tender";
+    const display = [setByText[who] || who, windows.length ? windows.map((w) => `${w.start}–${w.end}${w.hours ? ` (${w.hours} h)` : ""}`).join(" and ") : null].filter(Boolean).join(": ");
     add({
-      id: "peak.start", label: "Peak window starts", hit: block, value: Number(String(block.value).slice(0, 2)), display: block.value,
-      apply: (s, v) => ({ ...s, peak: { ...s.peak, start: v } }),
+      id: "peak.setBy", label: "Peak hours set by", hit: setBy || blocks, value: { who, windows }, display,
+      note: who === "supplier" ? "The supplier picks the hours: set the window on the Size step"
+        : windows.length ? "The floor is checked in every hour inside these windows, since any of them may be chosen"
+          : "The floor is checked in every hour of the day, since the procurer may choose any of them",
+      apply: (s, v) => ({
+        ...s,
+        peak: { ...s.peak, setBy: v.who, windows: v.windows },
+        rules: (s.rules?.length ? s.rules : DEFAULT_RULES).map((r) => (r.id === "peak" ? { ...r, hours: v.who === "supplier" ? "peak" : "any" } : r)),
+      }),
     });
   }
 
@@ -119,17 +144,37 @@ export function buildProposals(result) {
   add({
     id: "solar.min", group: "Sources", label: "Mandatory solar capacity", hit: solarMult, value: solarMult?.value,
     display: solarMult ? `${solarMult.value} × contracted capacity` : null,
-    note: "Sets the smallest solar size. Its surplus may be sold in the market over its own connection, so surplus sales are on with that connection as extra export capacity",
+    note: "Sets the smallest solar size",
     apply: (s, v) => {
       const min = Math.round(v * s.plantMw);
       const cur = s.vars.solarMw;
       return {
         ...s,
         sources: { ...s.sources, solar: true },
-        vars: { ...s.vars, solarMw: { ...cur, locked: false, min, max: Math.max(cur.max, Math.round(min * 1.5)), value: Math.max(cur.value, min) } },
-        fin: { ...s.fin, sellSurplus: true, extraExportMw: min },
+        vars: { ...s.vars, solarMw: { ...cur, locked: false, min, max: Math.max(cur.max, Math.round(min * 2)), value: Math.max(cur.value, min) } },
       };
     },
+  });
+  // Market sales follow only what the tender says; when it says nothing, nothing is sold.
+  const sale = first(index, result, [`${F}.market_sale_scope`]);
+  const saleText = { mandated_solar: "Only the mandated solar may be scheduled in the market", any_capacity: "Energy may be sold to a third party or on a power exchange", not_allowed: "Sale outside the PPA not allowed" };
+  add({
+    id: "market.sale", group: "Sources", label: "Sale in the market", hit: sale, value: sale?.value, display: sale ? saleText[sale.value] || sale.value : null,
+    note: sale?.value === "mandated_solar" ? "Only the mandated solar's surplus is sold, over its own interconnection, after the PPA is supplied"
+      : sale?.value === "any_capacity" ? "Surplus after the PPA is supplied is sold within the plant's connection" : "Nothing is sold outside the PPA",
+    apply: (s, v) => {
+      if (v === "mandated_solar") {
+        return { ...s, fin: { ...s.fin, sellSurplus: true, extraExportMw: s.vars.solarMw.min || 0 }, market: { ...(s.market || {}), sellFrom: "solar" } };
+      }
+      if (v === "any_capacity") return { ...s, fin: { ...s.fin, sellSurplus: true, extraExportMw: 0 }, market: { ...(s.market || {}), sellFrom: "all" } };
+      return { ...s, fin: { ...s.fin, sellSurplus: false }, market: { ...(s.market || {}), sellFrom: "all" } };
+    },
+  });
+  const priority = first(index, result, [`${F}.ppa_priority_before_sale`]);
+  add({
+    id: "ppaFirst", group: "Sources", label: "PPA supplied before any sale", hit: priority, value: priority?.value, display: priority ? (priority.value ? "Yes" : "No") : null,
+    note: "Every hour the PPA is supplied first; only what it cannot take is sold",
+    apply: (s) => s,
   });
   const storage = first(index, result, [`${F}.storage_mandatory`]);
   add({
@@ -203,8 +248,9 @@ export function buildProposals(result) {
 export function applyProposals(state, proposals, accepted = {}) {
   let next = { ...state, provenance: { ...state.provenance } };
   const notes = [];
-  // capacity first: other inputs (solar minimum) scale with it
-  const ordered = [...proposals].sort((a, b) => (a.id === "plantMw" ? -1 : b.id === "plantMw" ? 1 : 0));
+  // capacity first (base, then greenshoe): other inputs such as the solar minimum scale with it
+  const rank = (p) => (p.id === "plantMw" ? 0 : p.id === "greenshoe" ? 1 : 2);
+  const ordered = [...proposals].sort((a, b) => rank(a) - rank(b));
   for (const p of ordered) {
     if (!p.stated) continue;
     if (p.info) {

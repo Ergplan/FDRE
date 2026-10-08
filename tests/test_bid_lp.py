@@ -145,3 +145,69 @@ def test_hourly_market_price_values_each_sale_at_its_hour():
     bio_evening = np.array(h["biomass"])[(HOUR >= 18) & (HOUR < 23)].mean()
     bio_midday = np.array(h["biomass"])[(HOUR >= 9) & (HOUR < 16)].mean()
     assert bio_evening > bio_midday
+
+
+def test_market_depth_caps_hourly_sales():
+    price = np.where((HOUR >= 18) & (HOUR < 23), 8.0, 4.5)
+    free = M.solve(_market_payload(price_series=price.tolist(), flat=0))
+    cap = np.full(M.HOURS, 20.0)
+    payload = _market_payload(price_series=price.tolist(), flat=0)
+    payload["ctx"]["surplusCapMw"] = cap.tolist()
+    capped = M.solve(payload)
+    assert max(capped["hourly"]["export"]) <= 20.0 + 1e-6
+    assert max(free["hourly"]["export"]) > 20.0
+    assert capped["lifetime"][0]["exportRevenueCr"] < free["lifetime"][0]["exportRevenueCr"]
+
+
+def _diversion_payload(**extra):
+    # wind and biomass free to grow, evening prices far above any PPA tariff
+    price = np.where((HOUR >= 18) & (HOUR < 23), 9.0, 2.0)
+    payload = _market_payload(price_series=price.tolist(), flat=0)
+    payload["vars"] = {"solarMw": {"min": 0, "max": 400}, "windMw": {"min": 0, "max": 400},
+                       "bessMw": {"locked": True, "value": 0}, "biomassMw": {"min": 0, "max": 100}}
+    payload.update(extra)
+    return payload
+
+
+def test_without_ppa_first_the_optimizer_diverts_ppa_energy_to_the_market():
+    res = M.solve(_diversion_payload())
+    assert res["perYear"][0]["divertedMu"] > 1.0  # sold at Rs 9 while the PPA had room
+
+
+def test_ppa_first_sells_only_true_surplus():
+    res = M.solve(_diversion_payload(ppaFirst=True))
+    assert res["ppaFirst"] is True
+    year = res["perYear"][0]
+    assert year["divertedMu"] < 0.01, year
+    h = res["hourly"]
+    delivered = np.array(h["direct"]) + np.array(h["discharge"])
+    exported = np.array(h["export"])
+    # every hour with a sale has the PPA fully supplied
+    assert np.all(delivered[exported > 0.05] >= 100 - 0.05)
+
+
+def test_solar_only_sales():
+    res = M.solve(_diversion_payload(ppaFirst=True, exportSources="solar"))
+    h = res["hourly"]
+    assert res["exportSources"] == "solar"
+    assert np.all(np.array(h["export"]) <= np.array(h["solar"]) + 0.02)
+
+
+def test_peak_floor_in_any_hour_the_procurer_may_pick():
+    rules = [{"id": "peak", "label": "Peak", "basis": "monthly", "hours": "any", "target": 0.9}]
+    payload = _payload(
+        vars={"solarMw": {"min": 0, "max": 600}, "windMw": {"min": 0, "max": 600}, "bessMw": {"min": 0, "max": 200},
+              "biomassMw": {"min": 0, "max": 100}},
+        biomass={"availability": 0.9, "maxPlf": 0.8},
+        compliance=rules, returnHourly=True,
+    )
+    res = M.solve(payload)
+    delivered = np.array(res["hourly"]["direct"]) + np.array(res["hourly"]["discharge"])
+    worst = min(delivered[(M.MONTH_OF_HOUR == m) & (M.HOUR_OF_DAY == h)].mean() / 100 for m in range(12) for h in range(24))
+    assert worst >= 0.9 - 1e-4
+    assert res["perYear"][0]["rules"][0]["achieved"] == pytest.approx(worst, abs=1e-3)
+    # within windows only the window hours are held to the floor
+    window = ((HOUR >= 18) & (HOUR < 22)).astype(int)
+    res_w = M.solve({**payload, "peakMask": window.tolist()})
+    d_w = np.array(res_w["hourly"]["direct"]) + np.array(res_w["hourly"]["discharge"])
+    assert min(d_w[(M.MONTH_OF_HOUR == m) & (M.HOUR_OF_DAY == h)].mean() / 100 for m in range(12) for h in range(18, 22)) >= 0.9 - 1e-4

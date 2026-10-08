@@ -22,8 +22,9 @@ export WEB_PORT="$(docker port fdre-dashboard-web-1 3000/tcp | head -1 | sed 's/
 export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(envof fdre-dashboard-engine-1 ANTHROPIC_API_KEY 2>/dev/null || true)}"
 [[ "$ANTHROPIC_API_KEY" == "none" ]] && export ANTHROPIC_API_KEY=""
 export TENDER_INTEL_MODEL="${TENDER_INTEL_MODEL:-$(envof fdre-dashboard-engine-1 TENDER_INTEL_MODEL 2>/dev/null || true)}"
+export TENDER_INTEL_REQUIRE_LLM="${TENDER_INTEL_REQUIRE_LLM:-$(envof fdre-dashboard-engine-1 TENDER_INTEL_REQUIRE_LLM 2>/dev/null || true)}"
 [[ -n "$POSTGRES_PASSWORD" && -n "$SESSION_SECRET" && -n "$WEB_PORT" ]] || { echo "Could not read settings from the running containers." >&2; exit 1; }
-echo "==> Current port ${WEB_PORT}; settings read from running containers; tender reading: $([[ -n "$ANTHROPIC_API_KEY" ]] && echo "model (key set)" || echo "rules (no key)")"
+echo "==> Current port ${WEB_PORT}; settings read from running containers; tender reading: $([[ -n "$ANTHROPIC_API_KEY" ]] && echo "model (key set)" || echo "rules (no key)")$([[ "$TENDER_INTEL_REQUIRE_LLM" == "1" ]] && echo ", rules switched off")"
 
 mkdir -p "$HOME/fdre-backups"
 backup="$HOME/fdre-backups/fdre-$(date +%Y%m%d-%H%M%S).sql.gz"

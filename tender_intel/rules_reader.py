@@ -948,6 +948,68 @@ def _solar_multiple(pages: list[PageText]) -> list[Hit]:
     return hits
 
 
+_SELLER = r"\b(?:RPD|RE[\s-]*PG|SPD|developer|supplier|selected\s+bidder|bidder|(?:RE\s+)?power\s+generator)\b"
+_NOT_SALE = (
+    r"transferred|\bright\s+to\s+(?:regulate|divert)|\bhave\s+(?:a|the|full)\s+right|discom|compensation|debarred"
+    r"|breach|penalty|priority|offered\s+to\s+the\s+procurer[^.]{0,40}not\s+(?:accept|give)"
+)
+
+
+def _market_sale(pages: list[PageText]) -> list[Hit]:
+    """What the supplier may schedule or sell in the market during the contract: a sentence
+    in which the supplier (bidder, developer, RPD/RE-PG) sells or schedules power in the market,
+    a power exchange or to a third party. Energy before the supply start date, the procurer's
+    own rights, compensation and penalty clauses are other matters and are skipped."""
+    hits = []
+    pattern = r"in\s+the\s+(?:open\s+)?market|power\s+exchanges?|\bIEX\b|third[\s-]+part(?:y|ies)"
+    for page, m in _iter(pages, pattern):
+        start, end = sentence_bounds(page.text, m.start(), m.end())
+        sentence = page.text[start:end]
+        if not re.search(r"\b(?:schedul\w*|sell\w*|sale)\b", sentence, re.I):
+            continue
+        if not re.search(r"\b(?:power|energy|electricity|capacity)\b", sentence, re.I) or not re.search(_SELLER, sentence, re.I):
+            continue
+        if re.search(_NOT_SALE, sentence, re.I):
+            continue
+        if re.search(r"(?:until|till|prior\s+to|before)\s+(?:the\s+)?(?:SSD|SCSD|SCOD|supply\s+start|scheduled\s+commencement)|\bearly\b", sentence, re.I):
+            continue
+        if re.search(r"shall\s+not|not\s+(?:be\s+)?(?:allowed|permitted)|prohibited", sentence, re.I):
+            value = "not_allowed"
+        elif re.search(r"solar\s+power\s+capacity|solar\s+capacity", sentence, re.I):
+            value = "mandated_solar"
+        else:
+            value = "any_capacity"
+        hits.append(Hit(value, page.page_no, m.start(), m.end()))
+    return hits
+
+
+def _ppa_priority(pages: list[PageText]) -> list[Hit]:
+    """The PPA comes before any sale elsewhere: an explicit priority clause, or a penalty or
+    breach for selling while the PPA demand is unmet."""
+    patterns = [
+        r"priority\s+shall\s+be\s+(?:accorded|given)?\s*(?:for|to)?\s*(?:meet(?:ing)?|meet)\s+the\s+(?:energy|capacity)\s+requirements?\s+as\s+per\s+(?:the\s+)?PPA[^.]{0,40}before\s+selling",
+        r"while\s+the\s+demand\s+specified\s+in\s+the\s+PPA\s+remains\s+unfulfilled",
+    ]
+    hits = []
+    for pattern in patterns:
+        hits += [Hit(True, page.page_no, m.start(), m.end()) for page, m in _iter(pages, pattern)]
+    hits.sort(key=lambda h: (h.page, h.start))
+    return hits
+
+
+def _peak_set_by(pages: list[PageText]) -> list[Hit]:
+    """Who fixes the peak hours, from the sentence that defines them."""
+    hits = []
+    for page, m in _iter(pages, r"peak\s+hours?"):
+        start, end = sentence_bounds(page.text, m.start(), m.end())
+        sentence = page.text[start:end]
+        if re.search(r"(?:as|to\s+be)\s+(?:decided|declared|notified|specified|intimated)\s+by\s+(?:the\s+)?(?:procurer|buying\s+entity|WBSEDCL|NHPC|SECI|NTPC|SJVN|discom|end\s+procurer|\w+\s+procurer)", sentence, re.I):
+            hits.append(Hit("procurer", page.page_no, m.start(), m.end()))
+        elif re.search(r"(?:as|to\s+be)\s+(?:decided|chosen|declared)\s+by\s+the\s+(?:supplier|developer|bidder|RPD|RE[\s-]*PG)", sentence, re.I):
+            hits.append(Hit("supplier", page.page_no, m.start(), m.end()))
+    return hits
+
+
 def _greenshoe(pages: list[PageText]) -> list[Hit]:
     patterns = [
         rf"{NUM}\s*MW\s*\(?\s*green\s*-?\s*shoe",
@@ -1079,6 +1141,9 @@ RULE_PATHS = (
     "sector.power.fdre.green_share_min_pct",
     "sector.power.fdre.non_re_allowed",
     "sector.power.fdre.min_solar_capacity_multiple",
+    "sector.power.fdre.market_sale_scope",
+    "sector.power.fdre.ppa_priority_before_sale",
+    "sector.power.fdre.peak_hours_set_by",
     "sector.power.fdre.supply_start_date",
     "sector.power.common.greenshoe_capacity_mw",
     "sector.power.bess.capacity_mw",
@@ -1256,6 +1321,12 @@ def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | N
         green_share = pick("sector.power.fdre.green_share_min_pct", _green_share(text_pages), percent)
         pick("sector.power.fdre.non_re_allowed", _non_re(text_pages), lambda v: "yes" if v else "no")
         pick("sector.power.fdre.min_solar_capacity_multiple", _solar_multiple(text_pages), lambda v: f"{v:g} times")
+        pick("sector.power.fdre.market_sale_scope", _market_sale(text_pages))
+        pick("sector.power.fdre.ppa_priority_before_sale", _ppa_priority(text_pages), lambda v: "yes" if v else "no")
+        set_by = _peak_set_by(text_pages)
+        if not set_by and blocks:  # the tender prints the windows itself
+            set_by = [Hit("tender", page_no, start, end) for page_no, start, end, _ in blocks[:1]]
+        pick("sector.power.fdre.peak_hours_set_by", set_by)
         pick("sector.power.fdre.supply_start_date", _supply_start(text_pages))
         cuf_min = choose(_cuf_min(text_pages), page_text, lambda v: f"{v:g}%")
         cuf_band = choose(_cuf_band(text_pages), page_text, lambda v: f"+{v[0] - 100:g}% / -{100 - v[1]:g}%")

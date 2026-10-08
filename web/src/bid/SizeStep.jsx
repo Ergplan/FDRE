@@ -6,8 +6,9 @@ import { SizeCard } from "../rtc/chapters";
 import ProfileLibrary from "../rtc/ProfileLibrary";
 import { DATA_COLORS } from "../chartTheme";
 import { Field, SelectBox, Section, Stat, SwitchBox, nf, pf } from "../rtc/ui";
-import { BIOMASS_COLOR, MARKETS, activeRules, energyMix, marketLabel, peakHours, peakLabel, scaledVars } from "./model";
+import { BIOMASS_COLOR, MARKETS, activeRules, anyHours, energyMix, marketLabel, peakHours, peakLabel, scaledVars, sizesAtMax } from "./model";
 import { SourceChip } from "./RequirementsStep";
+import Checklist, { BidderInputs } from "./Checklist";
 
 const COLORS = { solar: DATA_COLORS.solar, wind: DATA_COLORS.wind, biomass: BIOMASS_COLOR, bess: DATA_COLORS.bess };
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => [String(h), `${String(h).padStart(2, "0")}:00`]);
@@ -43,7 +44,8 @@ function RulesEditor({ state, setState, prov }) {
           </select>
           <select value={r.hours} onChange={(e) => setRule(r.id, { hours: e.target.value })} disabled={!r.enabled}>
             <option value="all">all hours</option>
-            <option value="peak">peak hours</option>
+            <option value="peak">peak window</option>
+            <option value="any">any hour that may be picked</option>
           </select>
           <span className="bid-pct">
             <input type="number" step="1" min="1" max="100" value={Math.round(r.target * 1000) / 10} disabled={!r.enabled}
@@ -106,7 +108,7 @@ function MarketProfile({ prices, market }) {
   );
 }
 
-function DispatchWeek({ hourly, peak, market }) {
+function DispatchWeek({ hourly, peak, market, rules }) {
   const [week, setWeek] = useState(0);
   const option = useMemo(() => {
     if (!hourly) return null;
@@ -118,7 +120,8 @@ function DispatchWeek({ hourly, peak, market }) {
       return g > 0 ? Number(((hourly.direct[t] * hourly[key][t]) / g).toFixed(2)) : 0;
     });
     const labels = idx.map((t) => `${E.MONTHS[E.MONTH_OF_HOUR[t]]} ${String(E.HOUR_OF_DAY[t]).padStart(2, "0")}h`);
-    const ph = new Set(peakHours(peak));
+    const anyRule = rules?.some((r) => r.enabled && r.hours === "any");
+    const ph = new Set(anyRule ? (peak.windows?.length ? anyHours(peak) : []) : peakHours(peak));
     const areas = [];
     idx.forEach((t, i) => {
       if (ph.has(E.HOUR_OF_DAY[t]) && (i === 0 || !ph.has(E.HOUR_OF_DAY[idx[i - 1]]))) {
@@ -146,7 +149,7 @@ function DispatchWeek({ hourly, peak, market }) {
         { name: "Contracted supply", type: "line", step: "middle", data: idx.map((t) => hourly.demand[t]), lineStyle: { color: "#f4f4f1", type: "dashed", width: 1 }, itemStyle: { color: "#f4f4f1" }, symbol: "none" },
       ],
     };
-  }, [hourly, week, peak, market]);
+  }, [hourly, week, peak, market, rules]);
   if (!hourly) return <p className="rtc-note">Run the sizing again to see the hour-by-hour dispatch (it is not kept when the page reloads).</p>;
   return (
     <div className="rtc-card">
@@ -170,6 +173,9 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
   const mix = useMemo(() => energyMix(hourly), [hourly]);
   const running = Boolean(run?.active);
   const nothingOn = !Object.values(sources).some(Boolean);
+  const atMax = lp ? sizesAtMax(lp, vars, sources) : [];
+  // with a tender read, sales outside the PPA only where the tender allows them
+  const saleBarred = Boolean(state.tender) && (!prov["market.sale"] || /not allowed/i.test(prov["market.sale"].display || ""));
 
   return (
     <>
@@ -180,8 +186,10 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
             <SourceChip source={prov.plantMw} />
           </div>
           <div className="bid-input-with-src">
-            <SelectBox label="Peak window starts" value={String(state.peak.start)} onChange={(v) => patch("peak", { start: Number(v) })} options={HOUR_OPTIONS} hint={`Peak hours ${peakLabel(state.peak)}`} />
-            <SourceChip source={prov["peak.start"]} />
+            {state.rules.some((r) => r.enabled && r.hours === "any")
+              ? <div className="rtc-field"><div className="rtc-field-top"><span>Peak hours</span></div><strong>{state.peak.windows?.length ? state.peak.windows.map((w) => `${w.start}–${w.end}`).join(" and ") : "Any hour of the day"}</strong><small>{state.peak.setBy === "procurer" ? "The procurer picks the hours, so every hour it may pick is checked" : "Every hour inside the tender's windows is checked"}</small></div>
+              : <SelectBox label="Peak window starts" value={String(state.peak.start)} onChange={(v) => patch("peak", { start: Number(v) })} options={HOUR_OPTIONS} hint={`Peak hours ${peakLabel(state.peak)}${state.peak.setBy === "supplier" ? " · the tender lets the supplier choose" : " · not set by a tender"}`} />}
+            <SourceChip source={prov["peak.setBy"]} />
           </div>
           <div className="bid-input-with-src">
             <Field label="Peak hours per day" unit="h" value={state.peak.hours} onChange={(v) => patch("peak", { hours: Math.max(1, Math.min(12, Math.round(v))) })} step={1} min={1} max={12} hint="Used by floors measured in peak hours" />
@@ -190,17 +198,28 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
         </div>
         <div className="rtc-grid rtc-grid-3">
           <div className="bid-input-with-src">
-            <SwitchBox label="Sell surplus in the market" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })} hint="Energy the contract and the battery cannot take" />
-            <SourceChip source={prov["solar.min"]} compact />
+            <SwitchBox label="Sell surplus in the market" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })}
+              locked={saleBarred}
+              hint={saleBarred ? "The tender does not allow sales outside the PPA" : "Energy the PPA and the battery cannot take"} />
+            <SourceChip source={prov["market.sale"]} compact />
           </div>
           <SelectBox label="Surplus sold at" value={state.market?.source || "GDAM"} onChange={(v) => patch("market", { source: v })}
             options={[...MARKETS.map((m) => [m, prices?.markets?.[m] ? `IEX ${m} · hourly, avg ₹${nf(prices.markets[m].meanRsPerMwh / 1000, 2)}/kWh` : `IEX ${m} · hourly`]), ["flat", "A flat price"]]}
             hint={state.market?.source === "flat" ? "One price for every hour" : prices?.markets?.[state.market?.source]?.source || "IEX market-clearing prices"} />
-          <Field label="Extra export capacity" unit="MW" value={fin.extraExportMw} onChange={(v) => patch("fin", { extraExportMw: v })} step={10} min={0} disabled={!fin.sellSurplus} hint="Connection for market sales beyond the contracted capacity" />
+          {state.market?.sellFrom === "solar"
+            ? (
+              <div className="bid-input-with-src">
+                <SelectBox label="Sold in the market" value="solar" onChange={() => {}} options={[["solar", "Solar surplus only (as the tender allows)"]]}
+                  hint="Only the mandated solar may be scheduled in the market; it sells over its own interconnection" />
+                <SourceChip source={prov["solar.min"]} compact />
+              </div>
+            )
+            : <Field label="Extra export capacity" unit="MW" value={fin.extraExportMw} onChange={(v) => patch("fin", { extraExportMw: v })} step={10} min={0} disabled={!fin.sellSurplus} hint="Connection for market sales beyond the contracted capacity" />}
           {state.market?.source === "flat"
             ? <Field label="Flat market price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} step={0.05} min={0} disabled={!fin.sellSurplus} />
             : <Field label="Market price escalation" pct value={state.market?.escalation || 0} onChange={(v) => patch("market", { escalation: v })} step={0.25} min={-5} max={10} disabled={!fin.sellSurplus} hint="per year, on the hourly prices" />}
         </div>
+        {fin.sellSurplus && <p className="rtc-note">The PPA is supplied first in every hour; only energy it cannot take is sold.</p>}
         {fin.sellSurplus && state.market?.source !== "flat" && <MarketProfile prices={prices} market={state.market?.source} />}
         <RulesEditor state={state} setState={setState} prov={prov} />
         <button type="button" className="secondary" onClick={() => setState((s) => ({ ...s, vars: scaledVars(s.plantMw, s.vars) }))}>Rescale size ranges to the capacity</button>
@@ -292,6 +311,12 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
 
       {lp && (
         <>
+          {atMax.length > 0 && (
+            <div className="alert" data-testid="bid-at-max">
+              <TriangleAlert size={14} /> {atMax.map((k) => ({ solarMw: "Solar", windMw: "Wind", biomassMw: "Biomass", bessMw: "Battery power", bessMwh: "Battery energy" }[k])).join(", ")} ended at the top of {atMax.length > 1 ? "their ranges" : "its range"}: the optimizer would build more.
+              {lp.market ? " With market sales this usually means surplus sold on the exchange is paying for extra plant; check the market limit and prices, or widen the range if intended." : " Widen the range if more is acceptable."}
+            </div>
+          )}
           <Section index="3.3" title="Least-tariff plant" note={`HiGHS · ${lp.status} · ${nf(lp.seconds, 0)} s · years modelled ${lp.years.join(", ")}`}
             actions={<button type="button" className="primary" onClick={() => goto("finance")}>Financials <Zap size={14} /></button>}>
             <div className="rtc-grid rtc-grid-4 bid-sizes" data-testid="bid-sizes">
@@ -303,7 +328,9 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
             </div>
             <ComplianceTable lp={lp} />
           </Section>
-          <Section index="3.4" title="Year-1 energy" note="Where the contracted supply came from">
+          <Checklist state={state} lp={lp} index="3.4" />
+          <BidderInputs state={state} prices={prices} index="3.5" />
+          <Section index="3.6" title="Year-1 energy" note="Where the contracted supply came from">
             {hourly && (
               <div className="rtc-grid rtc-grid-4">
                 <Stat label="Contracted (100%)" value={`${nf(mix.demand / 1000, 0)} MU`} />
@@ -317,7 +344,7 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
                 <Stat label="Curtailed" value={`${nf(mix.curtail / 1000, 0)} MU`} />
               </div>
             )}
-            <DispatchWeek hourly={hourly} peak={state.peak} market={lp.market} />
+            <DispatchWeek hourly={hourly} peak={state.peak} market={lp.market} rules={state.rules} />
           </Section>
         </>
       )}
