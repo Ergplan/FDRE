@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tender_intel import TENDER_TYPES, catalog, llm_available, read_tender  # noqa: E402
+from tender_intel.llm import provider  # noqa: E402
 from tender_intel import jobs  # noqa: E402
 from tender_intel.extract import MODES, require_llm, resolve_mode  # noqa: E402
 from tender_intel.pages import UnreadableDocument, check_readable  # noqa: E402
@@ -47,7 +48,13 @@ class TenderIntelReadRequest(BaseModel):
 
 def status() -> dict[str, Any]:
     available = llm_available()
-    return {"llm_available": available, "default_mode": "llm" if available else "rules", "require_llm": require_llm(), "types": list(TENDER_TYPES)}
+    return {
+        "llm_available": available,
+        "provider": provider() if available else None,
+        "default_mode": "llm" if available else "rules",
+        "require_llm": require_llm(),
+        "types": list(TENDER_TYPES),
+    }
 
 
 def tender_catalog(tender_type: str = Query("fdre")) -> dict[str, Any]:
@@ -82,7 +89,7 @@ def read(req: TenderIntelReadRequest, response: Response, sync: int = Query(0)) 
         raise HTTPException(status_code=422, detail=f"Unknown mode {req.mode!r}; one of {', '.join(MODES)}.")
     available = llm_available()
     if req.mode == "llm" and not available:
-        raise HTTPException(status_code=400, detail="mode=llm needs ANTHROPIC_API_KEY on the engine; use mode=rules or auto.")
+        raise HTTPException(status_code=400, detail="mode=llm needs a model key (OPENAI_API_KEY or ANTHROPIC_API_KEY) on the engine; use mode=rules or auto.")
     try:
         check_readable(req.file.name, payload)
     except UnreadableDocument as exc:

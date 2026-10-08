@@ -41,8 +41,14 @@ applied. What the tender does not state is shown as not stated and is not modell
 * The model must quote; every quote is searched on the PDF page (capped confidence and review when
   not found; rejected without a quote); every number and date must be printed in its own quote
   (`value_in_quotes`, an FDRE addition); types, ranges and cross-field rules are plain Python.
-* The Requirements and Tender steps say which reader produced the values. Without
-  `ANTHROPIC_API_KEY` the engine falls back to the rule-based reader and the screen says so.
+* The Requirements and Tender steps say which reader produced the values (and, for the model,
+  which provider and model). Without `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` the engine falls
+  back to the rule-based reader and the screen says so.
+* A value is used in the model only when the page proves it: its quote is found on the page and
+  prints the value. A value whose quote is not found or does not print it is shown unticked as
+  "Not proved by the page" and is used only if the reviewer ticks it after checking. A review
+  raised by a plausibility check alone (a range, the EMD/PBG ratio) does not block a value the
+  page prints.
   `TENDER_INTEL_REQUIRE_LLM=1` switches the fallback off: a read that cannot use the model fails.
 
 ## Recently extracted tenders

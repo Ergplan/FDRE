@@ -35,10 +35,16 @@ function first(index, result, paths, pick = (v) => v) {
   return null;
 }
 
+// Issues that mean the page does not prove the value: its quote was not found, or the quote
+// does not print it, or it is not of its type. Plausibility checks (a ratio, a range) do not.
+const UNPROVED = new Set(["evidence_not_located", "value_in_quotes", "structured_numbers_quoted", "type"]);
+
 export function sourceOf(hit) {
   if (!hit) return null;
   const ev = (hit.field.evidence || []).find((e) => e.located) || (hit.field.evidence || [])[0] || null;
+  const proved = Boolean(ev?.located) && !(hit.field.issues || []).some((i) => !i.warning && UNPROVED.has(i.rule));
   return {
+    proved,
     path: hit.field.path + (hit.key ? `.${hit.key}` : ""),
     label: hit.field.label,
     section: hit.field.section,
@@ -244,7 +250,16 @@ export function buildProposals(result) {
   return out;
 }
 
-/** Apply the accepted proposals (default: every stated, non-info proposal) to the model. */
+/** Whether a proposal is used: one the page proves is used unless unticked (an info note
+ * always); one it does not prove (quote not found, or not printing the value) only when
+ * ticked by the user. */
+export function isUsed(p, accepted = {}) {
+  if (!p.stated) return false;
+  if (p.source?.proved) return p.info || accepted[p.id] !== false;
+  return accepted[p.id] === true;
+}
+
+/** Apply the used proposals (see isUsed) to the model. */
 export function applyProposals(state, proposals, accepted = {}) {
   let next = { ...state, provenance: { ...state.provenance } };
   const notes = [];
@@ -252,12 +267,11 @@ export function applyProposals(state, proposals, accepted = {}) {
   const rank = (p) => (p.id === "plantMw" ? 0 : p.id === "greenshoe" ? 1 : 2);
   const ordered = [...proposals].sort((a, b) => rank(a) - rank(b));
   for (const p of ordered) {
-    if (!p.stated) continue;
+    if (!isUsed(p, accepted)) continue;
     if (p.info) {
       notes.push({ id: p.id, label: p.label, display: p.display, note: p.note, source: p.source });
       continue;
     }
-    if (accepted[p.id] === false) continue;
     next = p.apply(next, p.value);
     next.provenance[p.id] = { label: p.label, display: p.display, ...p.source };
   }

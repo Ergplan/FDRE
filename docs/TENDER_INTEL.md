@@ -38,7 +38,9 @@ Not from tender_engine (FDRE additions):
 ## Modes
 
 **llm** (a model reads the PDF pages). Used when `mode=llm`, or `mode=auto` with
-`ANTHROPIC_API_KEY` set, and the file is a PDF.
+`OPENAI_API_KEY` or `ANTHROPIC_API_KEY` set, and the file is a PDF. Both providers get the same
+prompts, the same PDF pages (OpenAI as an `input_file`, Anthropic as a `document` block) and the
+same strict response schema; the answer is a draft either way and goes through every check below.
 
 1. Section map: one call over a digest of every page (first 400 characters and heading-like
    lines) returns the document's sections with a kind.
@@ -84,33 +86,42 @@ IPP as weak fallbacks); the default is `fdre`. A user-chosen type overrides it.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | (unset) | enables llm mode |
-| `TENDER_INTEL_MODEL` | (unset) | model id to use; when unset the engine lists the models the key can use once per process and takes the first whose id contains "opus", else the first listed. No model id is written in the code. |
+| `OPENAI_API_KEY` | (unset) | enables llm mode with OpenAI (Responses API, structured output) |
+| `ANTHROPIC_API_KEY` | (unset) | enables llm mode with Anthropic |
+| `TENDER_INTEL_PROVIDER` | (unset) | `openai` or `anthropic`; when unset, the first key set (Anthropic, then OpenAI) |
+| `TENDER_INTEL_MODEL` | (unset) | model id to use; when unset the engine lists the models the key can use once per process and takes, for Anthropic, the first whose id contains "opus" (else the first listed), for OpenAI the plain `gpt-N` id with the highest N. No model id is written in the code. |
+| `TENDER_INTEL_REASONING_EFFORT` | (unset) | OpenAI reasoning models only: `low`, `medium` or `high` |
+| `TENDER_INTEL_MAX_OUTPUT_TOKENS` | 32000 | OpenAI output limit per call (reasoning tokens count against it) |
+| `TENDER_INTEL_REQUIRE_LLM` | (unset) | `1`: read only with the model; a read that cannot use it fails instead of using rules |
 | `TENDER_INTEL_CONCURRENCY` | 4 | sections read in parallel |
 | `TENDER_INTEL_TIMEOUT_SECONDS` | 300 | per-request timeout (the SDK retries 3 times) |
 | `TENDER_INTEL_JOBS_DIR` | `/tmp/tender_intel_jobs` | job files (shared by the engine's two uvicorn workers) |
 
-`docker-compose.yml` passes `ANTHROPIC_API_KEY` and `TENDER_INTEL_MODEL` to the engine. For a
+`docker-compose.yml` passes the keys and the `TENDER_INTEL_*` settings above to the engine. For a
 first install they can be set in `.env` (see `.env.example`); on a running server use the update
 below, because `deploy/update.sh` does not read `.env`.
 
 ### Setting the key on the server
 
 `deploy/update.sh` reads the deployment's settings from the running containers (not from `.env`),
-so give the key to one update run; later updates keep the running engine's key.
+so give the key to one update run; later updates keep the running engine's key. Run this in an
+SSH session on the VM (Google Cloud console, Compute Engine, VM instances, SSH):
 
 ```
 cd ~/fdre
-read -rs ANTHROPIC_API_KEY      # paste the key, press Enter (not echoed, not in shell history)
-export ANTHROPIC_API_KEY
+read -rs OPENAI_API_KEY         # paste the key, press Enter (not echoed, not in shell history)
+export OPENAI_API_KEY
+export TENDER_INTEL_PROVIDER=openai
+export TENDER_INTEL_REQUIRE_LLM=1   # optional: never fall back to the rule-based reader
 bash deploy/update.sh           # rebuilds and restarts with the key; later runs keep it
-unset ANTHROPIC_API_KEY
+unset OPENAI_API_KEY
 ```
 
-Check: the update prints "tender reading: model (key set)", and on the Tender to Bid tab the
-Tender step's "Reading" option shows "Full reading (language model)". To pin a model, export
-`TENDER_INTEL_MODEL` the same way. To remove the key: `ANTHROPIC_API_KEY=none bash deploy/update.sh`.
-Never commit the key; `.env` is ignored by git.
+Check: the update prints "tender reading: model, openai", and on the Tender to Bid tab the
+Tender step's "Reading" option shows "Full reading (tender engine model, OpenAI)". For an
+Anthropic key use `ANTHROPIC_API_KEY` and `TENDER_INTEL_PROVIDER=anthropic` instead. To pin a
+model, export `TENDER_INTEL_MODEL` the same way. To remove a key: `OPENAI_API_KEY=none bash
+deploy/update.sh` (or `ANTHROPIC_API_KEY=none`). Never commit a key; `.env` is ignored by git.
 
 ## API
 

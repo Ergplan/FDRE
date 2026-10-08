@@ -133,13 +133,13 @@ def resolve_mode(name: str, payload: bytes, mode: str, llm_ok: bool) -> str:
         raise ValueError(f"unknown mode {mode!r}; one of {list(MODES)}")
     if require_llm():
         if not llm_ok:
-            raise ValueError("This engine reads tenders only with the model (TENDER_INTEL_REQUIRE_LLM) and no ANTHROPIC_API_KEY is set.")
+            raise ValueError("This engine reads tenders only with the model (TENDER_INTEL_REQUIRE_LLM) and no model key (OPENAI_API_KEY or ANTHROPIC_API_KEY) is set.")
         if mode == "rules":
             raise ValueError("Rule-based reading is switched off on this engine (TENDER_INTEL_REQUIRE_LLM).")
         if not is_pdf(name, payload):
             raise ValueError("The model reading needs a PDF; upload the tender as PDF.")
     if mode == "llm" and not llm_ok:
-        raise ValueError("mode=llm needs ANTHROPIC_API_KEY")
+        raise ValueError("mode=llm needs a model key (OPENAI_API_KEY or ANTHROPIC_API_KEY)")
     if mode == "rules":
         return "rules"
     if is_pdf(name, payload) and (mode == "llm" or llm_ok):
@@ -711,25 +711,26 @@ def read_tender(
 
     usage: dict[str, Any] = {"calls": 0, "input_tokens": 0, "output_tokens": 0, "seconds": 0.0}
     model: str | None = None
+    provider: str | None = None
     drafts: dict[str, Draft] | None = None
     if resolved == "llm":
         from tender_intel.llm import LLMClient, default_client
 
         try:
             client = LLMClient(sdk) if sdk is not None else default_client()
-            model = client.model
+            model, provider = client.model, client.provider
         except Exception as exc:  # noqa: BLE001 - no model reachable: read by rules
             if require_llm():
                 raise RuntimeError(f"The model could not be reached ({_short(exc)}); rule-based reading is switched off.") from exc
             warnings.append(f"The model could not be reached ({_short(exc)}); the tender was read in rules mode.")
-            resolved, model = "rules", None
+            resolved, model, provider = "rules", None, None
         else:
             drafts, succeeded = _llm_drafts(name, payload, pages, schema, client, report, warnings, usage)
             if succeeded == 0 and schema.sections:
                 if require_llm():
                     raise RuntimeError("Every model call failed; rule-based reading is switched off. " + " ".join(warnings[-3:]))
                 warnings.append("Every model call failed; the tender was read in rules mode instead.")
-                resolved, model, drafts = "rules", None, None
+                resolved, model, provider, drafts = "rules", None, None, None
     if drafts is None:
         report(0, 1, "Reading with rules")
         drafts = _rules_drafts(pages, schema)
@@ -750,6 +751,7 @@ def read_tender(
         "engine": ENGINE,
         "mode": resolved,
         "model": model,
+        "provider": provider,
         "document": {
             "name": name,
             "pages": len(pages),

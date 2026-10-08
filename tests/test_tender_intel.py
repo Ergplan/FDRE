@@ -581,6 +581,157 @@ def test_llm_client_with_the_real_sdk_over_a_mock_transport(monkeypatch):
     assert sent["system"] == load_prompt("section_map", "v1").text and sent["output_config"]["format"]["type"] == "json_schema"
 
 
+# ----------------------------------------------------------------------------- OpenAI provider
+
+
+def test_provider_follows_the_keys(monkeypatch):
+    from tender_intel import llm
+
+    for name in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "TENDER_INTEL_PROVIDER"):
+        monkeypatch.delenv(name, raising=False)
+    assert llm.provider() == "" and llm.api_key() == "" and not llm.llm_available()
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-test")
+    assert llm.provider() == "openai" and llm.api_key() == "sk-openai-test"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    assert llm.provider() == "anthropic"  # both keys: Anthropic unless told otherwise
+    monkeypatch.setenv("TENDER_INTEL_PROVIDER", "openai")
+    assert llm.provider() == "openai" and llm.api_key() == "sk-openai-test"
+    monkeypatch.delenv("OPENAI_API_KEY")
+    assert llm.api_key() == "" and not llm.llm_available()  # the named provider has no key
+    monkeypatch.setenv("TENDER_INTEL_MAX_OUTPUT_TOKENS", "")
+    assert llm.max_output_tokens(16000) == llm.OPENAI_MIN_OUTPUT_TOKENS
+    monkeypatch.setenv("TENDER_INTEL_MAX_OUTPUT_TOKENS", "64000")
+    assert llm.max_output_tokens(16000) == 64000
+
+
+def test_openai_client_with_the_real_sdk_over_a_mock_transport(monkeypatch):
+    """The real OpenAI SDK forms the request (no network): model picked from /v1/models,
+    the registered prompt as instructions, the PDF pages as an input file and the response
+    model as a strict JSON schema."""
+    openai = pytest.importorskip("openai")
+    httpx = pytest.importorskip("httpx")
+    from openai.lib._parsing._responses import type_to_text_format_param
+
+    from tender_intel.section_map import SectionMapOutput
+
+    monkeypatch.delenv("TENDER_INTEL_MODEL", raising=False)
+    monkeypatch.delenv("TENDER_INTEL_MAX_OUTPUT_TOKENS", raising=False)
+    monkeypatch.delenv("TENDER_INTEL_REASONING_EFFORT", raising=False)
+    for tender_type in TENDER_TYPES:  # every group model is a valid strict schema
+        for section in compile_type(tender_type).sections:
+            assert type_to_text_format_param(X._group_model(tender_type, section.name))["strict"] is True
+    sent: dict = {}
+    listed = ("gpt-4o", "gpt-5", "gpt-5.1", "gpt-5.1-mini", "gpt-5-2025-08-07", "text-embedding-3-large", "o3")
+
+    def handler(request):
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"object": "list", "data": [{"id": i, "object": "model", "created": 0, "owned_by": "x"} for i in listed]})
+        sent.update(json.loads(request.content))
+        answer = {"sections": [{"start_page": 1, "end_page": 3, "heading": "Cover", "kind": "cover_and_notice", "confidence": 0.9}]}
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp_test", "object": "response", "created_at": 0, "status": "completed", "model": sent["model"],
+                "output": [{"type": "message", "id": "msg_1", "status": "completed", "role": "assistant",
+                            "content": [{"type": "output_text", "text": json.dumps(answer), "annotations": []}]}],
+                "usage": {"input_tokens": 11, "output_tokens": 22, "total_tokens": 33,
+                          "input_tokens_details": {"cached_tokens": 0}, "output_tokens_details": {"reasoning_tokens": 0}},
+                "parallel_tool_calls": True, "tool_choice": "auto", "tools": [], "error": None, "incomplete_details": None,
+                "instructions": None, "metadata": {}, "temperature": 1, "top_p": 1,
+            },
+        )  # fmt: skip
+
+    sdk = openai.OpenAI(api_key="test-key", max_retries=0, http_client=openai.DefaultHttpxClient(transport=httpx.MockTransport(handler)))
+    client = LLMClient(sdk, "openai")
+    pdf = base64.standard_b64encode(b"%PDF-1.4 test").decode("ascii")
+    blocks = [
+        {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf}, "title": "rfp"},
+        {"type": "text", "text": "=== page 1 ==="},
+    ]
+    parsed, usage = client.call("section_map", "v1", blocks, SectionMapOutput, 1000)
+    assert client.model == "gpt-5.1" and sent["model"] == "gpt-5.1"  # highest plain gpt-N, never hard-coded
+    assert parsed.sections[0].heading == "Cover" and usage == {"input_tokens": 11, "output_tokens": 22}
+    assert sent["instructions"] == load_prompt("section_map", "v1").text
+    content = sent["input"][0]["content"]
+    assert content[0] == {"type": "input_file", "filename": "rfp.pdf", "file_data": f"data:application/pdf;base64,{pdf}"}
+    assert content[1] == {"type": "input_text", "text": "=== page 1 ==="}
+    assert sent["text"]["format"]["type"] == "json_schema" and sent["text"]["format"]["strict"] is True
+    assert sent["max_output_tokens"] == 32000 and "reasoning" not in sent
+
+
+class _FakeResponses:
+    """OpenAI responses.parse with canned answers for the BESS sample: one honest value,
+    one value its quote does not print, one quote that is not in the document and one
+    value without a quote."""
+
+    CANNED = {
+        "capacity_mw": (500, "GUVNL invites bids for setting up 500 MW / 1000 MWh (2 hours) Battery Energy Storage System"),
+        "capacity_mwh": (1200, "GUVNL invites bids for setting up 500 MW / 1000 MWh (2 hours) Battery Energy Storage System"),
+        "emd_per_mw_inr": (400000, "EMD of Rs 4 lakh per MW payable by demand draft in favour of GUVNL"),
+        "pbg_per_mw_inr": (1000000, None),
+    }
+
+    def __init__(self, pages: dict[int, PageText]) -> None:
+        self.pages = pages
+        self.calls: list[dict] = []
+
+    def parse(self, *, model, instructions, input, max_output_tokens, text_format):
+        content = input[0]["content"]
+        self.calls.append({"model": model, "schema": text_format.__name__, "instructions": instructions, "kinds": [c["type"] for c in content]})
+        usage = SimpleNamespace(input_tokens=100, output_tokens=20)
+        if text_format.__name__ == "SectionMapOutput":
+            return SimpleNamespace(status="completed", output=[], output_parsed=text_format.model_validate({"sections": []}), usage=usage)
+        text = next(c["text"] for c in content if c["type"] == "input_text")
+        position = {int(doc): int(pos) for pos, doc in re.findall(r"attached page (\d+) = document page (\d+)", text)}
+        answer = {}
+        for key in text_format.model_fields:
+            if key not in self.CANNED:
+                answer[key] = {"value": None, "confidence": 0, "rationale": "Not stated.", "evidence": []}
+                continue
+            value, quote = self.CANNED[key]
+            evidence = []
+            if quote:
+                page = next((n for n, p in self.pages.items() if _collapse(quote) in _collapse(p.text)), min(position))
+                evidence.append({"page_no": position.get(page, 1), "quote": quote})
+            answer[key] = {"value": value, "confidence": 0.95, "rationale": "canned", "evidence": evidence}
+        return SimpleNamespace(status="completed", output=[], output_parsed=text_format.model_validate(answer), usage=usage)
+
+
+def test_openai_reading_keeps_every_guardrail(tmp_path, monkeypatch):
+    """The OpenAI answer is a draft like any other: a value its quote does not print, a quote
+    that is not in the document and a value without a quote are all caught."""
+    for name in ("ANTHROPIC_API_KEY", "TENDER_INTEL_MODEL", "TENDER_INTEL_REQUIRE_LLM"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("TENDER_INTEL_PROVIDER", "openai")
+    pdf = Path(make_pdf(str(tmp_path / "rfs.pdf"))).read_bytes()
+    pages = {p.page_no: p for p in read_pages("GUVNL_BESS_RfS.pdf", pdf)}
+    responses = _FakeResponses(pages)
+    sdk = SimpleNamespace(responses=responses, models=SimpleNamespace(list=lambda: [SimpleNamespace(id="gpt-4o"), SimpleNamespace(id="gpt-5")]))
+    result = read_tender("GUVNL_BESS_RfS.pdf", pdf, tender_type="bess", mode="llm", sdk=sdk)
+    json.dumps(result)
+    assert result["mode"] == "llm" and result["provider"] == "openai" and result["model"] == "gpt-5"
+    extract_calls = [c for c in responses.calls if c["schema"] != "SectionMapOutput"]
+    assert extract_calls and all(c["kinds"] == ["input_file", "input_text"] for c in extract_calls)
+    assert all(c["instructions"].startswith(load_prompt("extract", "v1").text) for c in extract_calls)
+    fields, values = _by_path(result), result["values"]
+
+    honest = fields["sector.power.bess.capacity_mw"]
+    assert honest["status"] == "validated" and values["sector.power.bess.capacity_mw"] == 500
+    assert honest["evidence"][0]["located"]
+
+    # needs_review values stay in result["values"] for review (as in tender_engine); the Bid
+    # tab does not use them unless the user ticks them (tools/check_bid_model.mjs)
+    invented = fields["sector.power.bess.capacity_mwh"]  # 1200 is not printed in its quote
+    assert invented["status"] == "needs_review" and any(i["rule"] == "value_in_quotes" and not i["warning"] for i in invented["issues"])
+
+    unlocated = fields["core.guarantees.emd_per_mw_inr"]  # the quote is not in the document
+    assert unlocated["status"] == "needs_review" and unlocated["confidence"] == 0.3
+    assert not unlocated["evidence"][0]["located"] and any(i["rule"] == "evidence_not_located" for i in unlocated["issues"])
+
+    unquoted = fields["core.guarantees.pbg_per_mw_inr"]  # no quote at all
+    assert unquoted["status"] == "rejected" and "core.guarantees.pbg_per_mw_inr" not in values
+
+
 # ----------------------------------------------------------------------------- jobs and API
 
 
@@ -600,7 +751,8 @@ def client(tmp_path, monkeypatch):
     from react_demo.backend.api import app
 
     monkeypatch.setenv("TENDER_INTEL_JOBS_DIR", str(tmp_path / "jobs"))
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    for name in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "TENDER_INTEL_PROVIDER"):
+        monkeypatch.delenv(name, raising=False)
     return TestClient(app)
 
 
@@ -611,7 +763,7 @@ def _upload(path: Path, **extra) -> dict:
 def test_api_status_catalog_and_read(client, tmp_path, monkeypatch):
     for prefix in ("/api/bid/tender", "/api/rtc/tender"):
         status = client.get(f"{prefix}/status").json()
-        assert status == {"llm_available": False, "default_mode": "rules", "require_llm": False, "types": list(TENDER_TYPES)}
+        assert status == {"llm_available": False, "provider": None, "default_mode": "rules", "require_llm": False, "types": list(TENDER_TYPES)}
     cat = client.get("/api/bid/tender/catalog", params={"tender_type": "fdre"})
     assert cat.status_code == 200 and "fdre_profile" in [s["name"] for s in cat.json()["sections"]]
     assert client.get("/api/bid/tender/catalog", params={"tender_type": "nuclear"}).status_code == 422

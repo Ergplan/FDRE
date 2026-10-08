@@ -9,9 +9,9 @@ import { defaultBidState, energyMix, lpPayload, opsFromLp, peakHours, peakLabel,
 import { applyProposals, buildProposals } from "../web/src/bid/tenderMap.js";
 
 // a tender_intel result as the engine returns it (only what the mapping reads)
-const field = (path, label, value, page, quote, status = "validated") => ({
+const field = (path, label, value, page, quote, status = "validated", issues = []) => ({
   path, key: path.split(".").pop(), label, value, status, confidence: 0.6,
-  evidence: [{ page, quote, located: status === "validated", method: "exact", score: 100, resolution: "stated_page", bbox: null }], issues: [],
+  evidence: [{ page, quote, located: true, method: "exact", score: 100, resolution: "stated_page", bbox: null }], issues,
 });
 const fields = [
   field("sector.power.common.total_capacity_mw", "Total capacity", 1500, 10, "supply of 1500MW (“Base Supply Capacity”)"),
@@ -20,7 +20,8 @@ const fields = [
   field("sector.power.common.location_constraint", "Location constraint", "ists_anywhere", 11, "anywhere in India"),
   field("sector.power.fdre.annual_supply_min_pct", "Annual supply floor", 80, 10, "Supply of minimum 80% CUF for each Accounting Year"),
   field("sector.power.fdre.monthly_supply_min_pct", "Monthly supply floor", 70, 10, "minimum 70% CUF on monthly basis"),
-  field("sector.power.fdre.peak_supply_min_pct", "Peak supply floor", 90, 10, "Supply of minimum 90% CUF during Peak hours", "needs_review"),
+  // to review for a plausibility check only: the page still proves the value
+  field("sector.power.fdre.peak_supply_min_pct", "Peak supply floor", 90, 10, "Supply of minimum 90% CUF during Peak hours", "needs_review", [{ rule: "range", message: "check", warning: false }]),
   field("sector.power.fdre.peak_hours_per_day", "Peak hours", 4, 10, "Discharging 4 Hours Daily"),
   field("sector.power.fdre.biomass_permitted", "Biomass permitted", true, 9, "(Solar, Wind, Hydro, Biomass,)"),
   field("sector.power.fdre.min_solar_capacity_multiple", "Solar multiple", 2, 11, "Solar Power Capacity equivalent to twice the contracted Supply Capacity"),
@@ -81,6 +82,31 @@ assert.equal(silentPayload.ctx.sellSurplus, false, "even if switched on, a tende
 const skipped = applyProposals(base, proposals, { "rule.monthly": false, plantMw: false, greenshoe: false });
 assert.equal(skipped.plantMw, base.plantMw);
 assert.equal(skipped.rules.find((r) => r.id === "monthly").enabled, false);
+// a value the page does not prove (its quote does not print it, or is not found) is used only when ticked
+const unprovedFields = fields.map((f) => {
+  if (f.path.endsWith("monthly_supply_min_pct")) return { ...f, value: 75, status: "needs_review", issues: [{ rule: "value_in_quotes", message: "75 is not printed in its quotes", warning: false }] };
+  if (f.path.endsWith("green_share_min_pct")) {
+    return { ...f, status: "needs_review", evidence: f.evidence.map((e) => ({ ...e, located: false, resolution: "unresolved" })), issues: [{ rule: "evidence_not_located", message: "not located", warning: false }] };
+  }
+  return f;
+});
+const unprovedProps = buildProposals({
+  ...synthetic,
+  sections: [{ name: "all", label: "All", fields: unprovedFields }],
+  values: Object.fromEntries(unprovedFields.filter((f) => f.value !== null).map((f) => [f.path, f.value])),
+});
+const up = Object.fromEntries(unprovedProps.map((p) => [p.id, p]));
+assert.equal(up["rule.monthly"].source.proved, false);
+assert.equal(up.green.source.proved, false);
+assert.equal(up["rule.annual"].source.proved, true);
+assert.equal(up["rule.peak"].source.proved, true, "a plausibility review does not block a value the page prints");
+const strict = applyProposals(base, unprovedProps, {});
+assert.equal(strict.rules.find((r) => r.id === "monthly").enabled, false, "a value its quote does not print is not used");
+assert.ok(!strict.notes.some((n) => n.id === "green"), "nor a fact whose quote is not on the page");
+assert.equal(strict.rules.find((r) => r.id === "annual").enabled, true);
+const ticked = applyProposals(base, unprovedProps, { "rule.monthly": true, green: true });
+assert.equal(ticked.rules.find((r) => r.id === "monthly").target, 0.75, "used once the reviewer ticks it");
+assert.ok(ticked.notes.some((n) => n.id === "green"));
 
 // peak window and the HiGHS request
 assert.deepEqual(peakHours({ start: 22, hours: 4 }), [22, 23, 0, 1]);

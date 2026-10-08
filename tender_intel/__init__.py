@@ -3,7 +3,7 @@
 Ported from Ergplan/tender_engine (commit bd4959c) as a stateless package: the domain
 packs (YAML schemas and versioned prompts), value types, the evidence resolver, the
 section map and per-section extraction, and the deterministic validation rules. Without
-a model (no ANTHROPIC_API_KEY, or a DOCX/text upload) a rules reader fills the headline
+a model (no OPENAI_API_KEY or ANTHROPIC_API_KEY, or a DOCX/text upload) a rules reader fills the headline
 fields, each with a verbatim quote. See docs/TENDER_INTEL.md.
 """
 

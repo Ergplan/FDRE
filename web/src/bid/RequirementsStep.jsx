@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ArrowRight, CheckCircle2, ChevronDown, ChevronRight, CircleDashed, FileSearch, Info, TriangleAlert } from "lucide-react";
 import { Section, nf } from "../rtc/ui";
-import { buildProposals } from "./tenderMap";
+import { buildProposals, isUsed } from "./tenderMap";
 
 const STATUS = {
   validated: { label: "Checked", cls: "ok", icon: CheckCircle2 },
@@ -42,6 +42,8 @@ function Quote({ evidence }) {
   );
 }
 
+export const PROVIDER_LABEL = { openai: "OpenAI", anthropic: "Anthropic" };
+
 /** Which reader produced the values: the tender engine's model reading, or the rules fallback. */
 export function ReadingBanner({ result }) {
   if (!result) return null;
@@ -49,14 +51,14 @@ export function ReadingBanner({ result }) {
     return (
       <div className="bid-mode" data-testid="bid-mode-llm">
         <CheckCircle2 size={14} />
-        <span>Read by the tender engine's model reading{result.model ? ` (${result.model})` : ""}: {result.usage?.calls || 0} calls, every value checked against its quote on the page.</span>
+        <span>Read by the tender engine's model reading{result.model ? ` (${[PROVIDER_LABEL[result.provider], result.model].filter(Boolean).join(" ")})` : ""}: {result.usage?.calls || 0} calls, every value checked against its quote on the page.</span>
       </div>
     );
   }
   return (
     <div className="bid-mode rules" data-testid="bid-mode-rules">
       <TriangleAlert size={14} />
-      <span><strong>Not read by the tender engine's model.</strong> These values come from the rule-based fallback because the engine has no ANTHROPIC_API_KEY. Each value still carries its page quote, but only headline fields are read. Set the key on the engine and read the tender again for the full reading.</span>
+      <span><strong>Not read by the tender engine's model.</strong> These values come from the rule-based fallback (the engine had no model key, OPENAI_API_KEY or ANTHROPIC_API_KEY, or rule-based reading was chosen). Each value still carries its page quote, but only headline fields are read. Set the key on the engine and read the tender again for the full reading.</span>
     </div>
   );
 }
@@ -77,9 +79,10 @@ export default function RequirementsStep({ state, setState, onApply, goto }) {
     );
   }
   const accepted = state.accepted || {};
-  const toggle = (id) => setState((s) => ({ ...s, accepted: { ...s.accepted, [id]: s.accepted?.[id] === false } }));
+  const toggle = (p) => setState((s) => ({ ...s, accepted: { ...s.accepted, [p.id]: !isUsed(p, s.accepted || {}) } }));
   const groups = [...new Set(proposals.map((p) => p.group))];
-  const used = proposals.filter((p) => p.stated && !p.info && accepted[p.id] !== false).length;
+  const used = proposals.filter((p) => !p.info && isUsed(p, accepted)).length;
+  const unproved = proposals.filter((p) => p.stated && !p.source?.proved).length;
 
   const sections = result.sections || [];
   const visible = (f) => (filter === "all" ? true : filter === "found" ? f.status === "validated" || f.status === "needs_review" : filter === "review" ? f.status === "needs_review" || f.status === "rejected" : f.status === "not_found");
@@ -87,7 +90,7 @@ export default function RequirementsStep({ state, setState, onApply, goto }) {
   return (
     <>
       <ReadingBanner result={result} />
-      <Section index="2" title="What the tender sets" note={`${used} model inputs from the tender · hover a page chip for its quote`}
+      <Section index="2" title="What the tender sets" note={`${used} model inputs from the tender · hover a page chip for its quote${unproved ? ` · ${unproved} not proved by the page (tick only after checking)` : ""}`}
         actions={<button type="button" className="primary" onClick={() => onApply(proposals)} data-testid="bid-apply">Apply to model and size <ArrowRight size={14} /></button>}>
         <div className="bid-req-table" role="table">
           <div className="bid-req-row head" role="row">
@@ -99,13 +102,15 @@ export default function RequirementsStep({ state, setState, onApply, goto }) {
               {proposals.filter((p) => p.group === g).map((p) => (
                 <div key={p.id} className={`bid-req-row ${p.stated ? "" : "missing"} ${p.info ? "info" : ""}`} role="row" data-testid={`req-${p.id}`}>
                   <span>
-                    {p.info ? <Info size={14} className="rtc-note" /> : (
-                      <input type="checkbox" checked={p.stated && accepted[p.id] !== false} disabled={!p.stated} onChange={() => toggle(p.id)} aria-label={`Use ${p.label}`} />
+                    {p.info && (!p.stated || p.source?.proved) ? <Info size={14} className="rtc-note" /> : (
+                      <input type="checkbox" checked={isUsed(p, accepted)} disabled={!p.stated} onChange={() => toggle(p)} aria-label={`Use ${p.label}`} />
                     )}
                   </span>
                   <span><strong>{p.label}</strong></span>
                   <span className="bid-req-value">{p.stated ? p.display : <em>Not stated: model default kept</em>}</span>
-                  <span className="rtc-note">{p.note}</span>
+                  <span className="rtc-note">{p.stated && !p.source?.proved
+                    ? <><strong>Not proved by the page</strong> (the quote is not found or does not print this value): not used unless you tick it after checking. {p.note}</>
+                    : p.note}</span>
                   <span>{p.source ? <><SourceChip source={p.source} /> <StatusChip status={p.source.status} /></> : null}</span>
                 </div>
               ))}

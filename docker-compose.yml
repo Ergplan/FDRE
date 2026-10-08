@@ -26,9 +26,14 @@ services:
         INSTALL_DOCLING: ${INSTALL_DOCLING:-true}
     restart: unless-stopped
     environment:
-      # Tender intelligence (tender_intel): without a key tenders are read in rules mode
+      # Tender intelligence (tender_intel): an OpenAI or Anthropic key; without one tenders are read in rules mode
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # openai or anthropic; blank = the first key set (Anthropic, then OpenAI)
+      TENDER_INTEL_PROVIDER: ${TENDER_INTEL_PROVIDER:-}
       TENDER_INTEL_MODEL: ${TENDER_INTEL_MODEL:-}
+      TENDER_INTEL_REASONING_EFFORT: ${TENDER_INTEL_REASONING_EFFORT:-}
+      TENDER_INTEL_MAX_OUTPUT_TOKENS: ${TENDER_INTEL_MAX_OUTPUT_TOKENS:-}
       # 1 = read tenders only with the model (the ported tender_engine reading); never fall back to rules
       TENDER_INTEL_REQUIRE_LLM: ${TENDER_INTEL_REQUIRE_LLM:-}
 

@@ -15,16 +15,27 @@ export POSTGRES_PASSWORD="$(envof fdre-dashboard-db-1 POSTGRES_PASSWORD)"
 export SESSION_SECRET="$(envof fdre-dashboard-web-1 SESSION_SECRET)"
 export COOKIE_SECURE="$(envof fdre-dashboard-web-1 COOKIE_SECURE)"
 export WEB_PORT="$(docker port fdre-dashboard-web-1 3000/tcp | head -1 | sed 's/.*://')"
-# Tender reading model key: one given for this run wins (set it once, e.g.
-#   read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY && bash deploy/update.sh
-# ), otherwise the running engine's key is kept. Never put the key in the repository.
-# ANTHROPIC_API_KEY=none removes the key (back to rules reading).
-export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(envof fdre-dashboard-engine-1 ANTHROPIC_API_KEY 2>/dev/null || true)}"
-[[ "$ANTHROPIC_API_KEY" == "none" ]] && export ANTHROPIC_API_KEY=""
-export TENDER_INTEL_MODEL="${TENDER_INTEL_MODEL:-$(envof fdre-dashboard-engine-1 TENDER_INTEL_MODEL 2>/dev/null || true)}"
-export TENDER_INTEL_REQUIRE_LLM="${TENDER_INTEL_REQUIRE_LLM:-$(envof fdre-dashboard-engine-1 TENDER_INTEL_REQUIRE_LLM 2>/dev/null || true)}"
+# Tender reading settings: a value given for this run wins (set it once, e.g.
+#   read -rs OPENAI_API_KEY && export OPENAI_API_KEY && bash deploy/update.sh
+# ), otherwise the running engine's value is kept. Never put a key in the repository.
+# NAME=none removes a setting, e.g. ANTHROPIC_API_KEY=none (back to rules reading without a key).
+for v in OPENAI_API_KEY ANTHROPIC_API_KEY TENDER_INTEL_PROVIDER TENDER_INTEL_MODEL TENDER_INTEL_REQUIRE_LLM \
+         TENDER_INTEL_REASONING_EFFORT TENDER_INTEL_MAX_OUTPUT_TOKENS; do
+  val="${!v:-$(envof fdre-dashboard-engine-1 "$v" 2>/dev/null || true)}"
+  [[ "$val" == "none" ]] && val=""
+  export "$v=$val"
+done
+# The provider the engine will use: TENDER_INTEL_PROVIDER, else the first key set (Anthropic, then OpenAI).
+provider="$TENDER_INTEL_PROVIDER"
+if [[ -z "$provider" ]]; then
+  if [[ -n "$ANTHROPIC_API_KEY" ]]; then provider=anthropic; elif [[ -n "$OPENAI_API_KEY" ]]; then provider=openai; fi
+fi
+case "$provider" in
+  openai) [[ -n "$OPENAI_API_KEY" ]] || provider="" ;;
+  anthropic) [[ -n "$ANTHROPIC_API_KEY" ]] || provider="" ;;
+esac
 [[ -n "$POSTGRES_PASSWORD" && -n "$SESSION_SECRET" && -n "$WEB_PORT" ]] || { echo "Could not read settings from the running containers." >&2; exit 1; }
-echo "==> Current port ${WEB_PORT}; settings read from running containers; tender reading: $([[ -n "$ANTHROPIC_API_KEY" ]] && echo "model (key set)" || echo "rules (no key)")$([[ "$TENDER_INTEL_REQUIRE_LLM" == "1" ]] && echo ", rules switched off")"
+echo "==> Current port ${WEB_PORT}; settings read from running containers; tender reading: $([[ -n "$provider" ]] && echo "model, ${provider}${TENDER_INTEL_MODEL:+ ${TENDER_INTEL_MODEL}}" || echo "rules (no model key)")$([[ "$TENDER_INTEL_REQUIRE_LLM" == "1" ]] && echo ", rules switched off")"
 
 mkdir -p "$HOME/fdre-backups"
 backup="$HOME/fdre-backups/fdre-$(date +%Y%m%d-%H%M%S).sql.gz"

@@ -1,5 +1,5 @@
 """Rules mode: deterministic extractors for the headline fields, used when no model is
-available (no ANTHROPIC_API_KEY, a DOCX or text upload, or mode=rules).
+available (no OPENAI_API_KEY or ANTHROPIC_API_KEY, a DOCX or text upload, or mode=rules).
 
 Not from tender_engine: written for FDRE, reusing number patterns and issuer names from
 fdre_bess_tender. Every value comes with a verbatim quote: the page's own words in order,
@@ -23,7 +23,7 @@ CONFIDENCE = 0.6
 CONFLICT_CONFIDENCE = 0.4
 MIN_QUOTE_WORDS = 5
 MAX_QUOTE_WORDS = 40
-NOT_READ = "Not read in rules mode; set ANTHROPIC_API_KEY for the full reading."
+NOT_READ = "Not read in rules mode; set OPENAI_API_KEY or ANTHROPIC_API_KEY for the full reading."
 NOT_FOUND = "The rules reader found no statement of this on the pages; check the document."
 # How many pages from the front the identity and date extractors look at.
 FRONT_PAGES = 40

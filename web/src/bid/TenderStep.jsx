@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, FileSearch, FolderOpen, Loader2, Sparkles, Upload } from "lucide-react";
 import { Section, Stat, nf, pf } from "../rtc/ui";
-import { ReadingBanner } from "./RequirementsStep";
+import { PROVIDER_LABEL, ReadingBanner } from "./RequirementsStep";
 
 const TYPE_LABEL = {
   auto: "Detect from the document",
@@ -143,7 +143,7 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
             <label className="rtc-field">
               <div className="rtc-field-top"><span>Reading</span></div>
               <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={busy}>
-                <option value="auto">{status?.llm_available ? "Full reading (tender engine model)" : "Rule-based reading (no model key on the engine)"}</option>
+                <option value="auto">{status?.llm_available ? `Full reading (tender engine model${status?.provider ? `, ${PROVIDER_LABEL[status.provider] || status.provider}` : ""})` : "Rule-based reading (no model key on the engine)"}</option>
                 {status?.llm_available && !status?.require_llm && <option value="rules">Rule-based reading only</option>}
               </select>
               <small>
@@ -151,7 +151,7 @@ export default function TenderStep({ state, onRead, onSkip, goto }) {
                   ? "This engine reads tenders only with the model; a read that cannot use it stops with an error"
                   : status?.llm_available
                     ? "Every field is read with a quote from the page; quotes are checked against the PDF"
-                    : "Set ANTHROPIC_API_KEY on the engine for the tender engine's full reading; rules read only the key figures, with page quotes"}
+                    : "Set OPENAI_API_KEY or ANTHROPIC_API_KEY on the engine for the tender engine's full reading; rules read only the key figures, with page quotes"}
               </small>
             </label>
             <div className="bid-upload-go">
