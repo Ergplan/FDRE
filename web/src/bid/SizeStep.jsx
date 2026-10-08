@@ -6,7 +6,7 @@ import { SizeCard } from "../rtc/chapters";
 import ProfileLibrary from "../rtc/ProfileLibrary";
 import { DATA_COLORS } from "../chartTheme";
 import { Field, SelectBox, Section, Stat, SwitchBox, nf, pf } from "../rtc/ui";
-import { BIOMASS_COLOR, activeRules, energyMix, peakHours, peakLabel, scaledVars } from "./model";
+import { BIOMASS_COLOR, MARKETS, activeRules, energyMix, marketLabel, peakHours, peakLabel, scaledVars } from "./model";
 import { SourceChip } from "./RequirementsStep";
 
 const COLORS = { solar: DATA_COLORS.solar, wind: DATA_COLORS.wind, biomass: BIOMASS_COLOR, bess: DATA_COLORS.bess };
@@ -79,7 +79,34 @@ function ComplianceTable({ lp }) {
   );
 }
 
-function DispatchWeek({ hourly, peak }) {
+/** Average day and month of the chosen IEX market, from the hourly price year. */
+function MarketProfile({ prices, market }) {
+  const m = prices?.markets?.[market];
+  const option = useMemo(() => (m ? {
+    animation: false,
+    grid: [{ left: 48, right: "54%", top: 30, bottom: 28 }, { left: "54%", right: 12, top: 30, bottom: 28 }],
+    title: [{ text: "Average day (₹/kWh)", left: 0, top: 0, textStyle: { fontSize: 11 } }, { text: "Monthly average (₹/kWh)", left: "54%", top: 0, textStyle: { fontSize: 11 } }],
+    tooltip: { trigger: "axis", valueFormatter: (v) => `₹${nf(v, 2)}/kWh` },
+    xAxis: [{ type: "category", gridIndex: 0, data: Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")) }, { type: "category", gridIndex: 1, data: E.MONTHS }],
+    yAxis: [{ type: "value", gridIndex: 0, min: 0 }, { type: "value", gridIndex: 1, min: 0 }],
+    series: [
+      { name: market, type: "bar", xAxisIndex: 0, yAxisIndex: 0, data: m.hourOfDayMeanRsPerMwh.map((v) => v / 1000), itemStyle: { color: DATA_COLORS.surplus } },
+      { name: market, type: "bar", xAxisIndex: 1, yAxisIndex: 1, data: m.monthlyMeanRsPerMwh.map((v) => v / 1000), itemStyle: { color: DATA_COLORS.surplus } },
+    ],
+  } : null), [m, market]);
+  if (!m) return <p className="rtc-note">IEX prices are loading or unavailable; the sizing uses them once loaded.</p>;
+  return (
+    <div className="rtc-card bid-market" data-testid="bid-market">
+      <div className="rtc-card-head">
+        <span>IEX {market} · {m.label} · {m.from} to {m.to} · {m.days} days</span>
+        <span className="rtc-note">min ₹{nf(m.minRsPerMwh / 1000, 2)} · avg ₹{nf(m.meanRsPerMwh / 1000, 2)} · max ₹{nf(m.maxRsPerMwh / 1000, 2)}/kWh</span>
+      </div>
+      <LiveChart option={option} height={190} />
+    </div>
+  );
+}
+
+function DispatchWeek({ hourly, peak, market }) {
   const [week, setWeek] = useState(0);
   const option = useMemo(() => {
     if (!hourly) return null;
@@ -107,17 +134,19 @@ function DispatchWeek({ hourly, peak }) {
       legend: { top: 0, right: 0 },
       tooltip: { trigger: "axis", valueFormatter: (v) => `${nf(v, 1)} MW` },
       xAxis: { type: "category", data: labels, axisLabel: { interval: 23 } },
-      yAxis: { type: "value", name: "MW" },
+      yAxis: [{ type: "value", name: "MW" }, { type: "value", name: "₹/kWh", min: 0, splitLine: { show: false }, show: Boolean(hourly.price) }],
       series: [
         { ...stack("Solar", split("solar"), DATA_COLORS.solar), markArea: { silent: true, itemStyle: { color: "rgba(212,255,63,0.06)" }, data: areas } },
         stack("Wind", split("wind"), DATA_COLORS.wind),
         stack("Biomass", split("biomass"), BIOMASS_COLOR),
         stack("Battery", idx.map((t) => hourly.discharge[t]), DATA_COLORS.bess),
+        stack(market ? `Sold on IEX ${market}` : "Sold as surplus", idx.map((t) => hourly.export[t]), DATA_COLORS.surplus),
+        ...(hourly.price ? [{ name: `IEX ${market} price`, type: "line", yAxisIndex: 1, symbol: "none", data: idx.map((t) => hourly.price[t]), lineStyle: { color: "#f2b84b", width: 1.2 }, itemStyle: { color: "#f2b84b" }, tooltip: { valueFormatter: (v) => `₹${nf(v, 2)}/kWh` } }] : []),
         { name: "Charging", type: "bar", data: idx.map((t) => -hourly.charge[t]), itemStyle: { color: "rgba(169,139,255,0.45)" }, barWidth: "90%" },
         { name: "Contracted supply", type: "line", step: "middle", data: idx.map((t) => hourly.demand[t]), lineStyle: { color: "#f4f4f1", type: "dashed", width: 1 }, itemStyle: { color: "#f4f4f1" }, symbol: "none" },
       ],
     };
-  }, [hourly, week, peak]);
+  }, [hourly, week, peak, market]);
   if (!hourly) return <p className="rtc-note">Run the sizing again to see the hour-by-hour dispatch (it is not kept when the page reloads).</p>;
   return (
     <div className="rtc-card">
@@ -131,7 +160,7 @@ function DispatchWeek({ hourly, peak }) {
 }
 
 /** Step 3: the plant the optimizer may build and the least-tariff sizing that meets the tender. */
-export default function SizeStep({ state, setState, patch, set, lockProps, isLocked, user, run, startSizing, stopSizing, hourly, goto }) {
+export default function SizeStep({ state, setState, patch, set, lockProps, isLocked, user, run, startSizing, stopSizing, hourly, goto, prices }) {
   const prov = state.provenance || {};
   const { sources, vars, bess, biomass, costs, fin, inputs } = state;
   const setVar = (k, values) => setState((s) => ({ ...s, vars: { ...s.vars, [k]: { ...s.vars[k], ...values } } }));
@@ -164,9 +193,15 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
             <SwitchBox label="Sell surplus in the market" checked={fin.sellSurplus} onChange={(v) => patch("fin", { sellSurplus: v })} hint="Energy the contract and the battery cannot take" />
             <SourceChip source={prov["solar.min"]} compact />
           </div>
-          <Field label="Market price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} step={0.05} min={0} disabled={!fin.sellSurplus} />
+          <SelectBox label="Surplus sold at" value={state.market?.source || "GDAM"} onChange={(v) => patch("market", { source: v })}
+            options={[...MARKETS.map((m) => [m, prices?.markets?.[m] ? `IEX ${m} · hourly, avg ₹${nf(prices.markets[m].meanRsPerMwh / 1000, 2)}/kWh` : `IEX ${m} · hourly`]), ["flat", "A flat price"]]}
+            hint={state.market?.source === "flat" ? "One price for every hour" : prices?.markets?.[state.market?.source]?.source || "IEX market-clearing prices"} />
           <Field label="Extra export capacity" unit="MW" value={fin.extraExportMw} onChange={(v) => patch("fin", { extraExportMw: v })} step={10} min={0} disabled={!fin.sellSurplus} hint="Connection for market sales beyond the contracted capacity" />
+          {state.market?.source === "flat"
+            ? <Field label="Flat market price" unit="₹/kWh" value={fin.surplusPrice} onChange={(v) => patch("fin", { surplusPrice: v })} step={0.05} min={0} disabled={!fin.sellSurplus} />
+            : <Field label="Market price escalation" pct value={state.market?.escalation || 0} onChange={(v) => patch("market", { escalation: v })} step={0.25} min={-5} max={10} disabled={!fin.sellSurplus} hint="per year, on the hourly prices" />}
         </div>
+        {fin.sellSurplus && state.market?.source !== "flat" && <MarketProfile prices={prices} market={state.market?.source} />}
         <RulesEditor state={state} setState={setState} prov={prov} />
         <button type="button" className="secondary" onClick={() => setState((s) => ({ ...s, vars: scaledVars(s.plantMw, s.vars) }))}>Rescale size ranges to the capacity</button>
       </Section>
@@ -234,7 +269,8 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
           <h2>Find the least-tariff plant</h2>
           <p>
             HiGHS sizes {[sources.solar && "solar", sources.wind && "wind", sources.biomass && "biomass", sources.bess && "battery"].filter(Boolean).join(", ") || "nothing"} together with the hour-by-hour dispatch over the PPA years,
-            so that {rules.length ? rules.map((r) => `${r.label.toLowerCase()} ≥ ${pf(r.target, 0)}`).join(", ") : "no floor is set"} holds every year, at the lowest {fin.years}-year tariff for a {pf(fin.targetEquityIrr, 1)} equity IRR. Lock every size to evaluate a fixed design.
+            so that {rules.length ? rules.map((r) => `${r.label.toLowerCase()} ≥ ${pf(r.target, 0)}`).join(", ") : "no floor is set"} holds every year, at the lowest {fin.years}-year tariff for a {pf(fin.targetEquityIrr, 1)} equity IRR.
+            {fin.sellSurplus ? ` Surplus is sold at ${marketLabel(state, prices)}, hour by hour.` : " Surplus is not sold."} Lock every size to evaluate a fixed design.
           </p>
         </div>
         <div className="optimize-bar-actions">
@@ -276,11 +312,12 @@ export default function SizeStep({ state, setState, patch, set, lockProps, isLoc
                 <Stat label="Biomass" value={`${nf(mix.biomass / 1000, 0)} MU`} detail={pf(mix.biomass / mix.demand, 1)} />
                 <Stat label="Battery" value={`${nf(mix.battery / 1000, 0)} MU`} detail={pf(mix.battery / mix.demand, 1)} />
                 <Stat label="Not supplied" value={`${nf(mix.unmet / 1000, 0)} MU`} detail={pf(mix.unmet / mix.demand, 1)} />
-                <Stat label="Sold as surplus" value={`${nf(mix.export / 1000, 0)} MU`} />
+                <Stat label={lp.market ? `Sold on IEX ${lp.market}` : "Sold as surplus"} value={`${nf(mix.export / 1000, 0)} MU`}
+                  detail={mix.export > 0 ? `₹${nf(lp.market ? mix.exportRevenueCr : (mix.export * (lp.flatPrice || 0)) / 1e4, 0)} cr · ₹${nf(lp.market ? (mix.exportRevenueCr * 1e4) / mix.export : lp.flatPrice, 2)}/kWh realised` : "nothing sold"} />
                 <Stat label="Curtailed" value={`${nf(mix.curtail / 1000, 0)} MU`} />
               </div>
             )}
-            <DispatchWeek hourly={hourly} peak={state.peak} />
+            <DispatchWeek hourly={hourly} peak={state.peak} market={lp.market} />
           </Section>
         </>
       )}

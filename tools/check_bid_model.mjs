@@ -109,6 +109,27 @@ const hourly = { solar: [60, 0], wind: [20, 50], biomass: [20, 50], direct: [100
 const mix = energyMix(hourly);
 assert.ok(Math.abs(mix.solar - 60) < 1e-9 && Math.abs(mix.wind - 60) < 1e-9 && Math.abs(mix.biomass - 60) < 1e-9 && mix.battery === 20);
 
+// IEX market prices for surplus sales
+const fakePrices = { markets: { GDAM: { hourlyRsPerMwh: Array.from({ length: E.HOURS }, (_, t) => (E.HOUR_OF_DAY[t] >= 18 && E.HOUR_OF_DAY[t] < 22 ? 8000 : 2000)), meanRsPerMwh: 3000 } } };
+const mkt = { ...applied, market: { source: "GDAM", escalation: 0.02 } };
+const withMarket = lpPayload(mkt, resourceProfiles(mkt), fakePrices);
+assert.equal(withMarket.ctx.surplusPrice.length, E.HOURS);
+assert.equal(withMarket.ctx.surplusPrice[19], 8);
+assert.equal(withMarket.fin.surplusEscalation, 0.02);
+const flatMarket = lpPayload({ ...mkt, market: { source: "flat", escalation: 0 } }, resourceProfiles(mkt), fakePrices);
+assert.equal(flatMarket.ctx.surplusPrice, undefined, "a flat price sends no series");
+const noSale = lpPayload({ ...mkt, fin: { ...mkt.fin, sellSurplus: false } }, resourceProfiles(mkt), fakePrices);
+assert.equal(noSale.ctx.surplusPrice, undefined, "no series when surplus is not sold");
+// LP lifetime export revenue flows into the financial model instead of the flat price
+const lpM = { ...lp, market: "GDAM", lifetime: lp.lifetime.map((r) => ({ ...r, exportRevenueCr: 123.4 })) };
+const opsM = opsFromLp(lpM, applied.fin, applied.bess);
+assert.equal(opsM[0].surplusRevenueCr, 123.4);
+const finM = E.runFinancialModel(null, lp.sizes, { costs: applied.costs, fin: applied.fin, bess: applied.bess, dfrTarget: 0.8, ops: opsM, solveBy: "npv" });
+assert.ok(Math.abs(finM.rows[0].surplusRevenue - 123.4) < 1e-9, "IEX revenue in the statements");
+assert.ok(Math.abs(finance.rows[0].surplusRevenue - 1e6 * applied.fin.surplusPrice * 1e-4) < 1e-9, "flat price when the sizing used one");
+const mixM = energyMix({ ...hourly, export: [10, 0], price: [8, 2] });
+assert.ok(Math.abs(mixM.exportRevenueCr - 10 * 8 * 1e-4) < 1e-12);
+
 console.log("Tender to Bid model checks passed");
 
 const file = process.argv[2];

@@ -223,7 +223,8 @@ def tariff_weights(fin: dict, taxed_in: np.ndarray | None = None) -> dict:
 
 
 def reference_taxable(fin: dict, costs: dict, bess: dict, sizes: dict, delivered_mwh: np.ndarray,
-                      export_mwh: np.ndarray, tariff: float, biomass_mwh: np.ndarray | None = None) -> np.ndarray:
+                      export_mwh: np.ndarray, tariff: float, biomass_mwh: np.ndarray | None = None,
+                      export_revenue_cr: np.ndarray | None = None) -> np.ndarray:
     """Taxable income by year (before loss set-off) for a design, as in engine.js."""
     n = int(fin.get("years") or 25)
     y = np.arange(1, n + 1)
@@ -242,7 +243,10 @@ def reference_taxable(fin: dict, costs: dict, bess: dict, sizes: dict, delivered
         opex = opex + biomass_mwh * float(fin.get("biomassFuelRsPerKwh") or 0) * fuel_esc * RS_CR_PER_MWH_AT_1RS
     trf = tariff * (1 + float(fin.get("tariffEscalation") or 0)) ** (y - 1)
     sell = float(fin.get("surplusPrice") or 0) if fin.get("sellSurplus") else 0.0
-    revenue = delivered_mwh * trf * RS_CR_PER_MWH_AT_1RS + export_mwh * sell * RS_CR_PER_MWH_AT_1RS
+    if export_revenue_cr is not None:  # surplus sold at hourly market prices
+        revenue = delivered_mwh * trf * RS_CR_PER_MWH_AT_1RS + export_revenue_cr
+    else:
+        revenue = delivered_mwh * trf * RS_CR_PER_MWH_AT_1RS + export_mwh * sell * RS_CR_PER_MWH_AT_1RS
     interest, _, _ = _debt_per_crore(fin, n)
     aug = aug_cost_per_mwh(costs, bess, n) * sizes["bessMwh"]
     dep = capex * _dep_capex(fin, n)
@@ -384,6 +388,10 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     tariff_esc = (1 + float(fin.get("tariffEscalation") or 0)) ** (years_arr - 1)
     om_esc = (1 + float(fin.get("omEscalation") or 0)) ** (years_arr - 1)
     surplus_price = float(fin.get("surplusPrice") or 0) if sell else 0.0
+    # Optional hourly market price for surplus (Rs/kWh, e.g. IEX GDAM), escalating yearly; when
+    # absent the flat surplusPrice applies (Round the clock)
+    price_series = _series(ctx.get("surplusPrice"), "surplusPrice") if sell and ctx.get("surplusPrice") is not None else None
+    surplus_esc = (1 + float(fin.get("surplusEscalation") or 0)) ** (years_arr - 1)
     preop = 1 + float(costs.get("preopPct") or 0)
     ins = float(fin.get("insurancePct") or 0)
     evac = float(costs.get("evacuationCr") or 0)
@@ -539,6 +547,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         opex_w = tw["opex"][1:]
         energy_w = RS_CR_PER_MWH_AT_1RS * (weights.T @ (rev_w * tariff_esc))
         surplus_w = RS_CR_PER_MWH_AT_1RS * surplus_price * (weights.T @ rev_w)
+        market_w = RS_CR_PER_MWH_AT_1RS * (weights.T @ (rev_w * surplus_esc)) if price_series is not None else None
         pv_om = float(opex_w @ om_esc)
         pv_flat = float(opex_w.sum())
 
@@ -564,7 +573,9 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         for yi, (c_dir, c_dis) in enumerate(deliver_cols):
             energy_vec[c_dir] = energy_w[yi]
             energy_vec[c_dis] = energy_w[yi]
-            if sell:
+            if sell and price_series is not None:
+                cost_vec[ex_cols[yi]] = -market_w[yi] * price_series
+            elif sell:
                 cost_vec[ex_cols[yi]] = -surplus_w[yi]
         const = tw["capex"] * evac * preop + pv_flat * evac * ins + pv_om * float(fin.get("otherFixedCr") or 0)
         return cost_vec, energy_vec, const, energy_w
@@ -580,6 +591,13 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         dl = np.array([x[c_dir].sum() + x[c_dis].sum() for c_dir, c_dis in deliver_cols])
         ex = np.array([x[c].sum() for c in ex_cols]) if sell else np.zeros(len(rep))
         return weights @ dl, weights @ ex
+
+    def yearly_export_revenue(x: np.ndarray) -> np.ndarray | None:
+        """Surplus sale revenue (Rs cr) in every PPA year at the hourly market price, or None."""
+        if not sell or price_series is None:
+            return None
+        rep_rev = np.array([RS_CR_PER_MWH_AT_1RS * float(x[c] @ price_series) for c in ex_cols])
+        return (weights @ rep_rev) * surplus_esc
 
     def yearly_biomass(x: np.ndarray) -> np.ndarray | None:
         """Biomass MWh generated in every PPA year (interpolated), or None without biomass."""
@@ -697,7 +715,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         lower = lam + f_val / e_bound if e_bound > 0 else -math.inf
         z_old = taxed_in
         dl, ex = yearly(x)
-        taxed_in = tax_timing(fin, reference_taxable(fin, costs, bess, sizes_of(x), dl, ex, ratio, yearly_biomass(x)))
+        taxed_in = tax_timing(fin, reference_taxable(fin, costs, bess, sizes_of(x), dl, ex, ratio, yearly_biomass(x),
+                                                     yearly_export_revenue(x)))
         timing_same = bool(np.array_equal(z_old, taxed_in))
         z = sizes_of(x)
         iterations.append({
@@ -789,12 +808,16 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         # every PPA year (interpolated between modelled years), for the browser's financial model
         dl, ex = yearly(x)
         bio_y = yearly_biomass(x)
+        rev_y = yearly_export_revenue(x)
+        if rev_y is None:
+            rev_y = ex * surplus_price * RS_CR_PER_MWH_AT_1RS
         result["lifetime"] = [
             {
                 "year": y,
                 "demandMwh": float(demand.sum() * year_factors(y, fin, bess)["demandFactor"]),
                 "deliveredMwh": float(dl[y - 1]),
                 "exportMwh": float(ex[y - 1]),
+                "exportRevenueCr": float(rev_y[y - 1]),
                 "biomassMwh": float(bio_y[y - 1]) if bio_y is not None else 0.0,
             }
             for y in range(1, n + 1)
@@ -819,4 +842,6 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             "direct": r2(x[c_dir]), "charge": r2(x[c_ch]), "discharge": r2(x[c_dis]),
             "export": r2(exp), "curtail": r2(curtail), "soc": np.round(soc, 4).tolist(),
         }
+        if price_series is not None:
+            result["hourly"]["price"] = np.round(price_series, 3).tolist()
     return result

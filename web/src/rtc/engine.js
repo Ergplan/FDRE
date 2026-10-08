@@ -1339,7 +1339,8 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
     const op = ops[y - 1];
     const trf = tariff * (1 + fin.tariffEscalation) ** (y - 1);
     const energyRev = op.deliveredMWh * trf * RS_CR_PER_MWH_AT_1RS;
-    const surplusRev = fin.sellSurplus ? op.excessMWh * fin.surplusPrice * RS_CR_PER_MWH_AT_1RS : 0;
+    // op.surplusRevenueCr: surplus sold at hourly market prices (Tender to Bid, IEX); else a flat price
+    const surplusRev = fin.sellSurplus ? (op.surplusRevenueCr ?? op.excessMWh * fin.surplusPrice * RS_CR_PER_MWH_AT_1RS) : 0;
     const shortfallMWh = Math.max(0, dfrTarget * op.demandMWh - op.deliveredMWh);
     const penalty = shortfallMWh * (fin.shortfallPenalty || 0) * RS_CR_PER_MWH_AT_1RS;
     const revenue = energyRev + surplusRev - penalty;

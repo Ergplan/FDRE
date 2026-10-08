@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, CircleDollarSign, FileSearch, Gavel, ListChecks, RotateCcw, X, Zap } from "lucide-react";
 import { trackEvent } from "../activity";
 import { nf } from "../rtc/ui";
-import { defaultBidState, lpPayload, mergeBidState, resourceProfiles, runSizing } from "./model";
+import { defaultBidState, loadMarketPrices, lpPayload, mergeBidState, resourceProfiles, runSizing } from "./model";
 import { applyProposals } from "./tenderMap";
 import TenderStep from "./TenderStep";
 import RequirementsStep from "./RequirementsStep";
@@ -58,7 +58,13 @@ export default function BidTab({ user = null }) {
   const [hourly, setHourly] = useState(() => sessionHourly);
   const [run, setRun] = useState(() => sessionRun);
   const [message, setMessage] = useState("");
+  const [prices, setPrices] = useState(null);
   const abortRef = useRef(null);
+
+  // IEX price year for surplus sales (public market data, ~130 KB, loaded once)
+  useEffect(() => {
+    loadMarketPrices().then(setPrices).catch(() => setPrices(null));
+  }, []);
 
   useEffect(() => {
     sessionState = state;
@@ -104,7 +110,16 @@ export default function BidTab({ user = null }) {
 
   async function startSizing() {
     if (run?.active) return;
-    const payload = lpPayload(state, resourceProfiles(state));
+    let market = null;
+    if (state.fin.sellSurplus && state.market?.source !== "flat") {
+      try {
+        market = prices || (await loadMarketPrices());
+      } catch (err) {
+        setRun({ active: false, started: Date.now(), finished: Date.now(), log: [], error: `IEX prices could not be loaded (${err.message}); choose a flat price or try again.` });
+        return;
+      }
+    }
+    const payload = lpPayload(state, resourceProfiles(state), market);
     const abort = new AbortController();
     abortRef.current = abort;
     const started = Date.now();
@@ -118,9 +133,10 @@ export default function BidTab({ user = null }) {
       });
       const { hourly: h, log, ...summary } = result;
       setHourly(h || null);
+      const used = payload.ctx.surplusPrice ? state.market.source : null;
       setState((s) => ({
         ...s,
-        lp: summary,
+        lp: { ...summary, market: used, flatPrice: used ? null : (payload.ctx.sellSurplus ? payload.fin.surplusPrice : null) },
         // the optimizer's sizes become the values (locked sizes stay as they are)
         vars: Object.fromEntries(Object.entries(s.vars).map(([k, v]) => [k, v.locked || summary.sizes[k] === undefined ? v : { ...v, value: Math.round(summary.sizes[k] * 10) / 10 }])),
       }));
@@ -150,7 +166,7 @@ export default function BidTab({ user = null }) {
   const step = STEPS[index];
   const next = STEPS[index + 1];
   const prev = STEPS[index - 1];
-  const props = { state, setState, patch, set, lockProps, isLocked, goto, user };
+  const props = { state, setState, patch, set, lockProps, isLocked, goto, user, prices };
 
   return (
     <div className="rtc story bid">

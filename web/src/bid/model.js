@@ -64,6 +64,8 @@ export function defaultBidState() {
     site: { label: "Profiles: Beed, Maharashtra (change in Size)", constraint: null, places: [] },
     ceilingTariff: null,
     guarantees: { emdPerMwInr: null, pbgPerMwInr: null },
+    // surplus sold on the exchange at hourly IEX prices (GDAM / DAM / RTM), or at a flat price
+    market: { source: "GDAM", escalation: 0 },
     notes: [], // tender facts shown but not modelled
     lp: null, // last sizing (without the hourly dispatch)
   };
@@ -73,7 +75,7 @@ export function mergeBidState(saved) {
   const base = defaultBidState();
   if (!saved || saved.version !== 1) return base;
   const merged = { ...base, ...saved };
-  for (const k of ["peak", "sources", "inputs", "bess", "biomass", "costs", "fin", "locks", "site", "guarantees", "accepted", "provenance"]) {
+  for (const k of ["peak", "sources", "inputs", "bess", "biomass", "costs", "fin", "locks", "site", "guarantees", "accepted", "provenance", "market"]) {
     merged[k] = { ...base[k], ...(saved[k] || {}) };
   }
   merged.vars = Object.fromEntries(Object.keys(base.vars).map((k) => [k, { ...base.vars[k], ...(saved.vars?.[k] || {}) }]));
@@ -117,11 +119,46 @@ export function activeRules(state) {
   return state.rules.filter((r) => r.enabled && r.target > 0);
 }
 
+// ---------------------------------------------------------------- IEX market prices
+
+export const MARKET_URL = "/market/iex_hourly_prices.json";
+export const MARKETS = ["GDAM", "DAM", "RTM"];
+let pricesPromise = null;
+
+/** The hourly IEX price year (Rs/MWh per market), fetched once per page load. */
+export function loadMarketPrices() {
+  if (!pricesPromise) {
+    pricesPromise = fetch(MARKET_URL, { credentials: "same-origin" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`market prices unavailable (${r.status})`);
+        return r.json();
+      })
+      .catch((err) => {
+        pricesPromise = null;
+        throw err;
+      });
+  }
+  return pricesPromise;
+}
+
+/** The chosen market's 8,760 hourly prices in Rs/kWh, or null for a flat price. */
+export function marketSeries(state, prices) {
+  const m = prices?.markets?.[state.market?.source];
+  return m ? m.hourlyRsPerMwh.map((v) => v / 1000) : null;
+}
+
+export function marketLabel(state, prices) {
+  const src = state.market?.source;
+  if (!src || src === "flat") return `flat ₹${state.fin.surplusPrice}/kWh`;
+  const m = prices?.markets?.[src];
+  return m ? `IEX ${src} (avg ₹${(m.meanRsPerMwh / 1000).toFixed(2)}/kWh)` : `IEX ${src}`;
+}
+
 // ---------------------------------------------------------------- HiGHS request
 
 const round = (arr, d) => Array.from(arr, (v) => Math.round(v * 10 ** d) / 10 ** d);
 
-export function lpPayload(state, { solarCf, windCf }) {
+export function lpPayload(state, { solarCf, windCf }, prices = null) {
   const { sources, vars, bess } = state;
   const off = { locked: true, value: 0 };
   const spec = (k) => {
@@ -158,6 +195,11 @@ export function lpPayload(state, { solarCf, windCf }) {
   if (sources.biomass) {
     payload.vars.biomassMw = spec("biomassMw");
     payload.biomass = { ...state.biomass };
+  }
+  const series = state.fin.sellSurplus ? marketSeries(state, prices) : null;
+  if (series) {
+    payload.ctx.surplusPrice = series.map((v) => Math.round(v * 1000) / 1000);
+    payload.fin.surplusEscalation = state.market.escalation || 0;
   }
   if (rules.some((r) => r.hours === "peak")) payload.peakMask = Array.from(peakMask(state.peak));
   return payload;
@@ -228,13 +270,15 @@ export function opsFromLp(lp, fin, bess) {
       excessMWh: row.exportMwh || 0,
       curtailMWh: NaN,
       biomassMWh: row.biomassMwh || 0,
+      // surplus sale revenue at the hourly market price, when the sizing used one
+      ...(lp.market && row.exportRevenueCr !== undefined ? { surplusRevenueCr: row.exportRevenueCr } : {}),
     };
   });
 }
 
 /** Where year-1 energy came from: direct delivery split by each hour's generation shares. */
 export function energyMix(hourly) {
-  const out = { solar: 0, wind: 0, biomass: 0, battery: 0, export: 0, curtail: 0, unmet: 0, demand: 0, peakDelivered: 0 };
+  const out = { solar: 0, wind: 0, biomass: 0, battery: 0, export: 0, curtail: 0, unmet: 0, demand: 0, peakDelivered: 0, exportRevenueCr: 0 };
   if (!hourly) return out;
   for (let t = 0; t < hourly.direct.length; t += 1) {
     const s = hourly.solar[t];
@@ -249,6 +293,7 @@ export function energyMix(hourly) {
     }
     out.battery += hourly.discharge[t];
     out.export += hourly.export[t];
+    if (hourly.price) out.exportRevenueCr += hourly.export[t] * hourly.price[t] * 1e-4;
     out.curtail += hourly.curtail[t];
     out.demand += hourly.demand[t];
     out.unmet += Math.max(0, hourly.demand[t] - d - hourly.discharge[t]);

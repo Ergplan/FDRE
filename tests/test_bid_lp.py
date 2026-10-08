@@ -104,3 +104,44 @@ def test_rules_are_validated():
         M.solve(_payload(vars={}, compliance=[{"target": 0.9, "hours": "night"}]))
     with pytest.raises(M.LpInputError):
         M.solve(_payload(vars={}, compliance=[{"target": 0.9, "hours": "peak"}], peakMask=[0] * M.HOURS))
+
+
+def _market_payload(price_series=None, flat=2.5):
+    fin = {**FIN0, "sellSurplus": True, "surplusPrice": flat}
+    payload = _payload(
+        fin=fin,
+        vars={"solarMw": {"locked": True, "value": 300}, "windMw": {"locked": True, "value": 0},
+              "bessMw": {"locked": True, "value": 0}, "biomassMw": {"min": 0, "max": 200}},
+        biomass={"availability": 0.9, "maxPlf": 0.85},
+        returnLifetime=True, returnHourly=True,
+    )
+    payload["ctx"]["extraExportMw"] = 300
+    payload["ctx"]["sellSurplus"] = True
+    if price_series is not None:
+        payload["ctx"]["surplusPrice"] = list(price_series)
+    return payload
+
+
+def test_constant_market_price_matches_the_flat_price():
+    flat = M.solve(_market_payload(flat=2.5))
+    series = M.solve(_market_payload(price_series=[2.5] * M.HOURS, flat=0))
+    assert series["tariff"] == pytest.approx(flat["tariff"], abs=1e-6)
+    assert series["sizes"]["biomassMw"] == pytest.approx(flat["sizes"]["biomassMw"], abs=1e-4)
+    life_f, life_s = flat["lifetime"][0], series["lifetime"][0]
+    assert life_s["exportRevenueCr"] == pytest.approx(life_f["exportRevenueCr"], rel=1e-6)
+    assert life_f["exportRevenueCr"] == pytest.approx(life_f["exportMwh"] * 2.5 * 1e-4, rel=1e-9)
+
+
+def test_hourly_market_price_values_each_sale_at_its_hour():
+    # cheap at midday (solar glut), dear in the evening, as on IEX
+    price = np.where((HOUR >= 9) & (HOUR < 16), 1.8, np.where((HOUR >= 18) & (HOUR < 23), 8.0, 4.5))
+    res = M.solve(_market_payload(price_series=price.tolist(), flat=0))
+    h = res["hourly"]
+    assert len(h["price"]) == M.HOURS and h["price"][19] == pytest.approx(8.0)
+    exp = np.array(h["export"])
+    revenue = 1e-4 * float(exp @ price)
+    assert res["lifetime"][0]["exportRevenueCr"] == pytest.approx(revenue, rel=1e-3)
+    # at Rs 8 in the evening, against Rs 3.2 of fuel, surplus biomass is sold then rather than at midday
+    bio_evening = np.array(h["biomass"])[(HOUR >= 18) & (HOUR < 23)].mean()
+    bio_midday = np.array(h["biomass"])[(HOUR >= 9) & (HOUR < 16)].mean()
+    assert bio_evening > bio_midday

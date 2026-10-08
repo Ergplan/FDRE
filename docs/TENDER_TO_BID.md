@@ -38,6 +38,32 @@ A dispatchable renewable generator with its own size and hourly output:
 Biomass may charge the battery and its surplus is sold or curtailed like solar and wind.
 Default costs are planning assumptions; set them from quotes.
 
+## Surplus sold on IEX
+
+Energy the contract and the battery cannot take may be sold on the exchange (switch on the Size
+step; a tender that mandates solar beyond the contracted capacity switches it on, with that
+solar's own connection as extra export capacity). The price is hourly:
+
+* **IEX GDAM** (green day-ahead, the default for renewable surplus), **DAM** or **RTM**, from
+  15-minute market-clearing prices (`web/public/market/iex_hourly_prices.json`, built by
+  `tools/build_iex_prices.py` from the IEX extracts for 1 Sep 2025 to 24 Sep 2026). Each hour of
+  the year is the mean of its four blocks on the latest date with data for that day; missing
+  days take the same weekday a week either side. Averages: GDAM ₹4.90, DAM ₹4.45, RTM ₹4.14
+  per kWh, with midday near ₹2 and the evening peak near ₹7.5–8.3.
+* or a flat price.
+
+The LP values every MWh exported at that hour's price (escalated yearly if set), so it shifts
+dispatchable output (biomass) to dear hours and counts cheap midday solar surplus for little.
+The sale shows in the year-1 energy stack (MU, ₹ cr, realised ₹/kWh), in the dispatch chart
+(with the price line) and in the Financials revenue stack (PPA supply, IEX sale, penalties).
+
+To refresh the prices with a newer extract:
+
+```
+python tools/build_iex_prices.py --gdam GDAM.xlsx --dam DAM.xlsx --rtm RTM.xlsx \
+    --out web/public/market/iex_hourly_prices.json
+```
+
 ## What is not modelled yet
 
 * Non-RE supply with RECs (some RE-RTC tenders allow up to 49%): the design is 100% renewable,
@@ -48,7 +74,8 @@ Default costs are planning assumptions; set them from quotes.
 
 ## Checks
 
-* `tests/test_bid_lp.py` — biomass sizing, fuel cost, peak/monthly/annual floors, and that
+* `tests/test_bid_lp.py` — biomass sizing, fuel cost, peak/monthly/annual floors, hourly market
+  prices (a constant series equals the flat price; sales are valued at their hour), and that
   Round-the-clock requests are unchanged (results of three RTC cases were compared before and
   after the change and are identical).
 * `tools/check_bid_model.mjs` — tender fields → model inputs, the HiGHS request, the financial
