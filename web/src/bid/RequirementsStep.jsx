@@ -47,6 +47,14 @@ export const PROVIDER_LABEL = { openai: "OpenAI", anthropic: "Anthropic" };
 /** Which reader produced the values: the tender engine's model reading, or its rule-based reader. */
 export function ReadingBanner({ result }) {
   if (!result) return null;
+  if (result.mode === "rules+llm") {
+    return (
+      <div className="bid-mode" data-testid="bid-mode-merged">
+        <CheckCircle2 size={14} />
+        <span>Read by the tender engine: {result.merged?.fromRules ?? "–"} fields by its rule-based reader and {result.merged?.fromModel ?? "–"} more by its model reading ({[PROVIDER_LABEL[result.provider], result.model].filter(Boolean).join(" ")}). Every value is a quote checked against its page.</span>
+      </div>
+    );
+  }
   if (result.mode === "llm") {
     return (
       <div className="bid-mode" data-testid="bid-mode-llm">
@@ -138,7 +146,7 @@ export function AllFields({ result }) {
                   {fields.map((f) => (
                     <div key={f.path} className="bid-field">
                       <button type="button" className="bid-field-row" onClick={() => setOpenField(openField === f.path ? null : f.path)}>
-                        <span>{f.label}{f.required ? " *" : ""}</span>
+                        <span>{f.label}{f.required ? " *" : ""}{f.reader === "model" ? <em className="bid-reader"> model</em> : null}</span>
                         <span className="bid-field-value">{f.display || (f.value === null ? "–" : String(f.value))}</span>
                         <span>{f.evidence?.[0]?.page ? <span className="bid-src"><FileSearch size={10} /> p. {f.evidence[0].page}</span> : null}</span>
                         <StatusChip status={f.status} />

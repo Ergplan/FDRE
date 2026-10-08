@@ -87,7 +87,7 @@ export default function SizeStep({ state, terms, run, startSizing, stopSizing, h
   const lp = state.lp;
   const mix = useMemo(() => energyMix(hourly), [hourly]);
   const running = Boolean(run?.active);
-  const atMax = lp ? sizesAtMax(lp, state) : [];
+  const atMax = lp ? sizesAtMax(lp, state, terms) : [];
   const total = plantMw(state, terms);
   const on = SOURCES.filter((src) => state.sources[src.id]);
   return (

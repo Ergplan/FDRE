@@ -91,8 +91,31 @@ export const FINANCE_FIELDS = [
   { section: "costs", key: "evacuationCr", label: "Transmission / evacuation", unit: "₹ cr", min: 0, step: 5, hint: "Lump sum" },
 ];
 
+/** Upper limit the optimizer uses when "up to" is left empty, as a multiple of the contracted capacity. */
+export const AUTO_MAX = { solar: 12, wind: 6, hydro: 1, biomass: 1, thermal: 0.49, bess: 4 };
+
+/**
+ * Indian industry benchmarks for a first round ("Fill up for me please"): CERC tariff-order
+ * norms and 2025–26 market prices. They are the bidder's inputs, never the tender's: each value
+ * filled from here is marked as a benchmark until the bidder changes it.
+ */
+export const BENCHMARK_NOTE = "Industry benchmark (CERC norms, 2025–26 market prices), not from the tender";
+export const BENCHMARKS = {
+  solar: { cuf: 0.25, dcAc: 1.4, degradation: 0.005, capex: 3.5, om: 4 },
+  wind: { cuf: 0.33, capex: 6.5, om: 9 },
+  hydro: { cuf: 0.45, availability: 1, capex: 0, fixed: 150, energy: 1.2, escalation: 0.02 },
+  biomass: { availability: 0.9, cuf: 0.8, minLoad: 0.3, capex: 7, om: 40, fuel: 4.5, fuelEscalation: 0.05 },
+  thermal: { availability: 0.85, cuf: 0.85, minLoad: 0, capex: 0, fixed: 150, energy: 3, rec: 0.15, escalation: 0.03 },
+  bess: { duration: "4", rte: 0.87, minSoc: 0.05, maxSoc: 0.95, degradation: 0.02, augmentation: "annual", capex: 1.2, om: 1.2 },
+  fin: { targetEquityIrr: 0.14, debtFraction: 0.7, interestRate: 0.09, tenorYears: 15, taxRate: 0.2517, omEscalation: 0.05, insurancePct: 0.003, tariffEscalation: 0 },
+  costs: { preopPct: 0.05, evacuationCr: 0 },
+};
+// a first round: 250 MW, with solar, biomass and battery sized by the optimizer
+export const DEFAULT_ON = ["solar", "biomass", "bess"];
+export const DEFAULT_BID_MW = 250;
+
 const blankSource = (id) => ({
-  capacity: { mode: null, mw: null }, // mode "fixed": exactly mw; "optimise": 0 to mw
+  capacity: { mode: "optimise", mw: null }, // "fixed": exactly mw; "optimise": 0 to mw (empty: AUTO_MAX)
   ...Object.fromEntries(SOURCE_FIELDS[id].map((f) => [f.key, null])),
   ...(id === "hydro" ? { monthlyCuf: null } : {}),
 });
@@ -101,12 +124,13 @@ const FIN_REQUIRED = Object.fromEntries(FINANCE_FIELDS.filter((f) => f.section =
 
 export function defaultBidState() {
   return {
-    version: 2,
+    version: 3,
     step: "tender",
     tender: null, // { name, mode, seedKey, result }
     accepted: {}, // tender proposal id -> true/false (a value the page does not prove is used only when ticked)
-    bid: { baseMw: null, greenshoe: null }, // the bidder's answers on the Bid capacity step
-    sources: Object.fromEntries(SOURCE_IDS.map((id) => [id, false])),
+    bid: { baseMw: DEFAULT_BID_MW, greenshoe: false }, // the bidder's answers on the Bid capacity step
+    sources: Object.fromEntries(SOURCE_IDS.map((id) => [id, DEFAULT_ON.includes(id)])),
+    filled: {}, // "<source>.<field>" (or "fin.<key>") -> true while the value is a benchmark
     src: Object.fromEntries(SOURCE_IDS.map((id) => [id, blankSource(id)])),
     solarUpload: null,
     windUpload: null,
@@ -125,9 +149,9 @@ export function defaultBidState() {
 
 export function mergeBidState(saved) {
   const base = defaultBidState();
-  if (!saved || saved.version !== 2) return base;
+  if (!saved || saved.version !== 3) return base;
   const merged = { ...base, ...saved };
-  for (const k of ["bid", "sources", "fin", "costs", "market", "locks", "accepted"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
+  for (const k of ["bid", "sources", "fin", "costs", "market", "locks", "accepted", "filled"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
   merged.src = Object.fromEntries(SOURCE_IDS.map((id) => [id, { ...base.src[id], ...(saved.src?.[id] || {}), capacity: { ...base.src[id].capacity, ...(saved.src?.[id]?.capacity || {}) } }]));
   if (!STEP_IDS.includes(merged.step)) merged.step = "tender";
   return merged;
@@ -146,16 +170,34 @@ export function plantMw(state, terms) {
   return base + (state.bid.greenshoe && isNum(terms?.greenshoeMw) ? terms.greenshoeMw : 0);
 }
 
-/** Problems with the bid capacity: missing answers, or a capacity the tender does not allow. */
+/** Answers missing on the Bid capacity step (these stop the sizing). */
 export function capacityIssues(state, terms) {
   const out = [];
   if (!isNum(state.bid.baseMw) || state.bid.baseMw <= 0) out.push("Enter the capacity you bid");
   if (isNum(terms?.greenshoeMw) && state.bid.greenshoe === null) out.push("Say whether to plan for the greenshoe capacity");
+  return out;
+}
+
+/** A bid capacity the tender does not allow: the sizing still runs, the conditions table marks it not met. */
+export function capacityWarnings(state, terms) {
+  const out = [];
   if (isNum(state.bid.baseMw) && isNum(terms?.baseMw) && terms.partAllowed === false && state.bid.baseMw !== terms.baseMw) {
-    out.push(`The tender allows no part capacity: the bid must be ${terms.baseMw} MW`);
+    out.push(`The tender allows no part capacity: a compliant bid is ${terms.baseMw} MW`);
   }
   if (isNum(state.bid.baseMw) && isNum(terms?.baseMw) && state.bid.baseMw > terms.baseMw) out.push(`The bid is above the tender's ${terms.baseMw} MW`);
   return out;
+}
+
+/** The MW limit used for a source: the fixed capacity, the "up to" entered, or AUTO_MAX × contracted. */
+export function capacityLimit(state, terms, id) {
+  const c = state.src[id].capacity;
+  if (isNum(c.mw) && c.mw > 0) return c.mw;
+  if (c.mode !== "optimise") return null;
+  const p = plantMw(state, terms);
+  if (!p) return null;
+  const auto = Math.round(AUTO_MAX[id] * p);
+  const min = id === "solar" ? solarMinMw(state, terms) || 0 : 0;
+  return Math.max(auto, Math.round(min * 2));
 }
 
 /** The smallest solar the tender requires (MW), or null. */
@@ -170,7 +212,7 @@ export function sourceIssues(state, id, terms) {
   const out = [];
   const title = SOURCES.find((x) => x.id === id).title;
   if (!s.capacity.mode) out.push(`${title}: choose fixed capacity or let the optimizer size it`);
-  else if (!isNum(s.capacity.mw) || s.capacity.mw <= 0) out.push(`${title}: enter the ${s.capacity.mode === "fixed" ? "capacity" : "largest capacity the optimizer may build"}`);
+  else if (s.capacity.mode === "fixed" && (!isNum(s.capacity.mw) || s.capacity.mw <= 0)) out.push(`${title}: enter the capacity`);
   for (const f of SOURCE_FIELDS[id]) {
     if (f.profileOnly && (id === "solar" ? state.solarUpload : state.windUpload)) continue;
     const v = s[f.key];
@@ -356,19 +398,21 @@ export function modelInputs(state, terms) {
     durationH: duration,
   };
   const p = plantMw(state, terms) || 1;
+  const limit = (id) => capacityLimit(state, terms, id);
   const range = (id) => {
     const c = s[id].capacity;
-    if (!on(id) || !isNum(c.mw)) return { locked: true, value: 0 };
+    const mw = limit(id);
+    if (!on(id) || !isNum(mw)) return { locked: true, value: 0 };
     let min = 0;
-    if (id === "solar") min = Math.min(c.mw, solarMinMw(state, terms) || 0);
-    return c.mode === "fixed" ? { locked: true, value: c.mw } : { locked: false, value: c.mw, min, max: c.mw };
+    if (id === "solar") min = Math.min(mw, solarMinMw(state, terms) || 0);
+    return c.mode === "fixed" ? { locked: true, value: mw } : { locked: false, value: mw, min, max: mw };
   };
   const vars = {
     solarMw: range("solar"),
     windMw: range("wind"),
     bessMw: range("bess"),
-    bessMwh: on("bess") && isNum(s.bess.capacity.mw)
-      ? (s.bess.capacity.mode === "fixed" && duration ? { locked: true, value: s.bess.capacity.mw * duration } : { locked: false, value: 0, min: 0, max: s.bess.capacity.mw * (duration || 8) })
+    bessMwh: on("bess") && isNum(limit("bess"))
+      ? (s.bess.capacity.mode === "fixed" && duration ? { locked: true, value: limit("bess") * duration } : { locked: false, value: 0, min: 0, max: limit("bess") * (duration || 8) })
       : { locked: true, value: 0 },
   };
   if (on("biomass")) vars.biomassMw = range("biomass");
@@ -486,12 +530,42 @@ export async function runSizing(payload, { onLog, onProgress, signal } = {}) {
 // ---------------------------------------------------------------- results
 
 /** Sizes the optimizer left at the top of their range: it would have built more. */
-export function sizesAtMax(lp, state) {
+export function sizesAtMax(lp, state, terms) {
   return SOURCE_IDS.filter((id) => {
     const c = state.src[id].capacity;
     const size = lp?.sizes?.[SIZE_KEY[id]];
-    return state.sources[id] && c.mode === "optimise" && isNum(c.mw) && size !== undefined && size >= c.mw - 0.5;
+    const mw = capacityLimit(state, terms, id);
+    return state.sources[id] && c.mode === "optimise" && isNum(mw) && size !== undefined && size >= mw - 0.5;
   });
+}
+
+/** Fill every empty input with the industry benchmark (values already entered are kept). */
+export function fillBenchmarks(state, terms) {
+  const filled = { ...(state.filled || {}) };
+  const take = (path, current, value) => {
+    if (current !== null && current !== undefined && current !== "") return current;
+    filled[path] = true;
+    return value;
+  };
+  const src = Object.fromEntries(SOURCE_IDS.map((id) => {
+    const s = state.src[id];
+    const next = { ...s, capacity: { ...s.capacity, mode: s.capacity.mode || "optimise" } };
+    for (const f of SOURCE_FIELDS[id]) next[f.key] = take(`${id}.${f.key}`, s[f.key], BENCHMARKS[id][f.key]);
+    return [id, next];
+  }));
+  const fin = { ...state.fin };
+  const costs = { ...state.costs };
+  for (const f of FINANCE_FIELDS) {
+    const target = f.section === "fin" ? fin : costs;
+    target[f.key] = take(`${f.section}.${f.key}`, target[f.key], BENCHMARKS[f.section][f.key]);
+  }
+  const market = { ...state.market };
+  if (terms?.sale && terms.sale !== "not_allowed" && market.sell === null) {
+    market.sell = true;
+    market.source = "GDAM";
+    filled["market.sell"] = true;
+  }
+  return { ...state, src, fin, costs, market, filled, lp: null };
 }
 
 /** Year-by-year operations for runFinancialModel, from the LP's lifetime energy. */

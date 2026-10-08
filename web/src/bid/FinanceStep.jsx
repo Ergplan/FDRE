@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { ArrowRight, TriangleAlert } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { ArrowRight, Download, Loader2, TriangleAlert } from "lucide-react";
 import * as E from "../rtc/engine";
 import FinanceView from "../rtc/FinanceView";
 import { LiveChart } from "../rtc/charts";
@@ -8,6 +8,7 @@ import { Section, Stat, nf, pf } from "../rtc/ui";
 import { SOURCES, capexBySource, modelInputs, opsFromLp, plantMw } from "./model";
 import { SourceChip } from "./RequirementsStep";
 import Checklist from "./Checklist";
+import { downloadModel, modelExport } from "./exportModel";
 
 /** Cost lines of the sources switched on, added after "Other fixed" in the cash-flow table. */
 function costLines(state) {
@@ -42,7 +43,9 @@ function RevenueStack({ finance, saleLabel }) {
 }
 
 /** Step 4: the 25-year financial model of the sized plant, priced as the bid. */
-export default function FinanceStep({ state, patch, set, lockProps, goto, terms }) {
+export default function FinanceStep({ state, patch, set, lockProps, goto, terms, prices }) {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const { lp } = state;
   const prov = terms.provenance;
   const sizes = lp?.sizes;
@@ -75,7 +78,17 @@ export default function FinanceStep({ state, patch, set, lockProps, goto, terms 
 
   return (
     <>
-      <Section index="5" title="Bid tariff" note={`Tariff that gives a ${pf(fin.targetEquityIrr, 1)} equity IRR on the least-tariff plant`}>
+      <Section index="5" title="Bid tariff" note={`Tariff that gives a ${pf(fin.targetEquityIrr, 1)} equity IRR on the least-tariff plant`}
+        actions={(
+          <button type="button" className="primary" disabled={saving} data-testid="bid-download"
+            onClick={async () => {
+              setSaving(true); setSaveError("");
+              try { await downloadModel(modelExport({ state, terms, finance, costs, fin, prices })); } catch (err) { setSaveError(err.message); } finally { setSaving(false); }
+            }}>
+            {saving ? <Loader2 className="spin" size={14} /> : <Download size={14} />} Download financial model (Excel)
+          </button>
+        )}>
+        {saveError && <div className="alert"><TriangleAlert size={14} /> {saveError}</div>}
         {termChanged && <div className="alert"><TriangleAlert size={14} /> The PPA term changed after sizing: size the plant again so every year is modelled.</div>}
         <div className="rtc-grid rtc-grid-4" data-testid="bid-finance">
           <Stat label={finance.tariffLocked ? "Tariff (fixed)" : "Bid tariff"} value={`₹${nf(finance.tariff, 3)}/kWh`} detail={`HiGHS screening ₹${nf(lp.tariff, 3)}`} />

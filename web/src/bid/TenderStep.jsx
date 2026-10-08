@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowRight, FileSearch, FolderOpen, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, FileSearch, FolderOpen, Loader2, Sparkles, Upload } from "lucide-react";
 import { Section, nf } from "../rtc/ui";
 import { AllFields, PROVIDER_LABEL, ReadingBanner, TenderRequirements } from "./RequirementsStep";
 
@@ -38,7 +38,7 @@ function toBase64(file) {
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 /** Step 1: the tender (WBSEDCL is loaded ready), every requirement on one page, and reading another tender. */
-export default function TenderStep({ state, setState, onRead, goto, preloading }) {
+export default function TenderStep({ state, setState, onRead, onModelRead, goto, preloading }) {
   const [status, setStatus] = useState(null);
   const [file, setFile] = useState(null);
   const [tenderType, setTenderType] = useState("auto");
@@ -47,6 +47,7 @@ export default function TenderStep({ state, setState, onRead, goto, preloading }
   const [error, setError] = useState("");
   const cancelled = useRef(false);
   const inputRef = useRef(null);
+  const modelRef = useRef(null);
   const [recent, setRecent] = useState(null);
   const [opening, setOpening] = useState("");
 
@@ -78,36 +79,63 @@ export default function TenderStep({ state, setState, onRead, goto, preloading }
     return () => { cancelled.current = true; };
   }, []);
 
+  /** Read a file with the tender engine (background job), save the reading, return it. */
+  async function runRead(f, readMode, type) {
+    if (f.size > 60 * 1024 * 1024) throw new Error("The file is larger than 60 MB.");
+    const content = await toBase64(f);
+    const started = await getJson("/api/bid/tender/read", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ file: { name: f.name, content_base64: content }, tender_type: type, mode: readMode }),
+    });
+    let current = { status: started.status || "queued", progress: { done: 0, total: 1, step: "Queued" } };
+    setJob(current);
+    const t0 = Date.now();
+    while (!cancelled.current && current.status !== "done" && current.status !== "failed") {
+      await sleep(1200);
+      current = await getJson(`/api/bid/tender/read/${started.job_id}`);
+      setJob(current);
+      if (Date.now() - t0 > 30 * 60 * 1000) throw new Error("Reading the tender took longer than 30 minutes.");
+    }
+    if (cancelled.current) return null;
+    if (current.status === "failed") throw new Error(current.error || "The tender could not be read.");
+    // keep the reading for the team (Recently extracted tenders); the tab works without it
+    let savedId = null;
+    try {
+      const saved = await getJson("/api/tenders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fileName: f.name, result: current.result }) });
+      savedId = saved.tender?.id || null;
+    } catch { /* saving is best effort */ }
+    return { result: current.result, savedId };
+  }
+
+  /** The model reading of the open tender's PDF fills every field the rule-based reading has not. */
+  async function fillWithModel(f) {
+    setError("");
+    setJob({ status: "uploading", progress: { done: 0, total: 1, step: "Uploading" } });
+    try {
+      const base = state.tender?.baseResult || state.tender?.result;
+      const out = await runRead(f, "llm", base?.tender_type || "auto");
+      if (!out) return;
+      const number = (r) => r?.values?.["core.identity.tender_number"];
+      const sameDoc = out.result.document?.sha256 === base?.document?.sha256 || (number(out.result) && number(out.result) === number(base));
+      if (!sameDoc) throw new Error(`This PDF is a different tender (${number(out.result) || out.result.document?.name}); choose the ${number(base) || "open tender's"} RFP.`);
+      onModelRead(out.result, out.savedId);
+      setJob(null);
+      loadRecent();
+    } catch (err) {
+      setJob(null);
+      setError(err.message);
+    }
+  }
+
   async function read() {
     if (!file) return;
     setError("");
     setJob({ status: "uploading", progress: { done: 0, total: 1, step: "Uploading" } });
     try {
-      if (file.size > 60 * 1024 * 1024) throw new Error("The file is larger than 60 MB.");
-      const content = await toBase64(file);
-      const started = await getJson("/api/bid/tender/read", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ file: { name: file.name, content_base64: content }, tender_type: tenderType, mode }),
-      });
-      let current = { status: started.status || "queued", progress: { done: 0, total: 1, step: "Queued" } };
-      setJob(current);
-      const t0 = Date.now();
-      while (!cancelled.current && current.status !== "done" && current.status !== "failed") {
-        await sleep(1200);
-        current = await getJson(`/api/bid/tender/read/${started.job_id}`);
-        setJob(current);
-        if (Date.now() - t0 > 30 * 60 * 1000) throw new Error("Reading the tender took longer than 30 minutes.");
-      }
-      if (cancelled.current) return;
-      if (current.status === "failed") throw new Error(current.error || "The tender could not be read.");
-      // keep the reading for the team (Recently extracted tenders); the tab works without it
-      let savedId = null;
-      try {
-        const saved = await getJson("/api/tenders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fileName: file.name, result: current.result }) });
-        savedId = saved.tender?.id || null;
-      } catch { /* saving is best effort */ }
-      onRead({ name: file.name, readAt: new Date().toISOString(), result: current.result, savedId });
+      const out = await runRead(file, mode, tenderType);
+      if (!out) return;
+      onRead({ name: file.name, readAt: new Date().toISOString(), result: out.result, savedId: out.savedId });
       setJob(null);
     } catch (err) {
       setJob(null);
@@ -124,7 +152,19 @@ export default function TenderStep({ state, setState, onRead, goto, preloading }
   return (
     <>
       <Section index="1" title="Tender" note={last ? `${nf(last.document?.pages)} pages · ${nf(last.counts?.found)} fields read` : ""}
-        actions={last ? <button type="button" className="primary" onClick={() => goto("capacity")} data-testid="bid-to-capacity">Bid capacity <ArrowRight size={14} /></button> : null}>
+        actions={last ? (
+          <>
+            {last.mode === "rules" && status?.llm_available && (
+              <button type="button" className="secondary" onClick={() => modelRef.current?.click()} disabled={busy} data-testid="bid-fill-model"
+                title="Choose the tender's PDF: the tender engine's model reads every section; fields the rule-based reading found are kept">
+                {busy ? <Loader2 className="spin" size={14} /> : <Sparkles size={14} />} Fill every section with the model{status?.provider ? ` (${PROVIDER_LABEL[status.provider] || status.provider})` : ""}
+              </button>
+            )}
+            <button type="button" className="primary" onClick={() => goto("capacity")} data-testid="bid-to-capacity">Bid capacity <ArrowRight size={14} /></button>
+          </>
+        ) : null}>
+        <input ref={modelRef} type="file" accept=".pdf" hidden data-testid="bid-model-file"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) fillWithModel(f); e.target.value = ""; }} />
         {preloading && !last && <p className="rtc-note"><Loader2 className="spin" size={13} /> Loading the WBSEDCL tender</p>}
         {!preloading && !last && <p className="rtc-note">No tender is loaded. Open one from the list below or read a new one.</p>}
         {last && (
@@ -135,6 +175,17 @@ export default function TenderStep({ state, setState, onRead, goto, preloading }
             </div>
             {values["core.identity.title"] && <p>{values["core.identity.title"]}</p>}
             <ReadingBanner result={last} />
+            {last.mode === "rules" && (
+              <p className="rtc-note">The rule-based reader reads the figures the sizing needs; summary, eligibility, penalties and other clauses are read by the model.
+                {status?.llm_available ? " Click “Fill every section with the model” and choose the RFP PDF (a few minutes)." : " Set a model key on the engine to read them."}</p>
+            )}
+            {busy && (
+              <div className="bid-progress" role="status">
+                <div className="bid-progress-bar"><i style={{ width: `${Math.round(share * 100)}%` }} /></div>
+                <span><Loader2 className="spin" size={13} /> {p?.step || job.status} {p?.total > 1 ? `· ${p.done} of ${p.total}` : ""}</span>
+              </div>
+            )}
+            {error && <div className="alert"><AlertTriangle size={14} /> {error}</div>}
           </div>
         )}
       </Section>

@@ -3,14 +3,14 @@ import { ArrowRight, ChevronLeft, CircleDollarSign, FileSearch, Gavel, Layers, R
 import { trackEvent } from "../activity";
 import { nf } from "../rtc/ui";
 import { defaultBidState, loadMarketPrices, lpPayload, mergeBidState, missingInputs, capacityIssues, plantMw, resourceProfiles, runSizing } from "./model";
-import { tenderTerms } from "./tenderMap";
+import { mergeReadings, tenderTerms } from "./tenderMap";
 import TenderStep, { getJson } from "./TenderStep";
 import CapacityStep from "./CapacityStep";
 import SourcesStep from "./SourcesStep";
 import SizeStep from "./SizeStep";
 import FinanceStep from "./FinanceStep";
 
-const STORAGE_KEY = "fdre.bid.v2";
+const STORAGE_KEY = "fdre.bid.v3";
 // the tender loaded when the tab opens: the WBSEDCL RE-RTC RfQ/RfP reading built into the app
 const DEFAULT_TENDER = "wbsedcl-re-rtc-2026-01";
 const STEPS = [
@@ -67,8 +67,13 @@ export default function BidTab({ user = null }) {
         const { tenders } = await getJson("/api/tenders");
         const item = (tenders || []).find((t) => t.seed_key === DEFAULT_TENDER);
         if (!item) return;
+        // the latest model reading of the same tender fills the fields the rule-based reading has not
+        const modelItem = (tenders || []).filter((t) => t.mode === "llm" && t.tender_number && t.tender_number === item.tender_number)
+          .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
         const { tender } = await getJson(`/api/tenders/${item.id}`);
-        if (!cancelled) setState((s) => (s.tender ? s : { ...s, tender: { name: tender.file_name, readAt: tender.created_at, result: tender.result, savedId: tender.id, seedKey: DEFAULT_TENDER } }));
+        const model = modelItem ? (await getJson(`/api/tenders/${modelItem.id}`)).tender : null;
+        const result = model ? mergeReadings(tender.result, model.result) : tender.result;
+        if (!cancelled) setState((s) => (s.tender ? s : { ...s, tender: { name: tender.file_name, readAt: tender.created_at, result, baseResult: tender.result, savedId: tender.id, modelId: model?.id || null, seedKey: DEFAULT_TENDER } }));
       } catch {
         /* the tender list is unavailable: the step offers reading one */
       } finally {
@@ -101,6 +106,14 @@ export default function BidTab({ user = null }) {
     set("step", step);
     window.scrollTo?.({ top: 0, behavior: "smooth" });
   };
+
+  // a model reading of the open tender: merged into it (rule-based fields kept, the rest filled)
+  function onModelRead(modelResult, modelId) {
+    setState((s) => {
+      const base = s.tender?.baseResult || s.tender?.result;
+      return { ...s, tender: { ...s.tender, baseResult: base, result: mergeReadings(base, modelResult), modelId }, lp: null };
+    });
+  }
 
   function onRead(tender) {
     trackEvent("run", { module: "bid", action: "tender-read", mode: tender.result?.mode, type: tender.result?.tender_type });
@@ -219,7 +232,7 @@ export default function BidTab({ user = null }) {
       </nav>
 
       <div className="bid-page" style={{ "--chapter": step.color }} key={step.id}>
-        {step.id === "tender" && <TenderStep {...props} onRead={onRead} preloading={preloading} />}
+        {step.id === "tender" && <TenderStep {...props} onRead={onRead} onModelRead={onModelRead} preloading={preloading} />}
         {step.id === "capacity" && <CapacityStep {...props} />}
         {step.id === "sources" && <SourcesStep {...props} startSizing={startSizing} />}
         {step.id === "size" && <SizeStep {...props} run={run} startSizing={startSizing} stopSizing={stopSizing} hourly={hourly} />}

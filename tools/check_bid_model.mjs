@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as E from "../web/src/rtc/engine.js";
 import {
-  SOURCE_FIELDS, capacityIssues, defaultBidState, energyMix, lpPayload, missingInputs, modelInputs, opsFromLp, plantMw,
-  resourceProfiles, scaleToCuf, solarMinMw,
+  BENCHMARKS, SOURCE_FIELDS, capacityIssues, capacityWarnings, defaultBidState, energyMix, fillBenchmarks, lpPayload, missingInputs,
+  modelInputs, opsFromLp, plantMw, resourceProfiles, scaleToCuf, solarMinMw,
 } from "../web/src/bid/model.js";
-import { buildProposals, isUsed, tenderTerms } from "../web/src/bid/tenderMap.js";
+import { buildProposals, isUsed, mergeReadings, tenderTerms } from "../web/src/bid/tenderMap.js";
 
 // ---- the tender's terms, from the built-in WBSEDCL reading (nothing else)
 const { result } = JSON.parse(readFileSync(new URL("../web/db/seed/tenders/wbsedcl-re-rtc-2026-01.json", import.meta.url), "utf8"));
@@ -43,16 +43,55 @@ assert.ok(!t2.rules.some((r) => r.id === "monthly"), "an unproved floor is not a
 assert.ok(tenderTerms(tampered, { "rule.monthly": true }).rules.some((r) => r.id === "monthly"), "applied once ticked");
 assert.equal(isUsed({ stated: true, source: { proved: true }, id: "x" }, { x: false }), false, "a proved term can be unticked");
 
-// ---- nothing is filled in for the bidder: sizing waits for every input
+// ---- a first round: 250 MW, solar + biomass + battery sized by the optimizer; parameters empty
 const blank = { ...defaultBidState(), tender: { result } };
+assert.deepEqual(blank.bid, { baseMw: 250, greenshoe: false });
+assert.deepEqual(Object.entries(blank.sources).filter(([, v]) => v).map(([k]) => k), ["solar", "biomass", "bess"]);
+assert.equal(blank.src.solar.capacity.mode, "optimise");
+assert.deepEqual(capacityIssues(blank, terms), [], "250 MW does not stop the sizing");
+assert.deepEqual(capacityWarnings(blank, terms), ["The tender allows no part capacity: a compliant bid is 1500 MW"]);
 const missing0 = missingInputs(blank, terms);
-assert.ok(missing0.includes("Enter the capacity you bid"));
-assert.ok(missing0.includes("Solar is required by the tender"));
+assert.ok(missing0.includes("Solar: cuf (ac)"), missing0.join("; "));
 assert.ok(missing0.some((m) => m.startsWith("Financing:")));
-assert.deepEqual(capacityIssues({ ...blank, bid: { baseMw: 1000, greenshoe: false } }, terms), ["The tender allows no part capacity: the bid must be 1500 MW"]);
+assert.ok(!missing0.some((m) => /largest capacity|enter the capacity/.test(m)), "optimised sizes need no limit");
 for (const id of Object.keys(blank.src)) {
   for (const f of SOURCE_FIELDS[id]) assert.equal(blank.src[id][f.key], null, `${id}.${f.key} starts empty`);
 }
+// "Fill up for me please": benchmarks in every empty field, marked; entered values kept
+const typed = { ...blank, src: { ...blank.src, solar: { ...blank.src.solar, cuf: 0.27 } } };
+const quick = fillBenchmarks(typed, terms);
+assert.deepEqual(missingInputs(quick, terms), [], "one click completes a round");
+assert.equal(quick.src.solar.cuf, 0.27, "a value the bidder typed is kept");
+assert.equal(quick.filled["solar.cuf"], undefined);
+assert.equal(quick.src.biomass.fuel, BENCHMARKS.biomass.fuel);
+assert.equal(quick.filled["biomass.fuel"], true, "benchmark values are marked");
+assert.equal(quick.fin.targetEquityIrr, BENCHMARKS.fin.targetEquityIrr);
+assert.equal(quick.market.sell, true);
+const qp = lpPayload(quick, terms, resourceProfiles(quick));
+assert.equal(qp.ctx.demand[0], 250);
+assert.equal(qp.vars.solarMw.min, 500, "tender solar minimum 2 × 250 MW");
+assert.equal(qp.vars.solarMw.max, 3000, "automatic limit 12 × contracted");
+assert.equal(qp.vars.biomassMw.max, 250);
+assert.equal(qp.vars.bessMw.max, 1000);
+assert.equal(qp.vars.bessMwh.max, 4000);
+assert.deepEqual(qp.vars.windMw, { locked: true, value: 0 });
+assert.equal(qp.plants, undefined, "no hydro or thermal by default");
+
+// ---- reading merge: the rule-based fields stay, the model fills the rest
+const modelReading = JSON.parse(JSON.stringify(result));
+modelReading.mode = "llm"; modelReading.model = "gpt-test"; modelReading.provider = "openai";
+const mf = Object.fromEntries(modelReading.sections.flatMap((s) => s.fields).map((f) => [f.path, f]));
+Object.assign(mf["core.summary.plain_english_summary"], { status: "validated", value: "A summary", evidence: [{ page: 10, quote: "q", located: true }] });
+modelReading.values["core.summary.plain_english_summary"] = "A summary";
+Object.assign(mf["sector.power.common.total_capacity_mw"], { value: 999 }); // a model value for a field the rules found
+modelReading.values["sector.power.common.total_capacity_mw"] = 999;
+const merged = mergeReadings(result, modelReading);
+assert.equal(merged.mode, "rules+llm");
+assert.equal(merged.values["core.summary.plain_english_summary"], "A summary");
+assert.equal(merged.values["sector.power.common.total_capacity_mw"], 1500, "the rule-based value wins where both read it");
+assert.equal(merged.counts.found, result.counts.found + 1);
+assert.equal(merged.merged.fromModel, 1);
+assert.equal(tenderTerms(merged).baseMw, 1500);
 
 // ---- a complete bid: every number below is the bidder's (test values)
 const filled = (() => {

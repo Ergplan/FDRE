@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
-import { ArrowRight, BatteryCharging, CheckCircle2, Droplets, Factory, Flame, Sun, TriangleAlert, Wind, Zap } from "lucide-react";
+import { ArrowRight, BatteryCharging, CheckCircle2, Droplets, Factory, Flame, Sparkles, Sun, TriangleAlert, Wind, Zap } from "lucide-react";
 import ProfileLibrary from "../rtc/ProfileLibrary";
 import { LiveChart } from "../rtc/charts";
 import { DATA_COLORS } from "../chartTheme";
 import { Field, Section, SelectBox, nf } from "../rtc/ui";
 import * as E from "../rtc/engine";
-import { BIOMASS_COLOR, FINANCE_FIELDS, HYDRO_COLOR, MARKETS, SOURCES, SOURCE_FIELDS, THERMAL_COLOR, missingInputs, plantMw, solarMinMw, sourceIssues } from "./model";
+import { AUTO_MAX, BENCHMARK_NOTE, BIOMASS_COLOR, FINANCE_FIELDS, HYDRO_COLOR, MARKETS, SOURCES, SOURCE_FIELDS, THERMAL_COLOR, capacityLimit, fillBenchmarks, missingInputs, plantMw, solarMinMw, sourceIssues } from "./model";
 import { SourceChip } from "./RequirementsStep";
 
 export const SOURCE_COLORS = { solar: DATA_COLORS.solar, wind: DATA_COLORS.wind, hydro: HYDRO_COLOR, biomass: BIOMASS_COLOR, thermal: THERMAL_COLOR, bess: DATA_COLORS.bess };
@@ -38,12 +38,16 @@ function MarketProfile({ prices, market }) {
   );
 }
 
-function InputField({ f, value, onChange }) {
-  if (f.options) {
-    return <SelectBox label={f.label} value={value ?? ""} onChange={(v) => onChange(v || null)} options={[["", "Choose…"], ...f.options]} />;
-  }
-  return <Field label={f.label} unit={f.unit === "%" ? undefined : f.unit} pct={Boolean(f.pct)} value={value} onChange={onChange} step={f.step} min={f.min} max={f.max} hint={f.hint} />;
+function InputField({ f, value, onChange, benchmark }) {
+  const hint = benchmark ? BENCHMARK_NOTE : f.hint;
+  const el = f.options
+    ? <SelectBox label={f.label} value={value ?? ""} onChange={(v) => onChange(v || null)} options={[["", "Choose…"], ...f.options]} hint={hint} />
+    : <Field label={f.label} unit={f.unit === "%" ? undefined : f.unit} pct={Boolean(f.pct)} value={value} onChange={onChange} step={f.step} min={f.min} max={f.max} hint={hint} />;
+  return <div className={benchmark ? "bid-benchmark" : undefined}>{el}</div>;
 }
+
+/** Drop the benchmark marks of the fields the bidder has just changed. */
+const unmark = (filled, keys) => Object.fromEntries(Object.entries(filled || {}).filter(([k]) => !keys.includes(k)));
 
 function permittedNote(id, terms) {
   const prov = terms.provenance;
@@ -61,10 +65,14 @@ function SourceCard({ id, state, setState, terms, set, lockProps, isLocked, user
   const s = state.src[id];
   const note = permittedNote(id, terms);
   const issues = on ? sourceIssues(state, id, terms) : [];
-  const setSrc = (values) => setState((st) => ({ ...st, src: { ...st.src, [id]: { ...st.src[id], ...values } }, lp: null }));
+  const setSrc = (values) => setState((st) => ({ ...st, src: { ...st.src, [id]: { ...st.src[id], ...values } }, filled: unmark(st.filled, Object.keys(values).map((k) => `${id}.${k}`)), lp: null }));
   const setCap = (values) => setSrc({ capacity: { ...s.capacity, ...values } });
   const toggle = () => setState((st) => ({ ...st, sources: { ...st.sources, [id]: !st.sources[id] }, lp: null }));
   const min = id === "solar" ? solarMinMw(state, terms) : null;
+  const limit = capacityLimit(state, terms, id);
+  const fixed = s.capacity.mode === "fixed";
+  const auto = !fixed && !(s.capacity.mw > 0);
+  const capLabel = id === "bess" ? "Battery power" : "Capacity";
   const groups = [...new Set(SOURCE_FIELDS[id].map((f) => f.group))];
   const shim = { ...state, inputs: { solarCuf: state.src.solar.cuf || 0, windCuf: state.src.wind.cuf || 0 } };
   return (
@@ -80,12 +88,16 @@ function SourceCard({ id, state, setState, terms, set, lockProps, isLocked, user
       {on && (
         <div className="bid-source-body">
           <div className="bid-cap">
-            <div className="bid-choice">
-              <button type="button" className={s.capacity.mode === "fixed" ? "active" : ""} onClick={() => setCap({ mode: "fixed" })}>Fixed capacity</button>
-              <button type="button" className={s.capacity.mode === "optimise" ? "active" : ""} onClick={() => setCap({ mode: "optimise" })}>Optimizer sizes it, up to</button>
+            <div className="bid-fix" data-testid={`fix-${id}`}>
+              <button type="button" className={`rtc-switch ${fixed ? "on" : ""}`} aria-pressed={fixed}
+                onClick={() => setCap(fixed ? { mode: "optimise", mw: null } : { mode: "fixed" })}>
+                <i />{fixed ? "Size fixed" : "Optimizer sizes it"}
+              </button>
+              <span className="rtc-note">{fixed ? "The optimizer uses exactly this capacity and sizes the other sources around it" : "Switch on to fix this size; the optimizer still sizes the other sources"}</span>
             </div>
-            <Field label={id === "bess" ? "Battery power" : "Capacity"} unit={id === "solar" ? "MWac" : "MW"} value={s.capacity.mw} onChange={(v) => setCap({ mw: v })} step={10} min={0}
-              hint={min ? `Tender minimum ${nf(min, 0)} MW` : s.capacity.mode === "optimise" ? "The most the optimizer may build" : s.capacity.mode === "fixed" ? "Exactly this capacity" : "Choose fixed or optimised first"} />
+            <Field label={fixed ? `${capLabel} (fixed)` : `${capLabel}: optimizer may build up to`} unit={id === "solar" ? "MWac" : "MW"} value={s.capacity.mw} onChange={(v) => setCap({ mw: v })} step={10} min={0}
+              hint={[fixed ? (s.capacity.mw > 0 ? "Exactly this capacity" : "Enter the capacity") : auto && limit ? `Empty: up to ${nf(limit, 0)} MW (${AUTO_MAX[id]} × contracted)` : "The most the optimizer may build",
+                min ? `tender minimum ${nf(min, 0)} MW` : null].filter(Boolean).join(" · ")} />
           </div>
           {groups.map((g) => (
             <div key={g} className="bid-src-group">
@@ -93,7 +105,7 @@ function SourceCard({ id, state, setState, terms, set, lockProps, isLocked, user
               <div className="rtc-grid rtc-grid-2">
                 {SOURCE_FIELDS[id].filter((f) => f.group === g).map((f) => (
                   (f.profileOnly && (id === "solar" ? state.solarUpload : state.windUpload)) ? null
-                    : <InputField key={f.key} f={f} value={s[f.key]} onChange={(v) => setSrc({ [f.key]: v })} />
+                    : <InputField key={f.key} f={f} value={s[f.key]} onChange={(v) => setSrc({ [f.key]: v })} benchmark={Boolean(state.filled?.[`${id}.${f.key}`])} />
                 ))}
               </div>
             </div>
@@ -127,12 +139,19 @@ function SourceCard({ id, state, setState, terms, set, lockProps, isLocked, user
 /** Step 3: the sources the bidder has, each with its capacity, parameters and costs, and the financing. */
 export default function SourcesStep({ state, setState, terms, set, lockProps, isLocked, user, prices, goto, startSizing }) {
   const missing = missingInputs(state, terms);
+  const fill = () => setState((s) => fillBenchmarks(s, terms));
+  const fillButton = (
+    <button type="button" className="primary" onClick={fill} data-testid="bid-fill">
+      <Sparkles size={14} /> Fill up for me please
+    </button>
+  );
   const total = plantMw(state, terms);
   const saleAllowed = terms.sale && terms.sale !== "not_allowed";
   const setMarket = (values) => setState((s) => ({ ...s, market: { ...s.market, ...values }, lp: null }));
   return (
     <>
-      <Section index="3" title="Supply sources" note={`Switch on the sources you have; every value is yours${total ? ` · sizing for ${nf(total, 0)} MW` : ""}`}>
+      <Section index="3" title="Supply sources" note={`Switch on the sources you have; every value is yours${total ? ` · sizing for ${nf(total, 0)} MW` : ""}`} actions={fillButton}>
+        <p className="rtc-note">“Fill up for me please” puts industry benchmarks (CERC norms, 2025–26 prices) in every empty field, marked as benchmarks; anything you type replaces them. The tender sets none of these.</p>
         <div className="bid-sources">
           {SOURCES.map((src) => <SourceCard key={src.id} id={src.id} state={state} setState={setState} terms={terms} set={set} lockProps={lockProps} isLocked={isLocked} user={user} />)}
         </div>
@@ -166,7 +185,8 @@ export default function SourcesStep({ state, setState, terms, set, lockProps, is
         <div className="rtc-grid rtc-grid-4" data-testid="bid-financing">
           {FINANCE_FIELDS.map((f) => (
             <Field key={`${f.section}.${f.key}`} label={f.label} unit={f.unit === "%" ? undefined : f.unit} pct={Boolean(f.pct)} value={state[f.section][f.key]}
-              onChange={(v) => setState((s) => ({ ...s, [f.section]: { ...s[f.section], [f.key]: v }, lp: null }))} step={f.step} min={f.min} max={f.max} hint={f.hint} />
+              onChange={(v) => setState((s) => ({ ...s, [f.section]: { ...s[f.section], [f.key]: v }, filled: unmark(s.filled, [`${f.section}.${f.key}`]), lp: null }))} step={f.step} min={f.min} max={f.max}
+              hint={state.filled?.[`${f.section}.${f.key}`] ? BENCHMARK_NOTE : f.hint} />
           ))}
         </div>
         <p className="rtc-note">PPA term {terms.years ? `${terms.years} years (from the tender)` : "not stated"}. Repayment, depreciation, salvage and receivable days are on the Financials step.</p>
@@ -181,6 +201,7 @@ export default function SourcesStep({ state, setState, terms, set, lockProps, is
             : <p><CheckCircle2 size={13} /> Every source you switched on has its capacity, parameters and costs. The optimizer sizes them against the tender's requirements only.</p>}
         </div>
         <div className="optimize-bar-actions">
+          {missing.length > 0 && fillButton}
           <button type="button" className="primary optimize-go" disabled={missing.length > 0} onClick={() => { goto("size"); startSizing(); }} data-testid="bid-size"><Zap size={16} /> Size the plant <ArrowRight size={14} /></button>
         </div>
       </section>

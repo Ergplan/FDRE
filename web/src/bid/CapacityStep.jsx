@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowRight, CheckCircle2, TriangleAlert } from "lucide-react";
 import { Field, Section, Stat, nf } from "../rtc/ui";
-import { capacityIssues, plantMw, solarMinMw } from "./model";
+import { capacityIssues, capacityWarnings, plantMw, solarMinMw } from "./model";
 import { SourceChip } from "./RequirementsStep";
 
 const fmtDate = (v) => {
@@ -13,6 +13,7 @@ const fmtDate = (v) => {
 export default function CapacityStep({ state, setState, terms, goto }) {
   const prov = terms.provenance;
   const issues = capacityIssues(state, terms);
+  const warnings = capacityWarnings(state, terms);
   const total = plantMw(state, terms);
   const solarMin = solarMinMw(state, terms);
   const setBid = (values) => setState((s) => ({ ...s, bid: { ...s.bid, ...values }, lp: null }));
@@ -45,6 +46,11 @@ export default function CapacityStep({ state, setState, terms, goto }) {
         ) : null}
       </div>
 
+      {warnings.length > 0 && (
+        <div className="alert" data-testid="bid-capacity-warning">
+          <TriangleAlert size={14} /> {warnings.join(". ")} <SourceChip source={prov.part} compact />. The sizing runs for {nf(state.bid.baseMw || 0, 0)} MW; the conditions table marks the capacity as not met.
+        </div>
+      )}
       {issues.length > 0
         ? <ul className="bid-warnings" data-testid="bid-capacity-issues">{issues.map((m) => <li key={m}><TriangleAlert size={12} /> {m}</li>)}</ul>
         : (

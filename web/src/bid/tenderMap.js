@@ -202,3 +202,59 @@ export function tenderTerms(result, accepted = {}) {
     .map((r) => (r.id === "peak" && terms.peakAny ? { ...r, hours: "any" } : r));
   return terms;
 }
+
+const FOUND = new Set(["validated", "needs_review"]);
+
+/**
+ * One reading from two readings of the same tender: every field the rule-based reader found is
+ * kept as it is; a field it did not find is taken from the model reading when the model found it
+ * (with its own located quote and checks). Each field says which reader it came from.
+ */
+export function mergeReadings(base, extra) {
+  if (!base || !extra) return base || extra;
+  const extraFields = {};
+  for (const section of extra.sections || []) for (const f of section.fields || []) extraFields[f.path] = f;
+  let fromModel = 0;
+  let fromRules = 0;
+  const sections = (base.sections || []).map((section) => ({
+    ...section,
+    fields: (section.fields || []).map((f) => {
+      if (FOUND.has(f.status)) {
+        fromRules += 1;
+        return { ...f, reader: "rules" };
+      }
+      const x = extraFields[f.path];
+      if (x && FOUND.has(x.status)) {
+        fromModel += 1;
+        return { ...x, reader: "model" };
+      }
+      return f;
+    }),
+  }));
+  const values = { ...(base.values || {}) };
+  for (const section of sections) {
+    for (const f of section.fields) if (f.reader === "model" && extra.values?.[f.path] !== undefined) values[f.path] = extra.values[f.path];
+  }
+  const all = sections.flatMap((s) => s.fields);
+  const count = (status) => all.filter((f) => f.status === status).length;
+  return {
+    ...base,
+    mode: "rules+llm",
+    model: extra.model,
+    provider: extra.provider,
+    usage: extra.usage,
+    sections,
+    values,
+    merged: { fromRules, fromModel },
+    counts: {
+      ...base.counts,
+      found: count("validated") + count("needs_review"),
+      validated: count("validated"),
+      needs_review: count("needs_review"),
+      not_found: count("not_found"),
+      rejected: count("rejected"),
+      located: all.filter((f) => (f.evidence || []).some((e) => e.located)).length,
+    },
+    warnings: [...(base.warnings || []), ...(extra.warnings || [])],
+  };
+}

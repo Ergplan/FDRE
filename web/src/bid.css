@@ -203,3 +203,8 @@
 .bid-source .rtc-field-input { flex-wrap: wrap; row-gap: 2px; }
 .bid-source .rtc-field-input input { flex: 1 1 84px; min-width: 84px; }
 .bid-source .rtc-field-input em { white-space: normal; }
+.bid-benchmark .rtc-field input, .bid-benchmark .rtc-field select { border-style: dashed; }
+.bid-benchmark .rtc-field small { color: #f2b84b; }
+.bid-reader { margin-left: 6px; color: #7ddc9a; font-family: var(--font-mono); font-size: 10px; font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; }
+.bid-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bid-fix .rtc-switch { flex: none; }

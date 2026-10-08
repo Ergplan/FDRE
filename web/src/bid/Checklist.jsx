@@ -133,7 +133,11 @@ export default function Checklist({ state, terms, lp, bidTariff = null, index = 
   );
 }
 
-const show = (f, v) => {
+const show = (f, v, bench) => {
+  const text = showValue(f, v);
+  return bench ? `${text} (benchmark)` : text;
+};
+const showValue = (f, v) => {
   if (v === null || v === undefined) return "–";
   if (f.options) return f.options.find(([k]) => k === v)?.[1] || v;
   return f.pct ? pf(v, 2) : `${nf(v, 2)}${f.unit ? ` ${f.unit}` : ""}`;
@@ -147,9 +151,10 @@ export function BidderInputs({ state, prices, index = "4.3" }) {
     const s = state.src[src.id];
     const cap = s.capacity.mode === "fixed" ? `${nf(s.capacity.mw, 0)} MW fixed` : `optimised, up to ${nf(s.capacity.mw, 0)} MW`;
     const profile = src.id === "solar" || src.id === "wind" ? ` · profile ${(state[`${src.id}Upload`]?.name) || "typical shape"} scaled to the CUF` : "";
-    rows.push({ input: src.title, value: `${cap} · ${SOURCE_FIELDS[src.id].map((f) => `${f.label.toLowerCase()} ${show(f, s[f.key])}`).join(" · ")}${profile}` });
+    const capText = s.capacity.mw > 0 ? cap : "optimised, automatic limit";
+    rows.push({ input: src.title, value: `${capText} · ${SOURCE_FIELDS[src.id].map((f) => `${f.label.toLowerCase()} ${show(f, s[f.key], state.filled?.[`${src.id}.${f.key}`])}`).join(" · ")}${profile}` });
   }
-  rows.push({ input: "Financing", value: FINANCE_FIELDS.map((f) => `${f.label.toLowerCase()} ${show(f, state[f.section][f.key])}`).join(" · ") });
+  rows.push({ input: "Financing", value: FINANCE_FIELDS.map((f) => `${f.label.toLowerCase()} ${show(f, state[f.section][f.key], state.filled?.[`${f.section}.${f.key}`])}`).join(" · ") });
   if (state.market.sell) {
     const m = prices?.markets?.[state.market.source];
     rows.push({ input: "Market prices", value: state.market.source === "flat" ? `flat ₹${nf(state.market.flatPrice, 2)}/kWh` : `IEX ${state.market.source}${m ? `, ${m.from} to ${m.to}` : ""}, escalation ${pf(state.market.escalation || 0, 1)}/yr` });
