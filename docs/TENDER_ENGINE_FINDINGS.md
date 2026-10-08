@@ -1,92 +1,75 @@
-# Tender engine findings from two power tenders
+# Tender engine findings from the WBSEDCL RE-RTC RFP
 
 Feedback for the tender_engine team (Ergplan/tender_engine at commit bd4959c), from porting the
-extraction into FDRE (`tender_intel/`, Tender to Bid tab) and running it on two real tenders.
-Each finding names the field or rule, the page that shows it, and a proposal.
+extraction into FDRE (`tender_intel/`, Tender to Bid tab) and running it on one tender. Each
+finding names the field or rule, the page that shows it, and a proposal.
 
 | | |
 | --- | --- |
-| Tenders | NHPC FDRE-II RfS, Tender ID 2024_NHPC_800202_1 (264 pages); WBSEDCL RE-RTC RfQ/RfP, WBSEDCL/PT&P/RE-RTC/2026/01 (79 pages) |
+| Tender | WBSEDCL RfQ/RfP for 1500 MW with 500 MW greenshoe RE-RTC power, WBSEDCL/PT&P/RE-RTC/2026/01, dated 23.09.2026 (79 pages) |
 | Date | 8 October 2026 |
 | Port | FDRE `tender_intel/`; packs and prompts copied unchanged; tender_engine not modified |
 
-## How these were tested
+## How this was tested
 
-No Anthropic API key was available in this environment, so both tenders were read with FDRE's
+No Anthropic API key was available in this environment, so the tender was read with FDRE's
 rule-based reader. It fills tender_engine's schema with verbatim page quotes and runs
-tender_engine's quote resolver, value types and validation rules. The model (LLM) reading path
-was exercised only with a fake SDK.
+tender_engine's quote resolver, value types and validation rules. The model (LLM) reading path was
+exercised only with a fake SDK.
 
-Findings about the **schema, routing and rules** hold in any mode. How the LLM reads these two
-tenders has **not** been verified (see "Not yet verified").
+Findings about the **schema and rules** hold in any mode. How the LLM reads this tender has
+**not** been verified (see "Not yet verified").
 
-| Tender | Fields found | Located quotes | To review |
+| Fields in the fdre schema (with FDRE overlay) | Found | Located quotes | To review |
 | --- | --- | --- | --- |
-| NHPC FDRE-II | 30 of 111 | 30 | 0 |
-| WBSEDCL RE-RTC | 32 of 111 | 32 | 2 (EMD and PBG, F5) |
+| 111 | 32 | 32 | 2 (EMD and PBG, F5) |
 
 ## Findings register
 
-| # | Finding | Severity | Seen in |
-| --- | --- | --- | --- |
-| F1 | No fields for selling outside the PPA, or for the PPA coming first | High | NHPC, WBSEDCL |
-| F2 | Supply floors are not separate, measurable obligations (no monthly floor; no basis for the peak floor) | High | WBSEDCL, NHPC |
-| F3 | Who sets the peak hours is free text, so a model cannot act on it | High | WBSEDCL |
-| F4 | No RE-RTC terms: green share, non-RE supply with RECs, mandated solar, greenshoe, early supply | Medium | WBSEDCL |
-| F5 | `emd_pbg_within_10x` fails a guarantee pair the tender states plainly (20×) | Medium | WBSEDCL |
-| F6 | Two statements of the same date in one document are not compared | Medium | WBSEDCL |
-| F7 | Schedule dates with no field: LoA date, PPA execution date, response to queries | Medium | WBSEDCL |
-| F8 | Section routing does not reach market-sale and priority clauses in the draft PPA | Medium | NHPC |
-| F9 | Date type rejects two-digit years printed in the tender | Low | WBSEDCL |
-| F10 | One tender-number field for two printed identifiers | Low | NHPC |
-| F11 | Porting notes: PyMuPDF thread safety, tool-use fallback | Low | Port |
-| OK | Working as designed: quote resolver, peak windows, exchange share in generation compensation | — | NHPC |
+| # | Finding | Severity |
+| --- | --- | --- |
+| F1 | No field for what may be sold outside the PPA | High |
+| F2 | Supply floors are not separate, measurable obligations (no monthly floor; no basis for the peak floor) | High |
+| F3 | Who sets the peak hours is free text, so a model cannot act on it | High |
+| F4 | A single value is not checked against its own quote | High |
+| F5 | No RE-RTC terms: green share, non-RE supply with RECs, mandated solar, greenshoe, early supply | Medium |
+| F6 | `emd_pbg_within_10x` fails a guarantee pair the tender states plainly (20×) | Medium |
+| F7 | Two statements of the same date in one document are not compared | Medium |
+| F8 | Schedule dates with no field: LoA date, PPA execution date, response to queries | Medium |
+| F9 | Date type rejects two-digit years printed in the tender | Low |
+| F10 | Porting notes: PyMuPDF thread safety, tool-use fallback | Low |
+| OK | Working as designed: quote resolver, date-order warning | — |
 
-## F1 · No fields for selling outside the PPA, or for the PPA coming first (High)
+## F1 · No field for what may be sold outside the PPA (High)
 
-Both tenders say what the supplier may sell outside the PPA and, in NHPC's case, that the PPA
-comes first, with a penalty. The schema has nowhere to put either, so a bid model built on the
-extraction either ignores market sales or makes up its own rule. When FDRE's sizing model was
-allowed to sell surplus at exchange prices without these terms, it diverted PPA energy to the
-exchange in evening hours.
-
-> **NHPC RfS p. 35** (also p. 64, 181, 194): "The RPD/RE-PG may also sell the power which was
-> offered on day ahead basis to the Procurer / buying entity (within Contracted Capacity) but not
-> scheduled by the Procurer / buying entity, to any third party or in power exchange without
-> requiring NOC from NHPC / buying entity."
-
-> **NHPC RfS p. 65** (also p. 181, 194): "However, it may be noted that at any instance of energy
-> supply from the Project, priority shall be for meeting the capacity requirements as per PPA,
-> before selling any quantum of energy in the open market."
-
-> **NHPC RfS p. 65** (also p. 181): "Any instance of third-party sale of power from the Project by
-> the RPD / RE-PG, while the demand specified in the PPA remains unfulfilled, shall constitute a
-> breach … liable for penalty @1.5 times of extant market rate/kWh (reference rate being the
-> applicable rate on the Indian Energy Exchange (IEX)) for the quantum of such sale."
+The tender lets the supplier schedule its mandated solar capacity in the market. The schema has
+nowhere to put this, so a bid model built on the extraction either ignores market sales or makes
+up its own rule. When FDRE's sizing model was allowed to sell surplus at exchange prices without
+such a term, it diverted PPA energy to the exchange in evening hours.
 
 > **WBSEDCL RfQ p. 11, cl. 1.1.2**: "The Selected Bidder shall be entitled to schedule the entire
 > Solar Power capacity so developed at its discretion, towards the RE RTC PPA or in the market, in
 > accordance with the applicable Grid Code, scheduling regulations and provisions of the PPA."
 
-**Proposal.** Add to the power pack: `market_sale_scope` (enum: mandated solar only, any capacity,
-unscheduled energy only, not allowed), `ppa_priority_before_sale` (bool) and `diversion_penalty`
-(record: multiple, reference price such as IEX). Add `power exchange`, `third party`,
-`open market`, `priority` and `IEX` to the routing keywords (see F8). FDRE added the first two as
-overlay fields; we would rather take them from upstream.
+The tender does not say whether the PPA must be supplied before any market sale; the schema
+should be able to record that as not stated rather than leave it to the model.
+
+**Proposal.** Add `market_sale_scope` (enum: mandated solar only, any capacity, unscheduled
+energy only, not allowed) and `ppa_priority_before_sale` (bool) to the power pack, with
+`in the market`, `power exchange`, `third party` and `priority` among the routing keywords. FDRE
+added both as overlay fields; this tender reads as mandated solar only (p. 11), priority not
+stated.
 
 ## F2 · Supply floors are not separate, measurable obligations (High)
 
-RE-RTC and FDRE tenders set several floors at once, each measured differently. The fdre type has
-one `assured_availability_percent`, plus `cuf_declared_min_pct` and `peak_availability_pct` inside
+The tender sets three floors at once, each measured differently. The fdre type has one
+`assured_availability_percent`, plus `cuf_declared_min_pct` and `peak_availability_pct` inside
 `demand_profile_structured`. There is no monthly floor, and nothing says whether the peak floor is
 measured per month or per year. A sizing model needs each floor with its measure.
 
 > **WBSEDCL RfQ p. 10, cl. 1.1.1**: "… maintaining a Supply of minimum 80% CUF for each Accounting
 > Year along with maintaining a Supply of minimum 70% CUF on monthly basis and Supply of minimum
 > 90% CUF during Peak hours (Discharging 4 Hours Daily …"
-
-> **NHPC RfS p. 29**: "The declared minimum availability shall in no case be less than 90% of
-> contracted capacity during peak hours and annual CUF shall not be below 40%."
 
 **Proposal.** A `supply_floors` record list: `hours` (all, peak), `measured` (daily, monthly,
 annual), `min_pct`, `of` (contracted capacity, declared CUF). FDRE added scalar overlay fields for
@@ -102,16 +85,26 @@ the procurer may choose. A model cannot branch on free text.
 > **WBSEDCL RfQ p. 10**: "Supply of minimum 90% CUF during Peak hours (Discharging 4 Hours Daily -
 > single stretch of 4 hours or 4 hours in total in multiple stretches, as decided by WBSEDCL)"
 
-> **NHPC RfS p. 29**: "The Peak Hours will be of 2 Hours in the Morning during the period 05:00 Hrs
-> to 10:00 Hrs and will be of 2 Hours in the Evening during the period 18:00 …"
-
 **Proposal.** Make it an enum (tender, procurer, supplier). FDRE added `peak_hours_set_by` as an
-overlay field; WBSEDCL reads as procurer (p. 10), NHPC as tender (p. 29).
+overlay field; this tender reads as procurer (p. 10), and FDRE then checks the 90% floor in every
+hour of the day, every month.
 
-## F4 · No RE-RTC terms (Medium)
+## F4 · A single value is not checked against its own quote (High)
 
-The WBSEDCL tender is detected as fdre (score 10.3 against 2.8 for the next type), the nearest
-type, but several RE-RTC terms that drive the bid have no field:
+tender_engine checks that each quote is found on its page, and that every number in a structured
+value appears in that field's quotes (`structured_numbers_quoted`). A single value (a percentage,
+an amount, a date) is not checked against its quote. A model can therefore copy a real sentence
+and still return a number the sentence does not print, and the field would pass as validated.
+
+**Proposal.** A rule that a number (digits, lakh/crore, or words) or a date (day-first forms,
+month names, two-digit years) must be printed in the field's own quotes, failing to review
+otherwise. FDRE added it as `value_in_quotes`; on this tender all 18 numbers and dates read pass
+it.
+
+## F5 · No RE-RTC terms (Medium)
+
+The tender is detected as fdre (score 10.3 against 2.8 for the next type), the nearest type, but
+several RE-RTC terms that drive the bid have no field:
 
 - Minimum traceable green share, 51% each accounting year (p. 10, p. 11).
 - Non-RE supply allowed with RECs, and its price: 70% of the applicable tariff is the fixed charge
@@ -124,7 +117,7 @@ type, but several RE-RTC terms that drive the bid have no field:
 **Proposal.** An `re_rtc` type, or these fields on fdre. FDRE added green share, non-RE allowed,
 solar multiple, greenshoe and supply start date as overlay fields.
 
-## F5 · `emd_pbg_within_10x` fails a guarantee pair the tender states plainly (Medium)
+## F6 · `emd_pbg_within_10x` fails a guarantee pair the tender states plainly (Medium)
 
 Both EMD and PBG were read correctly from the Bid Information Sheet, and both were sent to review
 because the PBG is 20 times the EMD. The values are what the tender prints, so the rule creates
@@ -136,7 +129,7 @@ review work for a correct reading.
 **Proposal.** Report the ratio as a warning rather than a failure, or widen the band from the gold
 set.
 
-## F6 · Two statements of the same date are not compared (Medium)
+## F7 · Two statements of the same date are not compared (Medium)
 
 The Bid Information Sheet defers the pre-bid meeting to the portal, while the schedule and clause
 1.4 print a date. The extract prompt says a deferral is not a value, so the model may return null
@@ -150,7 +143,7 @@ from page 5 while page 16 prints 07.10.2026. Nothing in validation compares the 
 **Proposal.** Keep every statement of a field as evidence and add a run rule that flags a field
 whose statements disagree (a printed date against a deferral, or two different dates).
 
-## F7 · Schedule dates with no field (Medium)
+## F8 · Schedule dates with no field (Medium)
 
 The schedule of bidding process prints ten dated steps. The key-dates group holds issue, queries,
 pre-bid, bid submission, opening and e-RA, but has no date field for the Letter of Award, PPA
@@ -164,16 +157,6 @@ execution, response to queries or the last date to obtain the document. `loa_tim
 **Proposal.** Add `loa_date`, `ppa_execution_date` and `query_response_date`, and extend
 `date_order` to them.
 
-## F8 · Routing does not reach market-sale and priority clauses in the draft PPA (Medium)
-
-In the NHPC document the relevant clauses sit in the RfS and again in the draft PPA bound into the
-same PDF (pages 181 to 195). The fdre_profile section's keywords (peak hours, demand profile,
-excess energy, shortfall …) include no exchange or priority terms, and a section reads at most 40
-pages, so these pages may never be sent to the model.
-
-**Proposal.** A section for sale outside the PPA with its own keywords and the `draft_agreement`
-section kind, or add the keywords to fdre_profile.
-
 ## F9 · Date type rejects two-digit years (Low)
 
 The core `date` value type accepts four-digit years only. The tender prints the supply start dates
@@ -186,17 +169,7 @@ YYYY-MM-DD instruction relies on the model expanding it.
 **Proposal.** Accept a two-digit year as 20YY in the deterministic coercion and record that it was
 expanded (FDRE's rule reader does this and says so in the rationale).
 
-## F10 · One tender-number field for two printed identifiers (Low)
-
-NHPC prints the e-procurement Tender ID on the cover and an NIT reference number elsewhere. With one
-`tender_number` field the reading has to pick one and reports the other as a conflict
-(confidence 0.4).
-
-> **NHPC RfS p. 1**: "(Tender ID: 2024_NHPC_800202_1)"
-
-**Proposal.** Separate `portal_tender_id` and `document_reference`.
-
-## F11 · Porting notes (Low)
+## F10 · Porting notes (Low)
 
 - PyMuPDF is not thread-safe. Reading sections in parallel (one window per section) needs a lock
   around building the sub-PDFs; FDRE added a process-wide lock.
@@ -204,26 +177,21 @@ NHPC prints the e-procurement Tender ID on the cover and an NIT reference number
   `tool_choice: auto` if a forced tool choice is refused (HTTP 400). This was tested only against a
   mock; tender_engine's own path uses `messages.parse` and does not depend on it.
 - Quotes that run across a line break resolve only after whitespace normalisation, which the
-  resolver already does; every quote in both tenders resolved as `exact`.
+  resolver already does; every quote on this tender resolved as `exact`.
 
 ## Working as designed
 
-- Quote resolver: every one of the 62 values found across the two tenders has a located quote on
-  the stated page.
-- Peak windows by clock time (NHPC p. 29: 05:00–10:00 and 18:00–23:00, two hours each) fit
-  `peak_blocks`.
-- The exchange-sale share in generation compensation (NHPC p. 187, 235–236: 95% of the amount
-  realised is adjusted) fits `deemed_generation_structured.exchange_sale_share_adjusted_pct`.
-- `date_order` correctly raises only a warning when queries close before the pre-bid meeting
-  (both tenders).
+- Quote resolver: all 32 values found have a located quote on the stated page.
+- `date_order` correctly raises only a warning when queries close (05.10.2026) before the pre-bid
+  meeting (07.10.2026).
 
 ## Not yet verified
 
-- The LLM reading of these two tenders. Please run tender_engine on the WBSEDCL RfQ/RfP (79 pages)
-  and compare with the values and pages above; it is a useful second gold record for RE-RTC.
+- The LLM reading of this tender. Please run tender_engine on the WBSEDCL RfQ/RfP (79 pages) and
+  compare with the values and pages above; it is a useful gold record for RE-RTC.
 - Whether the fdre_profile prompt (v2) fills the FDRE overlay fields from their help text alone.
 - Summary and long-text fields (`plain_english_summary`, `availability_shortfall_penalty`), which
-  the rule reader does not attempt; both are required and missing in both tenders in rules mode.
+  the rule reader does not attempt; both are required and missing in rules mode.
 
 ## How FDRE uses the extraction
 
