@@ -1,0 +1,75 @@
+# FDRE-side additions to the packs copied from Ergplan/tender_engine. NOT from tender_engine:
+# these fields were added in the FDRE repo for the bid tools (which renewable sources a
+# tender allows). An overlay field joins its section in every tender type that includes the
+# section; tender types without the section do not get the field.
+pack: overlay
+
+fields:
+  sector.power.fdre.permitted_re_sources:
+    section: fdre_profile
+    label: Permitted renewable sources
+    type: list_text
+    help: Renewable sources the tender allows for the supply, as listed (for example solar, wind, hydro, biomass, storage).
+  sector.power.fdre.biomass_permitted:
+    section: fdre_profile
+    label: Biomass permitted
+    type: bool
+    help: Whether biomass (or bio-energy) generation may be part of the supply.
+  sector.power.fdre.annual_supply_min_pct:
+    section: fdre_profile
+    label: Minimum annual supply
+    type: percent
+    unit: percent
+    help: Minimum supply over each year, as a percentage of contracted capacity (annual CUF or availability).
+  sector.power.fdre.monthly_supply_min_pct:
+    section: fdre_profile
+    label: Minimum monthly supply
+    type: percent
+    unit: percent
+    help: Minimum supply in each month, as a percentage of contracted capacity.
+  sector.power.fdre.peak_supply_min_pct:
+    section: fdre_profile
+    label: Minimum peak-hour supply
+    type: percent
+    unit: percent
+    help: Minimum supply during peak hours, as a percentage of contracted capacity.
+  sector.power.fdre.peak_hours_per_day:
+    section: fdre_profile
+    label: Peak hours per day
+    type: decimal
+    unit: hours
+    min: 0
+    max: 24
+    help: Number of peak hours in a day during which the peak supply obligation applies.
+  sector.power.fdre.green_share_min_pct:
+    section: fdre_profile
+    label: Minimum green share
+    type: percent
+    unit: percent
+    help: Least share of supply that must come from renewable (traceable green) sources.
+  sector.power.fdre.non_re_allowed:
+    section: fdre_profile
+    label: Non-RE supply allowed
+    type: bool
+    help: Whether part of the supply may come from non-renewable sources.
+  sector.power.fdre.min_solar_capacity_multiple:
+    section: fdre_profile
+    label: Minimum solar capacity
+    type: decimal
+    unit: times the contracted capacity
+    min: 0
+    max: 10
+    help: Solar capacity the supplier must install, as a multiple of the contracted capacity.
+  sector.power.fdre.supply_start_date:
+    section: fdre_profile
+    label: Supply start date
+    type: date
+    help: Scheduled commencement of supply (supply start date) for the base contracted capacity, when the tender prints a date.
+  sector.power.common.greenshoe_capacity_mw:
+    section: identity_and_scope
+    label: Greenshoe capacity
+    type: mw
+    unit: MW
+    min: 0.1
+    max: 100000
+    help: Additional capacity the procurer may take up under a greenshoe option, in MW.

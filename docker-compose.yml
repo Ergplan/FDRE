@@ -25,6 +25,10 @@ services:
       args:
         INSTALL_DOCLING: ${INSTALL_DOCLING:-true}
     restart: unless-stopped
+    environment:
+      # Tender intelligence (tender_intel): without a key tenders are read in rules mode
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      TENDER_INTEL_MODEL: ${TENDER_INTEL_MODEL:-}
 
   web:
     build:

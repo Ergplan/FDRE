@@ -1008,6 +1008,10 @@ async def rtc_lp(request: Request) -> StreamingResponse:
                              headers={"cache-control": "no-cache, no-transform", "x-accel-buffering": "no"})
 
 
+from .tender_intel_routes import router as tender_intel_router  # noqa: E402  (tender intelligence, /api/bid|rtc/tender)
+app.include_router(tender_intel_router)  # registered before the SPA catch-all below so these routes win
+
+
 @app.get("/{path:path}", include_in_schema=False)
 def spa(path: str = ""):
     index = DIST_DIR / "index.html"
