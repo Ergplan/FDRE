@@ -90,8 +90,27 @@ IPP as weak fallbacks); the default is `fdre`. A user-chosen type overrides it.
 | `TENDER_INTEL_TIMEOUT_SECONDS` | 300 | per-request timeout (the SDK retries 3 times) |
 | `TENDER_INTEL_JOBS_DIR` | `/tmp/tender_intel_jobs` | job files (shared by the engine's two uvicorn workers) |
 
-`docker-compose.yml` passes `ANTHROPIC_API_KEY` and `TENDER_INTEL_MODEL` to the engine; set
-them in `.env` (see `.env.example`).
+`docker-compose.yml` passes `ANTHROPIC_API_KEY` and `TENDER_INTEL_MODEL` to the engine. For a
+first install they can be set in `.env` (see `.env.example`); on a running server use the update
+below, because `deploy/update.sh` does not read `.env`.
+
+### Setting the key on the server
+
+`deploy/update.sh` reads the deployment's settings from the running containers (not from `.env`),
+so give the key to one update run; later updates keep the running engine's key.
+
+```
+cd ~/fdre
+read -rs ANTHROPIC_API_KEY      # paste the key, press Enter (not echoed, not in shell history)
+export ANTHROPIC_API_KEY
+bash deploy/update.sh           # rebuilds and restarts with the key; later runs keep it
+unset ANTHROPIC_API_KEY
+```
+
+Check: the update prints "tender reading: model (key set)", and on the Tender to Bid tab the
+Tender step's "Reading" option shows "Full reading (language model)". To pin a model, export
+`TENDER_INTEL_MODEL` the same way. To remove the key: `ANTHROPIC_API_KEY=none bash deploy/update.sh`.
+Never commit the key; `.env` is ignored by git.
 
 ## API
 

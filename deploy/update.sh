@@ -15,8 +15,15 @@ export POSTGRES_PASSWORD="$(envof fdre-dashboard-db-1 POSTGRES_PASSWORD)"
 export SESSION_SECRET="$(envof fdre-dashboard-web-1 SESSION_SECRET)"
 export COOKIE_SECURE="$(envof fdre-dashboard-web-1 COOKIE_SECURE)"
 export WEB_PORT="$(docker port fdre-dashboard-web-1 3000/tcp | head -1 | sed 's/.*://')"
+# Tender reading model key: one given for this run wins (set it once, e.g.
+#   read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY && bash deploy/update.sh
+# ), otherwise the running engine's key is kept. Never put the key in the repository.
+# ANTHROPIC_API_KEY=none removes the key (back to rules reading).
+export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(envof fdre-dashboard-engine-1 ANTHROPIC_API_KEY 2>/dev/null || true)}"
+[[ "$ANTHROPIC_API_KEY" == "none" ]] && export ANTHROPIC_API_KEY=""
+export TENDER_INTEL_MODEL="${TENDER_INTEL_MODEL:-$(envof fdre-dashboard-engine-1 TENDER_INTEL_MODEL 2>/dev/null || true)}"
 [[ -n "$POSTGRES_PASSWORD" && -n "$SESSION_SECRET" && -n "$WEB_PORT" ]] || { echo "Could not read settings from the running containers." >&2; exit 1; }
-echo "==> Current port ${WEB_PORT}; settings read from running containers"
+echo "==> Current port ${WEB_PORT}; settings read from running containers; tender reading: $([[ -n "$ANTHROPIC_API_KEY" ]] && echo "model (key set)" || echo "rules (no key)")"
 
 mkdir -p "$HOME/fdre-backups"
 backup="$HOME/fdre-backups/fdre-$(date +%Y%m%d-%H%M%S).sql.gz"
