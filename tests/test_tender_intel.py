@@ -339,6 +339,12 @@ def test_rules_mode_reads_the_wbsedcl_re_rtc_rfp():
         "sector.power.common.part_capacity_allowed": (False, {12}),
         "sector.power.common.greenshoe_supply_start_date": ("2029-04-01", {10}),
         "sector.power.common.greenshoe_same_tariff": (True, {10}),
+        "sector.power.common.greenshoe_offer_date": ("2027-09-30", {10}),
+        "core.key_dates.era_date": ("2026-11-06", {16}),
+        "core.key_dates.query_response_date": ("2026-10-09", {16}),
+        "core.key_dates.document_sale_end_date": ("2026-10-14", {16}),
+        "core.key_dates.loa_date": ("2026-11-20", {16}),
+        "core.key_dates.ppa_execution_date": ("2026-12-16", {16}),
     }
     for field_path, (value, expected_pages) in expected.items():
         assert values.get(field_path) == value, (field_path, values.get(field_path))
@@ -356,6 +362,14 @@ def test_rules_mode_reads_the_wbsedcl_re_rtc_rfp():
     assert values.get("sector.power.fdre.peak_hours_set_by") == "procurer"
     _check_evidence(fields["sector.power.fdre.peak_hours_set_by"], pages, {10})
     assert fields["sector.power.fdre.ppa_priority_before_sale"]["status"] == "not_found"  # the RFP does not say
+    # the mandated solar is quoted in full, with the GW it means and where it may be built
+    solar_quote = fields["sector.power.fdre.min_solar_capacity_multiple"]["evidence"][0]["quote"]
+    assert "3 GW corresponding to the Base Supply Capacity" in solar_quote and "anywhere in India" in solar_quote
+    # the summary is assembled only from fields read above, each quoted on its page
+    summary = fields["core.summary.plain_english_summary"]
+    assert summary["status"] == "validated" and all(e["located"] for e in summary["evidence"])
+    for fact in ("1,500 MW", "500 MW greenshoe", "51%", "80% CUF", "3,000 MW", "no part capacity", "01.07.2028", "27.10.2026", "₹1,00,000 per MW"):
+        assert fact in summary["value"], fact
     # every number and date read is printed in its own quote
     checked = [o for o in result["rules"] if o["rule"] == "value_in_quotes"]
     assert len(checked) >= 15 and all(o["passed"] for o in checked)

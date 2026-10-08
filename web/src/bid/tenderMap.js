@@ -130,6 +130,7 @@ export function buildProposals(result) {
   }
 
   // ---- sources
+  const loc0 = first(index, result, [`${C}.location_constraint`]);
   const listed = first(index, result, [`${F}.permitted_re_sources`], (v) => (Array.isArray(v) ? v : [String(v)]));
   add({ id: "sources", group: "Sources", label: "Renewable sources named", hit: listed, value: listed?.value, display: listed ? listed.value.join(", ") : null,
     effect: "Only these renewable sources (and the non-RE below) can be switched on",
@@ -146,8 +147,16 @@ export function buildProposals(result) {
   add({ id: "green", group: "Sources", label: "Least traceable green share", hit: green, value: green ? pct(green.value) : null, display: green ? `${green.value}% of supply, each accounting year` : null,
     effect: "Every year: non-RE energy ≤ the rest of the supply", apply: (t, v) => ({ ...t, greenMin: v }) });
   const solarMult = first(index, result, [`${F}.min_solar_capacity_multiple`]);
-  add({ id: "solar.min", group: "Sources", label: "Mandatory solar capacity", hit: solarMult, value: solarMult?.value, display: solarMult ? `${solarMult.value} × the contracted capacity` : null,
-    effect: "Solar is required, at least this size", apply: (t, v) => ({ ...t, solarMultiple: v, mandatory: { ...t.mandatory, solar: true } }) });
+  const gw = (mw) => `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(mw / 1000)} GW`;
+  let solarText = solarMult ? `${solarMult.value} × the contracted capacity` : null;
+  if (solarMult && total) {
+    solarText += `: ${gw(solarMult.value * total.value)} for the base capacity`;
+    if (greenshoe) solarText += `, ${gw(solarMult.value * greenshoe.value)} more if the greenshoe is exercised`;
+  }
+  add({ id: "solar.min", group: "Sources", label: "Mandatory solar capacity", hit: solarMult, value: solarMult?.value,
+    display: solarText ? `${solarText}${loc0?.value === "ists_anywhere" ? "; anywhere in India" : ""}` : null,
+    effect: `Solar is switched on and at least ${solarMult ? solarMult.value : "?"} × the contracted capacity you size for (bid${greenshoe ? ", plus the greenshoe when you size for it" : ""})`,
+    apply: (t, v) => ({ ...t, solarMultiple: v, mandatory: { ...t.mandatory, solar: true } }) });
   const storage = first(index, result, [`${F}.storage_mandatory`]);
   add({ id: "storage", group: "Sources", label: "Energy storage mandatory", hit: storage, value: storage?.value, display: storage ? (storage.value ? "Yes" : "No") : null,
     effect: "When mandatory the battery must be switched on", apply: (t, v) => ({ ...t, mandatory: { ...t.mandatory, bess: Boolean(v) } }) });
@@ -178,6 +187,35 @@ export function buildProposals(result) {
   const deadline = first(index, result, ["core.key_dates.bid_submission_deadline"]);
   add({ id: "deadline", group: "Commercial", label: "Bid submission deadline", hit: deadline, value: deadline?.value, display: deadline ? fmtDate(deadline.value) : null, effect: "Shown", apply: (t, v) => ({ ...t, deadline: v }) });
   return out;
+}
+
+const DATE_FIELDS = [
+  ["core.key_dates.nit_date", "Tender issued (start of e-tender)", "bidding"],
+  ["core.key_dates.query_deadline", "Last date for queries", "bidding"],
+  ["core.key_dates.pre_bid_meeting_date", "Pre-bid meeting", "bidding"],
+  ["core.key_dates.query_response_date", "Response to queries", "bidding"],
+  ["core.key_dates.document_sale_end_date", "Last date to obtain the tender document", "bidding"],
+  ["core.key_dates.bid_submission_deadline", "Bid submission closes", "deadline"],
+  ["core.key_dates.technical_opening_date", "Techno-commercial bid opening", "bidding"],
+  ["core.key_dates.era_date", "e-Reverse auction", "bidding"],
+  ["core.key_dates.loa_date", "Letter of Award", "award"],
+  ["core.key_dates.ppa_execution_date", "PPA execution", "award"],
+  ["sector.power.common.greenshoe_offer_date", "Greenshoe offered at least 30 days before", "supply"],
+  ["sector.power.fdre.supply_start_date", "Supply start (base capacity)", "supply"],
+  ["sector.power.common.greenshoe_supply_start_date", "Supply start (greenshoe, if exercised)", "supply"],
+];
+
+/** Every date the tender prints that the reader found, in order, each with its page and quote. */
+export function tenderDates(result) {
+  if (!result) return [];
+  const index = fieldIndex(result);
+  const out = [];
+  for (const [path, label, kind] of DATE_FIELDS) {
+    const hit = first(index, result, [path]);
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(String(hit?.value || "")) ? hit.value : null;
+    if (iso) out.push({ id: path, label, kind, date: iso, source: sourceOf(hit) });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 const EMPTY_TERMS = {

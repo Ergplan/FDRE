@@ -1,7 +1,7 @@
 /* Tender to Bid tab: tender reading, requirements, sizing with biomass, financials.
    Builds on the Round-the-clock story styles in styles.css (story-hero, rtc-field, rtc-stat). */
 
-.bid-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 24px; border: 1px solid var(--line); background: #070707; }
+.bid-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 24px; border: 1px solid var(--line); background: #070707; }
 .bid-step {
   position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px 16px;
   border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); text-align: left;
@@ -208,3 +208,43 @@
 .bid-reader { margin-left: 6px; color: #7ddc9a; font-family: var(--font-mono); font-size: 10px; font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; }
 .bid-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .bid-fix .rtc-switch { flex: none; }
+
+/* ---- key dates calendar */
+.bid-cal { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 14px 0 18px; }
+.bid-month { padding: 12px; border: 1px solid var(--line); background: var(--surface); }
+.bid-month h4 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.bid-month-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; text-align: center; font-size: 12px; }
+.bid-weekday { color: var(--muted); font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.bid-day { padding: 5px 0; color: var(--ink-2); border: 1px solid transparent; }
+.bid-day.ev { color: #0b0b0b; font-weight: 700; cursor: default; }
+.bid-day.ev.bidding { background: #4fd1c5; }
+.bid-day.ev.deadline { background: #ff6b5f; }
+.bid-day.ev.award { background: #a98bff; }
+.bid-day.ev.supply { background: #d4ff3f; }
+.bid-day.past { opacity: 0.45; }
+.bid-day.today { border-color: var(--ink); }
+.bid-month-events { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12px; }
+.bid-month-events li { display: flex; gap: 6px; align-items: baseline; padding-left: 8px; border-left: 3px solid var(--line-2); }
+.bid-month-events li.bidding { border-left-color: #4fd1c5; }
+.bid-month-events li.deadline { border-left-color: #ff6b5f; }
+.bid-month-events li.award { border-left-color: #a98bff; }
+.bid-month-events li.supply { border-left-color: #d4ff3f; }
+.bid-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.bid-legend-item i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+.bid-legend-item.bidding i { background: #4fd1c5; }
+.bid-legend-item.deadline i { background: #ff6b5f; }
+.bid-legend-item.award i { background: #a98bff; }
+.bid-legend-item.supply i { background: #d4ff3f; }
+.bid-legend-item.today i { border: 1px solid var(--ink); }
+.bid-agenda { border: 1px solid var(--line); }
+.bid-agenda-row { display: grid; grid-template-columns: minmax(130px, 0.8fr) minmax(180px, 1.2fr) 110px minmax(240px, 2fr); gap: 12px; align-items: start; padding: 9px 12px; border-top: 1px solid var(--line); font-size: 13px; border-left: 3px solid transparent; }
+.bid-agenda-row.head { border-top: 0; color: var(--muted); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.bid-agenda-row span:first-child { display: grid; gap: 2px; }
+.bid-agenda-row.bidding { border-left-color: #4fd1c5; }
+.bid-agenda-row.deadline { border-left-color: #ff6b5f; }
+.bid-agenda-row.award { border-left-color: #a98bff; }
+.bid-agenda-row.supply { border-left-color: #d4ff3f; }
+.bid-agenda-row.past { opacity: 0.55; }
+@media (max-width: 900px) { .bid-agenda-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .bid-agenda-row.head { display: none; } }
+.bid-summary { margin: 10px 0 0; display: grid; gap: 8px; font-size: 14px; line-height: 1.55; }
+.bid-summary p { margin: 0; }

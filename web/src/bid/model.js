@@ -110,9 +110,9 @@ export const BENCHMARKS = {
   fin: { targetEquityIrr: 0.14, debtFraction: 0.7, interestRate: 0.09, tenorYears: 15, taxRate: 0.2517, omEscalation: 0.05, insurancePct: 0.003, tariffEscalation: 0 },
   costs: { preopPct: 0.05, evacuationCr: 0 },
 };
-// a first round: 250 MW, with solar, biomass and battery sized by the optimizer
+// a first round: the tender's 1,500 MW, with solar, biomass and battery sized by the optimizer
 export const DEFAULT_ON = ["solar", "biomass", "bess"];
-export const DEFAULT_BID_MW = 250;
+export const DEFAULT_BID_MW = 1500;
 
 const blankSource = (id) => ({
   capacity: { mode: "optimise", mw: null }, // "fixed": exactly mw; "optimise": 0 to mw (empty: AUTO_MAX)
@@ -124,7 +124,7 @@ const FIN_REQUIRED = Object.fromEntries(FINANCE_FIELDS.filter((f) => f.section =
 
 export function defaultBidState() {
   return {
-    version: 3,
+    version: 4,
     step: "tender",
     tender: null, // { name, mode, seedKey, result }
     accepted: {}, // tender proposal id -> true/false (a value the page does not prove is used only when ticked)
@@ -149,7 +149,7 @@ export function defaultBidState() {
 
 export function mergeBidState(saved) {
   const base = defaultBidState();
-  if (!saved || saved.version !== 3) return base;
+  if (!saved || saved.version !== 4) return base;
   const merged = { ...base, ...saved };
   for (const k of ["bid", "sources", "fin", "costs", "market", "locks", "accepted", "filled"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
   merged.src = Object.fromEntries(SOURCE_IDS.map((id) => [id, { ...base.src[id], ...(saved.src?.[id] || {}), capacity: { ...base.src[id].capacity, ...(saved.src?.[id]?.capacity || {}) } }]));
@@ -157,7 +157,7 @@ export function mergeBidState(saved) {
   return merged;
 }
 
-export const STEP_IDS = ["tender", "capacity", "sources", "size", "finance"];
+export const STEP_IDS = ["tender", "dates", "capacity", "sources", "size", "finance"];
 
 // ---------------------------------------------------------------- what is missing
 

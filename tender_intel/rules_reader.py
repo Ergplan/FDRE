@@ -91,7 +91,7 @@ def _words(text: str) -> list[tuple[int, int]]:
 
 
 def _ends_sentence(token: str) -> bool:
-    stripped = token.rstrip(")\"'’”]")
+    stripped = token.rstrip(")\"'’”]").lstrip("(\"'‘“[")
     if stripped.endswith(";") or stripped in {".", ":", "•"}:
         return True
     if not stripped.endswith("."):
@@ -433,6 +433,38 @@ def _nit_date(pages: list[PageText]) -> list[Hit]:
 
 def _query_deadline(pages: list[PageText]) -> list[Hit]:
     return _date_hits(pages, r"last\s+date\s+(?:of|for)\s+(?:receipt\s+of\s+|receiving\s+|submission\s+of\s+|sending\s+)?(?:queries|clarifications?)")
+
+
+def _era_date(pages: list[PageText]) -> list[Hit]:
+    return _date_hits(pages, r"e[\s-]*reverse\s+auction(?:\s+date)?")
+
+
+def _query_response(pages: list[PageText]) -> list[Hit]:
+    return _date_hits(pages, r"response\s+to\s+(?:the\s+)?(?:queries|clarifications?)")
+
+
+def _document_sale_end(pages: list[PageText]) -> list[Hit]:
+    return _date_hits(pages, r"last\s+date\s+(?:for|of)\s+(?:procurement|purchase|sale|download(?:ing)?)\s+of\s+(?:the\s+)?(?:tender|bid(?:ding)?|RfS|RfP)\s+document")
+
+
+def _loa_date(pages: list[PageText]) -> list[Hit]:
+    return _date_hits(pages, r"(?:placement|issue|issuance)\s+of\s+(?:the\s+)?(?:LOA|LoA|letter\s+of\s+award)")
+
+
+def _ppa_execution(pages: list[PageText]) -> list[Hit]:
+    return _date_hits(pages, r"(?:PPA|power\s+purchase\s+agreement)\s+(?:execution|signing)|(?:execution|signing)\s+of\s+(?:the\s+)?PPA")
+
+
+def _greenshoe_offer(pages: list[PageText]) -> list[Hit]:
+    """The date before which the greenshoe is offered: "offered ... at least 30 days prior to 30.09.2027"."""
+    hits = []
+    for page, m in _iter(pages, rf"green\s*-?\s*shoe[^;]{{0,200}}?offered[^;]{{0,80}}?(?:prior\s+to|before)\s*{DATE2}"):
+        try:
+            value, note = _iso_date(m.group(1))
+        except ValueError:
+            continue
+        hits.append(Hit(value, page.page_no, m.start(1), m.end(1), note=note))
+    return hits
 
 
 def _opening_date(pages: list[PageText]) -> list[Hit]:
@@ -944,7 +976,9 @@ def _solar_multiple(pages: list[PageText]) -> list[Hit]:
         value = {"twice": 2, "double": 2, "thrice": 3}.get(raw)
         if value is None:
             value = number(m.group(2))
-        hits.append(Hit(value, page.page_no, m.start(), m.end()))
+        # quote the whole requirement: the GW it means and where the solar may be built
+        tail = re.search(r"^[^;]{0,300}?anywhere\s+in\s+India", page.text[m.end() :], re.I)
+        hits.append(Hit(value, page.page_no, m.start(), m.end() + (tail.end() if tail else 0), mode="span" if tail else "sentence"))
     return hits
 
 
@@ -1137,6 +1171,13 @@ RULE_PATHS = (
     "core.key_dates.nit_date",
     "core.key_dates.query_deadline",
     "core.key_dates.technical_opening_date",
+    "core.key_dates.era_date",
+    "core.key_dates.query_response_date",
+    "core.key_dates.document_sale_end_date",
+    "core.key_dates.loa_date",
+    "core.key_dates.ppa_execution_date",
+    "sector.power.common.greenshoe_offer_date",
+    "core.summary.plain_english_summary",
     "core.guarantees.emd_per_mw_inr",
     "core.guarantees.pbg_per_mw_inr",
     "core.penalties.shortfall_rules",
@@ -1257,6 +1298,103 @@ def _demand_structured(
     return RuleDraft(lines, confidence, rationale, quotes)
 
 
+def _inr(value: float) -> str:
+    """Indian digit grouping: 100000 -> 1,00,000."""
+    n = str(int(round(value)))
+    if len(n) <= 3:
+        return n
+    head, tail = n[:-3], n[-3:]
+    groups = []
+    while len(head) > 2:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    return ",".join(([head] if head else []) + groups + [tail])
+
+
+def _summary_draft(got: dict[str, RuleDraft | None]) -> RuleDraft | None:
+    """A plain-English summary assembled only from the fields read above: each sentence states
+    values the rules reader found, and carries their quotes. Nothing else is added."""
+
+    def val(path: str) -> Any:
+        draft = got.get(path)
+        return draft.value if draft is not None else None
+
+    def date(path: str) -> str | None:
+        raw = val(path)
+        m = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", _date_key(str(raw)) if raw else "")
+        return f"{m[3]}.{m[2]}.{m[1]}" if m else None
+
+    paras: list[str] = []
+    quotes: list[tuple[int, str]] = []
+
+    def add(text: str, paths: list[str]) -> None:
+        paras.append(text)
+        for path in paths:
+            draft = got.get(path)
+            for quote in draft.quotes if draft is not None else []:
+                if quote not in quotes:
+                    quotes.append(quote)
+
+    C, F, K = "sector.power.common", "sector.power.fdre", "core.key_dates"
+    issuer, total, greenshoe, years = val("core.identity.issuing_agency"), val(f"{C}.total_capacity_mw"), val(f"{C}.greenshoe_capacity_mw"), val(f"{C}.ppa_tenure_years")
+    if issuer and total:
+        kind = val("core.identity.tender_type_as_stated") or "power"
+        text = f"{issuer} procures {total:,.0f} MW of {kind}"
+        text += f", with a {greenshoe:,.0f} MW greenshoe at its option" if greenshoe else ""
+        text += f", for {years:g} years." if years else "."
+        add(text, ["core.identity.issuing_agency", f"{C}.total_capacity_mw", f"{C}.greenshoe_capacity_mw", f"{C}.ppa_tenure_years"])
+    green, non_re = val(f"{F}.green_share_min_pct"), val(f"{F}.non_re_allowed")
+    if green:
+        text = f"At least {green:g}% of the supply must be traceable green power each accounting year"
+        text += "; the balance may come from RE or non-RE sources, with RECs for the non-RE supply." if non_re else "."
+        add(text, [f"{F}.green_share_min_pct", f"{F}.non_re_allowed"])
+    annual, monthly, peak, hours = (val(f"{F}.annual_supply_min_pct"), val(f"{F}.monthly_supply_min_pct"),
+                                    val(f"{F}.peak_supply_min_pct"), val(f"{F}.peak_hours_per_day"))
+    floors = [f"{annual:g}% CUF each accounting year" if annual else None, f"{monthly:g}% every month" if monthly else None,
+              f"{peak:g}% in {hours:g} peak hours a day" if peak and hours else (f"{peak:g}% in peak hours" if peak else None)]
+    if any(floors):
+        text = "Supply must be at least " + ", ".join(x for x in floors if x)
+        text += ", the peak hours as decided by the procurer." if val(f"{F}.peak_hours_set_by") == "procurer" else "."
+        add(text, [f"{F}.annual_supply_min_pct", f"{F}.monthly_supply_min_pct", f"{F}.peak_supply_min_pct", f"{F}.peak_hours_per_day", f"{F}.peak_hours_set_by"])
+    sources, multiple, place = val(f"{F}.permitted_re_sources"), val(f"{F}.min_solar_capacity_multiple"), val(f"{C}.location_constraint")
+    parts = []
+    if sources:
+        parts.append("Renewable sources named: " + ", ".join(sources) + ".")
+    if multiple:
+        solar = f"Solar of {multiple:g} × the contracted capacity is mandatory"
+        if total:
+            solar += f" ({multiple * total:,.0f} MW for the base capacity" + (f", {multiple * greenshoe:,.0f} MW more if the greenshoe is exercised)" if greenshoe else ")")
+        solar += ", anywhere in India" if place == "ists_anywhere" else ""
+        parts.append(solar + ".")
+    if val(f"{F}.market_sale_scope") == "mandated_solar":
+        parts.append("That solar may be scheduled to the PPA or in the market.")
+    if parts:
+        add(" ".join(parts), [f"{F}.permitted_re_sources", f"{F}.min_solar_capacity_multiple", f"{C}.location_constraint", f"{F}.market_sale_scope"])
+    if val(f"{C}.part_capacity_allowed") is False:
+        add("A single bidder must bid the whole capacity; no part capacity is allowed.", [f"{C}.part_capacity_allowed"])
+    ssd, gs_ssd, gs_offer = date(f"{F}.supply_start_date"), date(f"{C}.greenshoe_supply_start_date"), date(f"{C}.greenshoe_offer_date")
+    if ssd or gs_ssd:
+        text = f"Supply starts on {ssd}" if ssd else "The greenshoe"
+        if gs_ssd:
+            text += f"; the greenshoe, if exercised, from {gs_ssd}" if ssd else f" supply starts on {gs_ssd}"
+            text += " at the same tariff" if val(f"{C}.greenshoe_same_tariff") else ""
+            text += f" (offered at least 30 days before {gs_offer})" if gs_offer else ""
+        add(text + ".", [f"{F}.supply_start_date", f"{C}.greenshoe_supply_start_date", f"{C}.greenshoe_same_tariff", f"{C}.greenshoe_offer_date"])
+    steps = [("Bids close", f"{K}.bid_submission_deadline"), ("techno-commercial opening", f"{K}.technical_opening_date"),
+             ("e-reverse auction", f"{K}.era_date"), ("Letter of Award", f"{K}.loa_date"), ("PPA execution", f"{K}.ppa_execution_date")]
+    found = [(label, path) for label, path in steps if date(path)]
+    if found:
+        add("; ".join(f"{label} {date(path)}" for label, path in found) + ".", [path for _, path in found])
+    emd, pbg = val("core.guarantees.emd_per_mw_inr"), val("core.guarantees.pbg_per_mw_inr")
+    if emd or pbg:
+        money = [f"bid security (EMD) ₹{_inr(emd)} per MW" if emd else None, f"performance guarantee ₹{_inr(pbg)} per MW" if pbg else None]
+        text = "; ".join(x for x in money if x)
+        add(text[0].upper() + text[1:] + ".", ["core.guarantees.emd_per_mw_inr", "core.guarantees.pbg_per_mw_inr"])
+    if not paras:
+        return None
+    return RuleDraft("\n\n".join(paras), CONFIDENCE, "Assembled by the rules reader from the fields it read, each quoted on its page; nothing else is added.", quotes)
+
+
 def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | None]:
     """A draft (or None when nothing was found) for each wanted path the rules reader
     covers. Paths it does not cover are left out of the result."""
@@ -1285,6 +1423,11 @@ def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | N
     pick("core.key_dates.nit_date", _nit_date(text_pages))
     pick("core.key_dates.query_deadline", _query_deadline(text_pages))
     pick("core.key_dates.technical_opening_date", _opening_date(text_pages))
+    pick("core.key_dates.era_date", _era_date(text_pages))
+    pick("core.key_dates.query_response_date", _query_response(text_pages))
+    pick("core.key_dates.document_sale_end_date", _document_sale_end(text_pages))
+    pick("core.key_dates.loa_date", _loa_date(text_pages))
+    pick("core.key_dates.ppa_execution_date", _ppa_execution(text_pages))
     rupees = lambda value: f"₹{value:,.0f}"  # noqa: E731
     pick("core.guarantees.emd_per_mw_inr", _emd(text_pages), rupees)
     pick("core.guarantees.pbg_per_mw_inr", _pbg(text_pages), rupees)
@@ -1304,6 +1447,7 @@ def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | N
     pick("sector.power.common.part_capacity_allowed", _part_capacity(text_pages), lambda v: "yes" if v else "no")
     pick("sector.power.common.greenshoe_supply_start_date", _greenshoe_start(text_pages))
     pick("sector.power.common.greenshoe_same_tariff", _greenshoe_same_tariff(text_pages), lambda v: "yes" if v else "no")
+    pick("sector.power.common.greenshoe_offer_date", _greenshoe_offer(text_pages))
 
     fdre_wanted = any(path.startswith("sector.power.fdre.") for path in wanted)
     if fdre_wanted:
@@ -1373,4 +1517,6 @@ def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | N
         pick("sector.power.bess.cycles_per_day", _cycles(text_pages), lambda v: f"{v:g}")
         pick("sector.power.bess.round_trip_efficiency_guarantee_percent", _rte(text_pages), lambda v: f"{v:g}%")
         pick("sector.power.bess.availability_floor_percent", _bess_availability(text_pages), lambda v: f"{v:g}%")
+    if "core.summary.plain_english_summary" in wanted:
+        out["core.summary.plain_english_summary"] = _summary_draft(out)
     return out

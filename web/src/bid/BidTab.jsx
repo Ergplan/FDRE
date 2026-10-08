@@ -1,20 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ChevronLeft, CircleDollarSign, FileSearch, Gavel, Layers, RotateCcw, Scale, X, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronLeft, CircleDollarSign, FileSearch, Gavel, Layers, RotateCcw, Scale, X, Zap } from "lucide-react";
 import { trackEvent } from "../activity";
 import { nf } from "../rtc/ui";
 import { defaultBidState, loadMarketPrices, lpPayload, mergeBidState, missingInputs, capacityIssues, plantMw, resourceProfiles, runSizing } from "./model";
-import { mergeReadings, tenderTerms } from "./tenderMap";
+import { mergeReadings, tenderDates, tenderTerms } from "./tenderMap";
 import TenderStep, { getJson } from "./TenderStep";
 import CapacityStep from "./CapacityStep";
+import DatesStep from "./DatesStep";
 import SourcesStep from "./SourcesStep";
 import SizeStep from "./SizeStep";
 import FinanceStep from "./FinanceStep";
 
-const STORAGE_KEY = "fdre.bid.v3";
+const STORAGE_KEY = "fdre.bid.v4";
 // the tender loaded when the tab opens: the WBSEDCL RE-RTC RfQ/RfP reading built into the app
 const DEFAULT_TENDER = "wbsedcl-re-rtc-2026-01";
 const STEPS = [
   { id: "tender", title: "Tender", icon: FileSearch, color: "#d4ff3f" },
+  { id: "dates", title: "Key dates", icon: CalendarDays, color: "#ff8a5f" },
   { id: "capacity", title: "Bid capacity", icon: Scale, color: "#4fd1c5" },
   { id: "sources", title: "Supply sources", icon: Layers, color: "#3fa7d6" },
   { id: "size", title: "Size", icon: Zap, color: "#f5b83d" },
@@ -172,8 +174,12 @@ export default function BidTab({ user = null }) {
     setMessage("");
   }
 
+  const dates = tenderDates(state.tender?.result);
+  const today = new Date().toISOString().slice(0, 10);
+  const nextDate = dates.find((d) => d.date >= today);
   const done = {
     tender: Boolean(state.tender),
+    dates: dates.length > 0,
     capacity: capacityIssues(state, terms).length === 0,
     sources: missing.length === 0,
     size: Boolean(state.lp),
@@ -182,6 +188,7 @@ export default function BidTab({ user = null }) {
   const total = plantMw(state, terms);
   const summary = {
     tender: state.tender ? (state.tender.result?.values?.["core.identity.tender_number"] || state.tender.name) : preloading ? "Loading" : "No tender",
+    dates: nextDate ? `Next: ${nextDate.label.toLowerCase()} ${nextDate.date.split("-").reverse().join(".")}` : dates.length ? `${dates.length} dates` : "No dates",
     capacity: total ? `${nf(total, 0)} MW${state.bid.greenshoe ? " incl. greenshoe" : ""}` : "Not entered",
     sources: missing.length ? `${missing.length} input${missing.length > 1 ? "s" : ""} needed` : `${Object.values(state.sources).filter(Boolean).length} sources ready`,
     size: state.lp ? `₹${nf(state.lp.tariff, 3)}/kWh` : "Not sized",
@@ -233,6 +240,7 @@ export default function BidTab({ user = null }) {
 
       <div className="bid-page" style={{ "--chapter": step.color }} key={step.id}>
         {step.id === "tender" && <TenderStep {...props} onRead={onRead} onModelRead={onModelRead} preloading={preloading} />}
+        {step.id === "dates" && <DatesStep {...props} />}
         {step.id === "capacity" && <CapacityStep {...props} />}
         {step.id === "sources" && <SourcesStep {...props} startSizing={startSizing} />}
         {step.id === "size" && <SizeStep {...props} run={run} startSizing={startSizing} stopSizing={stopSizing} hourly={hourly} />}

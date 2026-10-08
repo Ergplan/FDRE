@@ -148,6 +148,9 @@ export default function TenderStep({ state, setState, onRead, onModelRead, goto,
   const share = p?.total ? Math.min(1, (p.done || 0) / p.total) : 0;
   const last = state.tender?.result;
   const values = last?.values || {};
+  const summaryField = last?.sections?.flatMap((s) => s.fields).find((f) => f.path === "core.summary.plain_english_summary");
+  const summary = summaryField && (summaryField.status === "validated" || summaryField.status === "needs_review") && summaryField.value ? summaryField : null;
+  const summaryPages = summary ? [...new Set((summary.evidence || []).map((e) => e.page))].sort((a, b) => a - b) : [];
 
   return (
     <>
@@ -160,7 +163,7 @@ export default function TenderStep({ state, setState, onRead, onModelRead, goto,
                 {busy ? <Loader2 className="spin" size={14} /> : <Sparkles size={14} />} Fill every section with the model{status?.provider ? ` (${PROVIDER_LABEL[status.provider] || status.provider})` : ""}
               </button>
             )}
-            <button type="button" className="primary" onClick={() => goto("capacity")} data-testid="bid-to-capacity">Bid capacity <ArrowRight size={14} /></button>
+            <button type="button" className="primary" onClick={() => goto("dates")} data-testid="bid-to-dates">Key dates <ArrowRight size={14} /></button>
           </>
         ) : null}>
         <input ref={modelRef} type="file" accept=".pdf" hidden data-testid="bid-model-file"
@@ -175,6 +178,12 @@ export default function TenderStep({ state, setState, onRead, onModelRead, goto,
             </div>
             {values["core.identity.title"] && <p>{values["core.identity.title"]}</p>}
             <ReadingBanner result={last} />
+            {summary && (
+              <div className="bid-summary" data-testid="bid-summary">
+                {summary.value.split(/\n\s*\n/).map((para, i) => <p key={i}>{para}</p>)}
+                <p className="rtc-note">From the tender, pages {summaryPages.join(", ")}: every figure is quoted on its page (Everything read from the tender → Summary).</p>
+              </div>
+            )}
             {last.mode === "rules" && (
               <p className="rtc-note">The rule-based reader reads the figures the sizing needs; summary, eligibility, penalties and other clauses are read by the model.
                 {status?.llm_available ? " Click “Fill every section with the model” and choose the RFP PDF (a few minutes)." : " Set a model key on the engine to read them."}</p>

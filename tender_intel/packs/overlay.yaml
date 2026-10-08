@@ -100,6 +100,31 @@ fields:
     label: Greenshoe supply start date
     type: date
     help: Supply start date for the greenshoe capacity, when the tender prints one.
+  core.key_dates.query_response_date:
+    section: key_dates
+    label: Response to queries
+    type: date
+    help: Date by which the procurer answers the bidders' queries, when the schedule prints one.
+  core.key_dates.document_sale_end_date:
+    section: key_dates
+    label: Last date to obtain the tender document
+    type: date
+    help: Last date for procuring (buying or downloading) the tender document, when printed.
+  core.key_dates.loa_date:
+    section: key_dates
+    label: Letter of Award
+    type: date
+    help: Date of placement or issue of the Letter of Award, when the schedule prints one.
+  core.key_dates.ppa_execution_date:
+    section: key_dates
+    label: PPA execution
+    type: date
+    help: Date by which the PPA is executed, when the schedule prints one.
+  sector.power.common.greenshoe_offer_date:
+    section: identity_and_scope
+    label: Greenshoe offered at least 30 days before
+    type: date
+    help: The date before which the procurer offers the greenshoe capacity to the selected bidder, as printed (for example "at least 30 days prior to 30.09.2027").
   sector.power.common.greenshoe_same_tariff:
     section: identity_and_scope
     label: Greenshoe at the same tariff

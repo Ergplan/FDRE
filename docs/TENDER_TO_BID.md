@@ -7,10 +7,11 @@ opens (its reading ships built in), so the work starts from what the tender requ
 | Step | What happens | Where |
 | --- | --- | --- |
 | 1 Tender | Every requirement of the tender on one page: what it says, how the sizing applies it, and the page and quote it comes from. Below it, every field read; then other tenders (read before, or a new upload) | `tenderMap.js` (`buildProposals`, `tenderTerms`), `TenderStep.jsx`, `RequirementsStep.jsx` |
-| 2 Bid capacity | The capacity you bid and whether the plant is sized for the greenshoe too, checked against the tender (WBSEDCL: 1,500 MW, no part capacity, 500 MW greenshoe at the same tariff) | `CapacityStep.jsx` |
-| 3 Supply sources | The sources you have: solar, wind, hydro, biomass, thermal (non-RE) and battery. For each, fixed capacity or the most the optimizer may build, its parameters (CUF, availability, minimum load, battery duration and efficiency) and its costs; then financing and, where the tender allows it, market sale. Every field starts empty | `SourcesStep.jsx`, `model.js` (`SOURCE_FIELDS`, `missingInputs`) |
-| 4 Size | HiGHS finds the least-tariff plant from your sources that meets every tender requirement, with the tender conditions table (met / not met) | `POST /api/rtc/lp` (`fdre_rtc_lp.py`), `SizeStep.jsx`, `Checklist.jsx` |
-| 5 Financials | The financial model of that plant: bid tariff at your equity IRR, capex by source, fuel, hydro and thermal costs (with RECs), guarantees, statements; **Download financial model (Excel)** | `engine.js runFinancialModel`, `FinanceStep.jsx`, `exportModel.js`, `POST /api/bid/model` |
+| 2 Key dates | Every date the tender prints (schedule of bidding, award, PPA, greenshoe offer, supply start) on a calendar, with what is next, days to go and the page and quote of each | `tenderDates` in `tenderMap.js`, `DatesStep.jsx` |
+| 3 Bid capacity | The capacity you bid and whether the plant is sized for the greenshoe too, checked against the tender (WBSEDCL: 1,500 MW, no part capacity, 500 MW greenshoe at the same tariff) | `CapacityStep.jsx` |
+| 4 Supply sources | The sources you have: solar, wind, hydro, biomass, thermal (non-RE) and battery. For each, fixed capacity or the most the optimizer may build, its parameters (CUF, availability, minimum load, battery duration and efficiency) and its costs; then financing and, where the tender allows it, market sale. Every field starts empty | `SourcesStep.jsx`, `model.js` (`SOURCE_FIELDS`, `missingInputs`) |
+| 5 Size | HiGHS finds the least-tariff plant from your sources that meets every tender requirement, with the tender conditions table (met / not met) | `POST /api/rtc/lp` (`fdre_rtc_lp.py`), `SizeStep.jsx`, `Checklist.jsx` |
+| 6 Financials | The financial model of that plant: bid tariff at your equity IRR, capex by source, fuel, hydro and thermal costs (with RECs), guarantees, statements; **Download financial model (Excel)** | `engine.js runFinancialModel`, `FinanceStep.jsx`, `exportModel.js`, `POST /api/bid/model` |
 
 ## Constraints from the tender, inputs from the bidder
 
@@ -32,15 +33,20 @@ with a quote located on its page (`tenderTerms`). For WBSEDCL:
 
 ### A first round in a few clicks
 
-The tab opens ready for a first round: the bid capacity is 250 MW (greenshoe off), and solar,
+The tab opens ready for a first round: the bid capacity is the tender's 1,500 MW (greenshoe off), and solar,
 biomass and battery are switched on with the optimizer choosing their sizes (up to 12, 1 and 4 ×
 the contracted capacity when no limit is entered; solar at least the tender's 2 ×). Each source
 card has a **Fix the size** toggle: switched on, that source is built at exactly the MW entered
 (for example a biomass plant of a given size) and the optimizer sizes the other sources around it. **Fill up for
 me please** on Supply sources puts industry benchmarks (CERC norms, 2025–26 prices; `BENCHMARKS`
 in `model.js`) in every empty field and marks each as a benchmark; a value the bidder types
-replaces it. WBSEDCL allows no part capacity (p. 12), so a 250 MW bid is sized and priced but the
-capacity is shown as a warning on Bid capacity and as not met in the conditions table.
+replaces it. WBSEDCL allows no part capacity (p. 12): another capacity is still sized and priced,
+but shown as a warning on Bid capacity and as not met in the conditions table.
+
+The Tender page opens with a plain-English summary of the tender. The rule-based reader assembles
+it only from the fields it read (capacity, green share, supply floors, mandatory solar of 3 GW for
+the base and 1 GW more with the greenshoe anywhere in India, no part capacity, supply start dates,
+the bidding schedule, EMD and PBG), and keeps the quote of every figure.
 
 ### Filling every section of the reading
 

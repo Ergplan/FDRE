@@ -8,7 +8,7 @@ import {
   BENCHMARKS, SOURCE_FIELDS, capacityIssues, capacityWarnings, defaultBidState, energyMix, fillBenchmarks, lpPayload, missingInputs,
   modelInputs, opsFromLp, plantMw, resourceProfiles, scaleToCuf, solarMinMw,
 } from "../web/src/bid/model.js";
-import { buildProposals, isUsed, mergeReadings, tenderTerms } from "../web/src/bid/tenderMap.js";
+import { buildProposals, isUsed, mergeReadings, tenderDates, tenderTerms } from "../web/src/bid/tenderMap.js";
 
 // ---- the tender's terms, from the built-in WBSEDCL reading (nothing else)
 const { result } = JSON.parse(readFileSync(new URL("../web/db/seed/tenders/wbsedcl-re-rtc-2026-01.json", import.meta.url), "utf8"));
@@ -31,6 +31,14 @@ assert.equal(terms.years, 25);
 assert.equal(terms.ceiling, null, "the tender states no ceiling tariff");
 assert.equal(terms.emdPerMw, 100000);
 assert.equal(terms.pbgPerMw, 2000000);
+const solarRow = buildProposals(result).find((x) => x.id === "solar.min");
+assert.equal(solarRow.display, "2 × the contracted capacity: 3 GW for the base capacity, 1 GW more if the greenshoe is exercised; anywhere in India");
+assert.ok(/3 GW corresponding to the Base Supply Capacity/.test(solarRow.source.quote) && /anywhere in India/.test(solarRow.source.quote), "the full requirement is quoted");
+// every date the tender prints, for the calendar
+const dates = tenderDates(result);
+assert.deepEqual(dates.map((d) => d.date), ["2026-09-23", "2026-10-05", "2026-10-07", "2026-10-09", "2026-10-14", "2026-10-27", "2026-11-02", "2026-11-06", "2026-11-20", "2026-12-16", "2027-09-30", "2028-07-01", "2029-04-01"]);
+assert.ok(dates.every((d) => d.source?.page && d.source?.quote), "each date has its page and quote");
+assert.equal(dates.find((d) => d.kind === "deadline").date, "2026-10-27");
 for (const p of buildProposals(result).filter((x) => x.stated)) {
   assert.ok(p.source?.page && p.source?.quote, `${p.id} carries its page and quote`);
 }
@@ -43,13 +51,14 @@ assert.ok(!t2.rules.some((r) => r.id === "monthly"), "an unproved floor is not a
 assert.ok(tenderTerms(tampered, { "rule.monthly": true }).rules.some((r) => r.id === "monthly"), "applied once ticked");
 assert.equal(isUsed({ stated: true, source: { proved: true }, id: "x" }, { x: false }), false, "a proved term can be unticked");
 
-// ---- a first round: 250 MW, solar + biomass + battery sized by the optimizer; parameters empty
+// ---- a first round: the tender's 1,500 MW, solar + biomass + battery sized by the optimizer; parameters empty
 const blank = { ...defaultBidState(), tender: { result } };
-assert.deepEqual(blank.bid, { baseMw: 250, greenshoe: false });
+assert.deepEqual(blank.bid, { baseMw: 1500, greenshoe: false });
 assert.deepEqual(Object.entries(blank.sources).filter(([, v]) => v).map(([k]) => k), ["solar", "biomass", "bess"]);
 assert.equal(blank.src.solar.capacity.mode, "optimise");
-assert.deepEqual(capacityIssues(blank, terms), [], "250 MW does not stop the sizing");
-assert.deepEqual(capacityWarnings(blank, terms), ["The tender allows no part capacity: a compliant bid is 1500 MW"]);
+assert.deepEqual(capacityIssues(blank, terms), []);
+assert.deepEqual(capacityWarnings(blank, terms), [], "1,500 MW is the tender's capacity");
+assert.deepEqual(capacityWarnings({ ...blank, bid: { baseMw: 250, greenshoe: false } }, terms), ["The tender allows no part capacity: a compliant bid is 1500 MW"]);
 const missing0 = missingInputs(blank, terms);
 assert.ok(missing0.includes("Solar: cuf (ac)"), missing0.join("; "));
 assert.ok(missing0.some((m) => m.startsWith("Financing:")));
@@ -68,12 +77,14 @@ assert.equal(quick.filled["biomass.fuel"], true, "benchmark values are marked");
 assert.equal(quick.fin.targetEquityIrr, BENCHMARKS.fin.targetEquityIrr);
 assert.equal(quick.market.sell, true);
 const qp = lpPayload(quick, terms, resourceProfiles(quick));
-assert.equal(qp.ctx.demand[0], 250);
-assert.equal(qp.vars.solarMw.min, 500, "tender solar minimum 2 × 250 MW");
-assert.equal(qp.vars.solarMw.max, 3000, "automatic limit 12 × contracted");
-assert.equal(qp.vars.biomassMw.max, 250);
-assert.equal(qp.vars.bessMw.max, 1000);
-assert.equal(qp.vars.bessMwh.max, 4000);
+assert.equal(qp.ctx.demand[0], 1500);
+assert.equal(qp.vars.solarMw.min, 3000, "tender solar minimum: 3 GW for the 1,500 MW base");
+assert.equal(qp.vars.solarMw.max, 18000, "automatic limit 12 × contracted");
+assert.equal(qp.vars.biomassMw.max, 1500);
+assert.equal(qp.vars.bessMw.max, 6000);
+assert.equal(qp.vars.bessMwh.max, 24000);
+const withGs = lpPayload({ ...quick, bid: { baseMw: 1500, greenshoe: true } }, terms, resourceProfiles(quick));
+assert.equal(withGs.vars.solarMw.min, 4000, "4 GW when the greenshoe is exercised");
 assert.deepEqual(qp.vars.windMw, { locked: true, value: 0 });
 assert.equal(qp.plants, undefined, "no hydro or thermal by default");
 
@@ -81,13 +92,13 @@ assert.equal(qp.plants, undefined, "no hydro or thermal by default");
 const modelReading = JSON.parse(JSON.stringify(result));
 modelReading.mode = "llm"; modelReading.model = "gpt-test"; modelReading.provider = "openai";
 const mf = Object.fromEntries(modelReading.sections.flatMap((s) => s.fields).map((f) => [f.path, f]));
-Object.assign(mf["core.summary.plain_english_summary"], { status: "validated", value: "A summary", evidence: [{ page: 10, quote: "q", located: true }] });
-modelReading.values["core.summary.plain_english_summary"] = "A summary";
+Object.assign(mf["sector.power.fdre.availability_shortfall_penalty"], { status: "validated", value: "A penalty clause", evidence: [{ page: 20, quote: "q", located: true }] });
+modelReading.values["sector.power.fdre.availability_shortfall_penalty"] = "A penalty clause";
 Object.assign(mf["sector.power.common.total_capacity_mw"], { value: 999 }); // a model value for a field the rules found
 modelReading.values["sector.power.common.total_capacity_mw"] = 999;
 const merged = mergeReadings(result, modelReading);
 assert.equal(merged.mode, "rules+llm");
-assert.equal(merged.values["core.summary.plain_english_summary"], "A summary");
+assert.equal(merged.values["sector.power.fdre.availability_shortfall_penalty"], "A penalty clause");
 assert.equal(merged.values["sector.power.common.total_capacity_mw"], 1500, "the rule-based value wins where both read it");
 assert.equal(merged.counts.found, result.counts.found + 1);
 assert.equal(merged.merged.fromModel, 1);
