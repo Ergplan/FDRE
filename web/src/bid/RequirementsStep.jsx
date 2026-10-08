@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, ChevronDown, ChevronRight, CircleDashed, FileSearch, Info, TriangleAlert } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleDashed, FileSearch, TriangleAlert } from "lucide-react";
 import { Section, nf } from "../rtc/ui";
 import { buildProposals, isUsed } from "./tenderMap";
 
@@ -16,7 +16,7 @@ export function StatusChip({ status }) {
   return <span className={`bid-status ${s.cls}`}><Icon size={11} /> {s.label}</span>;
 }
 
-/** Page chip with the quote it rests on (title); used next to every input set from the tender. */
+/** Page chip with the quote it rests on (title); used next to every value taken from the tender. */
 export function SourceChip({ source, compact = false }) {
   if (!source) return null;
   const tip = [source.label, source.quote ? `“${source.quote}”` : null, source.located ? null : "Quote not found on the page: check it"].filter(Boolean).join("\n");
@@ -44,7 +44,7 @@ function Quote({ evidence }) {
 
 export const PROVIDER_LABEL = { openai: "OpenAI", anthropic: "Anthropic" };
 
-/** Which reader produced the values: the tender engine's model reading, or the rules fallback. */
+/** Which reader produced the values: the tender engine's model reading, or its rule-based reader. */
 export function ReadingBanner({ result }) {
   if (!result) return null;
   if (result.mode === "llm") {
@@ -57,122 +57,109 @@ export function ReadingBanner({ result }) {
   }
   return (
     <div className="bid-mode rules" data-testid="bid-mode-rules">
-      <TriangleAlert size={14} />
-      <span><strong>Not read by the tender engine's model.</strong> These values come from the rule-based fallback (the engine had no model key, OPENAI_API_KEY or ANTHROPIC_API_KEY, or rule-based reading was chosen). Each value still carries its page quote, but only headline fields are read. Set the key on the engine and read the tender again for the full reading.</span>
+      <CheckCircle2 size={14} />
+      <span>Read by the tender engine's rule-based reader: every value below is a verbatim quote found on its page and checked against it.</span>
     </div>
   );
 }
 
-/** Step 2: what the tender asks for, how it sets the model, and every field read. */
-export default function RequirementsStep({ state, setState, onApply, goto }) {
-  const result = state.tender?.result;
+/** Every requirement of the tender on one page: what it says, how the sizing applies it, and the quote. */
+export function TenderRequirements({ result, accepted, setAccepted }) {
   const proposals = useMemo(() => buildProposals(result), [result]);
+  const groups = [...new Set(proposals.map((p) => p.group))];
+  const used = proposals.filter((p) => isUsed(p, accepted)).length;
+  const toggle = (p) => setAccepted({ ...accepted, [p.id]: !isUsed(p, accepted) });
+  return (
+    <div className="bid-terms" data-testid="bid-terms">
+      <p className="rtc-note">{used} requirements apply to the model. A requirement whose quote is not found on its page, or does not print the value, is not applied unless you tick it after checking the page.</p>
+      <div className="bid-req-table" role="table">
+        <div className="bid-req-row head" role="row">
+          <span>Use</span><span>Requirement</span><span>Tender says</span><span>How the sizing applies it</span><span>Page and quote</span>
+        </div>
+        {groups.map((g) => (
+          <React.Fragment key={g}>
+            <div className="bid-req-group">{g}</div>
+            {proposals.filter((p) => p.group === g).map((p) => (
+              <div key={p.id} className={`bid-req-row ${p.stated ? "" : "missing"}`} role="row" data-testid={`req-${p.id}`}>
+                <span>
+                  {p.stated
+                    ? <input type="checkbox" checked={isUsed(p, accepted)} onChange={() => toggle(p)} aria-label={`Apply ${p.label}`} />
+                    : <CircleDashed size={13} className="rtc-note" />}
+                </span>
+                <span><strong>{p.label}</strong></span>
+                <span className="bid-req-value">{p.stated ? p.display : <em>Not stated in the tender</em>}</span>
+                <span className="rtc-note">{p.stated && !p.source?.proved ? <><strong>Not proved by the page</strong>: applied only if you tick it. </> : null}{p.stated ? p.effect : "Not applied"}</span>
+                <span className="bid-req-quote">{p.source ? <><SourceChip source={p.source} compact /> {p.source.quote ? <q>{p.source.quote}</q> : null}</> : null}</span>
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Every field the engine read, by section, with its quotes and checks. */
+export function AllFields({ result }) {
   const [filter, setFilter] = useState("found");
   const [openSection, setOpenSection] = useState(null);
   const [openField, setOpenField] = useState(null);
-  if (!result) {
-    return (
-      <Section index="2" title="Requirements">
-        <p className="rtc-note">No tender has been read. <button type="button" className="link" onClick={() => goto("tender")}>Read a tender</button> or continue to sizing with the defaults.</p>
-        <button type="button" className="primary" onClick={() => goto("size")}>Go to sizing <ArrowRight size={14} /></button>
-      </Section>
-    );
-  }
-  const accepted = state.accepted || {};
-  const toggle = (p) => setState((s) => ({ ...s, accepted: { ...s.accepted, [p.id]: !isUsed(p, s.accepted || {}) } }));
-  const groups = [...new Set(proposals.map((p) => p.group))];
-  const used = proposals.filter((p) => !p.info && isUsed(p, accepted)).length;
-  const unproved = proposals.filter((p) => p.stated && !p.source?.proved).length;
-
   const sections = result.sections || [];
   const visible = (f) => (filter === "all" ? true : filter === "found" ? f.status === "validated" || f.status === "needs_review" : filter === "review" ? f.status === "needs_review" || f.status === "rejected" : f.status === "not_found");
-
   return (
-    <>
-      <ReadingBanner result={result} />
-      <Section index="2" title="What the tender sets" note={`${used} model inputs from the tender · hover a page chip for its quote${unproved ? ` · ${unproved} not proved by the page (tick only after checking)` : ""}`}
-        actions={<button type="button" className="primary" onClick={() => onApply(proposals)} data-testid="bid-apply">Apply to model and size <ArrowRight size={14} /></button>}>
-        <div className="bid-req-table" role="table">
-          <div className="bid-req-row head" role="row">
-            <span>Use</span><span>Requirement</span><span>Tender says</span><span>Effect on the model</span><span>Source</span>
-          </div>
-          {groups.map((g) => (
-            <React.Fragment key={g}>
-              <div className="bid-req-group">{g}</div>
-              {proposals.filter((p) => p.group === g).map((p) => (
-                <div key={p.id} className={`bid-req-row ${p.stated ? "" : "missing"} ${p.info ? "info" : ""}`} role="row" data-testid={`req-${p.id}`}>
-                  <span>
-                    {p.info && (!p.stated || p.source?.proved) ? <Info size={14} className="rtc-note" /> : (
-                      <input type="checkbox" checked={isUsed(p, accepted)} disabled={!p.stated} onChange={() => toggle(p)} aria-label={`Use ${p.label}`} />
-                    )}
-                  </span>
-                  <span><strong>{p.label}</strong></span>
-                  <span className="bid-req-value">{p.stated ? p.display : <em>Not stated: model default kept</em>}</span>
-                  <span className="rtc-note">{p.stated && !p.source?.proved
-                    ? <><strong>Not proved by the page</strong> (the quote is not found or does not print this value): not used unless you tick it after checking. {p.note}</>
-                    : p.note}</span>
-                  <span>{p.source ? <><SourceChip source={p.source} /> <StatusChip status={p.source.status} /></> : null}</span>
-                </div>
-              ))}
-            </React.Fragment>
+    <Section index="1.2" title="Everything read from the tender" note={`${nf(result.counts?.found)} of ${nf(result.counts?.fields)} fields found · type ${result.tender_type}`}
+      actions={(
+        <div className="bid-filter" role="tablist">
+          {[["found", "Found"], ["review", "To review"], ["missing", "Not stated"], ["all", "All"]].map(([id, label]) => (
+            <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>
           ))}
         </div>
-      </Section>
-
-      <Section index="2.1" title="Everything read from the tender" note={`${nf(result.counts?.found)} of ${nf(result.counts?.fields)} fields found · ${result.mode === "llm" ? "full reading" : "rule-based reading"} · type ${result.tender_type}`}
-        actions={(
-          <div className="bid-filter" role="tablist">
-            {[["found", "Found"], ["review", "To review"], ["missing", "Not stated"], ["all", "All"]].map(([id, label]) => (
-              <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>
-            ))}
-          </div>
-        )}>
-        {result.rules?.some((r) => !r.passed) && (
-          <ul className="bid-warnings">
-            {result.rules.filter((r) => !r.passed).map((r, i) => <li key={i}><TriangleAlert size={12} /> {r.message}</li>)}
-          </ul>
-        )}
-        <div className="bid-sections">
-          {sections.map((sec) => {
-            const fields = sec.fields.filter(visible);
-            const found = sec.fields.filter((f) => f.status === "validated" || f.status === "needs_review").length;
-            const open = openSection === sec.name || (openSection === null && fields.length > 0 && sec === sections.find((s) => s.fields.some(visible)));
-            return (
-              <div key={sec.name} className={`bid-sec ${open ? "open" : ""}`}>
-                <button type="button" className="bid-sec-head" onClick={() => setOpenSection(open ? "" : sec.name)}>
-                  {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  <strong>{sec.label}</strong>
-                  <span className="rtc-note">{found} of {sec.fields.length} found</span>
-                </button>
-                {open && (
-                  <div className="bid-fields">
-                    {fields.length === 0 && <p className="rtc-note">No fields in this view.</p>}
-                    {fields.map((f) => (
-                      <div key={f.path} className="bid-field">
-                        <button type="button" className="bid-field-row" onClick={() => setOpenField(openField === f.path ? null : f.path)}>
-                          <span>{f.label}{f.required ? " *" : ""}</span>
-                          <span className="bid-field-value">{f.display || (f.value === null ? "–" : String(f.value))}</span>
-                          <span>{f.evidence?.[0]?.page ? <span className="bid-src"><FileSearch size={10} /> p. {f.evidence[0].page}</span> : null}</span>
-                          <StatusChip status={f.status} />
-                        </button>
-                        {openField === f.path && (
-                          <div className="bid-field-detail">
-                            {f.help && <p className="rtc-note">{f.help}</p>}
-                            <Quote evidence={f.evidence} />
-                            {f.rationale && <p><em>{f.rationale}</em></p>}
-                            {f.issues?.length > 0 && <ul className="bid-warnings">{f.issues.map((x, i) => <li key={i}><TriangleAlert size={12} /> {x.message}</li>)}</ul>}
-                            <small className="rtc-note">{f.path} · confidence {nf((f.confidence || 0) * 100)}%</small>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-    </>
+      )}>
+      {result.rules?.some((r) => !r.passed) && (
+        <ul className="bid-warnings">
+          {result.rules.filter((r) => !r.passed).map((r, i) => <li key={i}><TriangleAlert size={12} /> {r.message}</li>)}
+        </ul>
+      )}
+      <div className="bid-sections">
+        {sections.map((sec) => {
+          const fields = sec.fields.filter(visible);
+          const found = sec.fields.filter((f) => f.status === "validated" || f.status === "needs_review").length;
+          const open = openSection === sec.name;
+          return (
+            <div key={sec.name} className={`bid-sec ${open ? "open" : ""}`}>
+              <button type="button" className="bid-sec-head" onClick={() => setOpenSection(open ? "" : sec.name)}>
+                {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <strong>{sec.label}</strong>
+                <span className="rtc-note">{found} of {sec.fields.length} found</span>
+              </button>
+              {open && (
+                <div className="bid-fields">
+                  {fields.length === 0 && <p className="rtc-note">No fields in this view.</p>}
+                  {fields.map((f) => (
+                    <div key={f.path} className="bid-field">
+                      <button type="button" className="bid-field-row" onClick={() => setOpenField(openField === f.path ? null : f.path)}>
+                        <span>{f.label}{f.required ? " *" : ""}</span>
+                        <span className="bid-field-value">{f.display || (f.value === null ? "–" : String(f.value))}</span>
+                        <span>{f.evidence?.[0]?.page ? <span className="bid-src"><FileSearch size={10} /> p. {f.evidence[0].page}</span> : null}</span>
+                        <StatusChip status={f.status} />
+                      </button>
+                      {openField === f.path && (
+                        <div className="bid-field-detail">
+                          {f.help && <p className="rtc-note">{f.help}</p>}
+                          <Quote evidence={f.evidence} />
+                          {f.rationale && <p><em>{f.rationale}</em></p>}
+                          {f.issues?.length > 0 && <ul className="bid-warnings">{f.issues.map((x, i) => <li key={i}><TriangleAlert size={12} /> {x.message}</li>)}</ul>}
+                          <small className="rtc-note">{f.path} · confidence {nf((f.confidence || 0) * 100)}%</small>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Section>
   );
 }

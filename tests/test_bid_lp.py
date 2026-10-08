@@ -211,3 +211,88 @@ def test_peak_floor_in_any_hour_the_procurer_may_pick():
     res_w = M.solve({**payload, "peakMask": window.tolist()})
     d_w = np.array(res_w["hourly"]["direct"]) + np.array(res_w["hourly"]["discharge"])
     assert min(d_w[(M.MONTH_OF_HOUR == m) & (M.HOUR_OF_DAY == h)].mean() / 100 for m in range(12) for h in range(18, 22)) >= 0.9 - 1e-4
+
+
+# ---------------------------------------------------------------- hydro and thermal (non-RE)
+
+def _plants_payload(plants, green=None, **vars_extra):
+    v = {"solarMw": {"locked": True, "value": 0}, "windMw": {"locked": True, "value": 0},
+         "bessMw": {"locked": True, "value": 0}, **vars_extra}
+    extra = {"vars": v, "plants": plants, "returnLifetime": True, "returnHourly": True}
+    if green is not None:
+        extra["greenShareMin"] = green
+    return _payload(**extra)
+
+
+HYDRO = {"id": "hydro", "green": True, "availability": 1.0, "cuf": 0.5, "capexCrPerMw": 0, "fixedLakhPerMw": 150,
+         "energyRsPerKwh": 1.0, "escalation": 0}
+THERMAL = {"id": "thermal", "green": False, "availability": 0.85, "minLoad": 0, "capexCrPerMw": 0,
+           "fixedLakhPerMw": 120, "energyRsPerKwh": 3.0, "recRsPerKwh": 0.2, "escalation": 0}
+
+
+def test_hydro_alone_is_sized_by_its_cuf():
+    res = M.solve(_plants_payload([HYDRO], hydroMw={"min": 0, "max": 400}))
+    assert res["ok"]
+    # at least 80% of 876 GWh from hydro that may deliver 50% of its capacity over the year:
+    # 160 MW at least; any size up to 200 MW costs the same per kWh
+    size = res["sizes"]["hydroMw"]
+    year = res["perYear"][0]
+    assert 160 - 0.2 <= size <= 200 + 0.2
+    assert year["dfr"] >= 0.8 - 1e-6
+    assert year["hydroMu"] <= 0.5 * size * 8.76 + 0.01
+    assert res["lifetime"][0]["hydroMwh"] == pytest.approx(year["hydroMu"] * 1000, rel=1e-3)
+    assert max(res["hourly"]["hydro"]) <= res["sizes"]["hydroMw"] + 0.01
+    assert res["greenShareMin"] is None  # no non-RE source: nothing to cap
+
+
+def test_hydro_monthly_cuf_limits_each_month():
+    monthly = [0.2] * 5 + [0.9] * 4 + [0.2] * 3  # a monsoon-heavy year
+    payload = _plants_payload([{**HYDRO, "cuf": None, "monthlyCuf": monthly}], hydroMw={"min": 0, "max": 2000})
+    res = M.solve({**payload, "dfrBasis": "monthly", "dfrTarget": 0.7})
+    assert res["ok"]
+    hydro = np.array(res["hourly"]["hydro"])
+    size = res["sizes"]["hydroMw"]
+    for m in range(12):
+        mask = M.MONTH_OF_HOUR == m
+        assert hydro[mask].sum() <= monthly[m] * size * mask.sum() + 1.0
+    # the dry months bind: 70% of the month from hydro at 20% CUF needs 350 MW at least
+    assert size >= 0.7 * 100 / 0.2 - 0.5
+    assert res["perYear"][0]["minMonthlyDfr"] >= 0.7 - 1e-6
+
+
+def test_green_share_caps_non_re_supply():
+    common = {"windMw": {"min": 0, "max": 600}, "thermalMw": {"min": 0, "max": 200}}
+    cheap = {**THERMAL, "fixedLakhPerMw": 20, "energyRsPerKwh": 1.0}  # cheaper than wind: the cap binds
+    res = M.solve(_plants_payload([cheap], green=0.51, **common))
+    assert res["ok"]
+    year = res["perYear"][0]
+    assert year["greenShare"] >= 0.51 - 1e-6
+    assert year["thermalMu"] <= 0.49 * year["deliveredMu"] + 1e-3
+    assert res["greenShareMin"] == 0.51 and res["sizes"]["thermalMw"] > 0
+    # without the cap cheap thermal carries more of the supply
+    free = M.solve(_plants_payload([cheap], green=0.0, **common))
+    assert free["perYear"][0]["thermalMu"] > year["thermalMu"] + 1
+
+
+def test_non_re_is_never_sold():
+    solar, wind, _ = _case()
+    payload = _plants_payload([{**THERMAL, "energyRsPerKwh": 0.1, "fixedLakhPerMw": 1, "recRsPerKwh": 0}], green=0.51,
+                              windMw={"min": 0, "max": 400}, thermalMw={"min": 0, "max": 300})
+    payload["ctx"] = {**payload["ctx"], "sellSurplus": True, "extraExportMw": 300}
+    payload["fin"] = {**FIN0, "sellSurplus": True, "surplusPrice": 6.0}
+    res = M.solve(payload)
+    assert res["ok"]
+    h = res["hourly"]
+    renewable = np.array(h["solar"]) + np.array(h["wind"]) + np.array(h["biomass"])
+    assert np.all(np.array(h["export"]) <= renewable + 0.02)
+
+
+def test_plants_cost_reaches_the_tariff():
+    cheap = M.solve(_plants_payload([{**HYDRO, "energyRsPerKwh": 0.5}], hydroMw={"min": 0, "max": 400}))
+    dear = M.solve(_plants_payload([{**HYDRO, "energyRsPerKwh": 2.5}], hydroMw={"min": 0, "max": 400}))
+    assert dear["tariff"] == pytest.approx(cheap["tariff"] + 2.0, abs=0.05)  # energy cost passes through
+
+
+def test_plant_ids_are_checked():
+    with pytest.raises(M.LpInputError):
+        M.solve(_plants_payload([{**HYDRO, "id": "solar"}], solarMw={"min": 0, "max": 10}))

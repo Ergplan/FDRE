@@ -1,185 +1,135 @@
-// Checks for the Tender to Bid model (web/src/bid): tender fields -> model inputs, the HiGHS
-// request and the financial-model inputs. Run from the repository root:
-//   node tools/check_bid_model.mjs [tender_intel_result.json]
-// With a result file (from POST /api/bid/tender/read?sync=1) it also prints what that tender sets.
+// Checks for the Tender to Bid model (web/src/bid): the tender's terms from the WBSEDCL reading,
+// the inputs the bidder must give, the HiGHS request and the financial-model inputs. Run from
+// the repository root:   node tools/check_bid_model.mjs
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as E from "../web/src/rtc/engine.js";
-import { defaultBidState, energyMix, lpPayload, opsFromLp, peakHours, peakLabel, peakMask, resourceProfiles } from "../web/src/bid/model.js";
-import { applyProposals, buildProposals } from "../web/src/bid/tenderMap.js";
+import {
+  SOURCE_FIELDS, capacityIssues, defaultBidState, energyMix, lpPayload, missingInputs, modelInputs, opsFromLp, plantMw,
+  resourceProfiles, scaleToCuf, solarMinMw,
+} from "../web/src/bid/model.js";
+import { buildProposals, isUsed, tenderTerms } from "../web/src/bid/tenderMap.js";
 
-// a tender_intel result as the engine returns it (only what the mapping reads)
-const field = (path, label, value, page, quote, status = "validated", issues = []) => ({
-  path, key: path.split(".").pop(), label, value, status, confidence: 0.6,
-  evidence: [{ page, quote, located: true, method: "exact", score: 100, resolution: "stated_page", bbox: null }], issues,
-});
-const fields = [
-  field("sector.power.common.total_capacity_mw", "Total capacity", 1500, 10, "supply of 1500MW (“Base Supply Capacity”)"),
-  field("sector.power.common.greenshoe_capacity_mw", "Greenshoe capacity", 500, 10, "with 500 MW greenshoe option"),
-  field("sector.power.common.ppa_tenure_years", "PPA tenure", 25, 10, "for a period of 25 (twenty-five) years"),
-  field("sector.power.common.location_constraint", "Location constraint", "ists_anywhere", 11, "anywhere in India"),
-  field("sector.power.fdre.annual_supply_min_pct", "Annual supply floor", 80, 10, "Supply of minimum 80% CUF for each Accounting Year"),
-  field("sector.power.fdre.monthly_supply_min_pct", "Monthly supply floor", 70, 10, "minimum 70% CUF on monthly basis"),
-  // to review for a plausibility check only: the page still proves the value
-  field("sector.power.fdre.peak_supply_min_pct", "Peak supply floor", 90, 10, "Supply of minimum 90% CUF during Peak hours", "needs_review", [{ rule: "range", message: "check", warning: false }]),
-  field("sector.power.fdre.peak_hours_per_day", "Peak hours", 4, 10, "Discharging 4 Hours Daily"),
-  field("sector.power.fdre.biomass_permitted", "Biomass permitted", true, 9, "(Solar, Wind, Hydro, Biomass,)"),
-  field("sector.power.fdre.min_solar_capacity_multiple", "Solar multiple", 2, 11, "Solar Power Capacity equivalent to twice the contracted Supply Capacity"),
-  field("sector.power.fdre.green_share_min_pct", "Green share", 51, 10, "a minimum 51% shall be Traceable Green Power"),
-  field("sector.power.fdre.market_sale_scope", "Market sale allowed", "mandated_solar", 11, "to schedule the entire Solar Power capacity so developed at its discretion, towards the RE RTC PPA or in the market"),
-  field("sector.power.fdre.peak_hours_set_by", "Peak hours set by", "procurer", 10, "4 hours in total in multiple stretches, as decided by WBSEDCL"),
-  field("core.guarantees.emd_per_mw_inr", "EMD per MW", 100000, 5, "Amount of ₹1,00,000/- (Indian rupees One Lakh only) per MW"),
-  field("core.guarantees.pbg_per_mw_inr", "PBG per MW", 2000000, 5, "Rupees Twenty Lakh only per MW"),
-  { ...field("sector.power.common.tariff_ceiling_inr_per_kwh", "Ceiling tariff", null, 1, ""), status: "not_found", value: null, evidence: [] },
-];
-const synthetic = {
-  mode: "rules", tender_type: "fdre",
-  sections: [{ name: "all", label: "All", fields }],
-  values: Object.fromEntries(fields.filter((f) => f.value !== null).map((f) => [f.path, f.value])),
-};
+// ---- the tender's terms, from the built-in WBSEDCL reading (nothing else)
+const { result } = JSON.parse(readFileSync(new URL("../web/db/seed/tenders/wbsedcl-re-rtc-2026-01.json", import.meta.url), "utf8"));
+const terms = tenderTerms(result);
+assert.equal(terms.baseMw, 1500);
+assert.equal(terms.greenshoeMw, 500);
+assert.equal(terms.partAllowed, false, "no part capacity (p. 12)");
+assert.equal(terms.greenshoeStart, "2029-04-01");
+assert.equal(terms.greenshoeSameTariff, true);
+assert.deepEqual(terms.rules.map((r) => [r.id, r.target, r.basis, r.hours]), [["annual", 0.8, "annual", "all"], ["monthly", 0.7, "monthly", "all"], ["peak", 0.9, "monthly", "any"]]);
+assert.equal(terms.peak.hours, 4);
+assert.equal(terms.peak.setBy, "procurer");
+assert.deepEqual(terms.permitted, { solar: true, wind: true, hydro: true, biomass: true, thermal: true, bess: true });
+assert.equal(terms.greenMin, 0.51);
+assert.equal(terms.solarMultiple, 2);
+assert.equal(terms.mandatory.solar, true);
+assert.equal(terms.mandatory.bess, false);
+assert.equal(terms.sale, "mandated_solar");
+assert.equal(terms.years, 25);
+assert.equal(terms.ceiling, null, "the tender states no ceiling tariff");
+assert.equal(terms.emdPerMw, 100000);
+assert.equal(terms.pbgPerMw, 2000000);
+for (const p of buildProposals(result).filter((x) => x.stated)) {
+  assert.ok(p.source?.page && p.source?.quote, `${p.id} carries its page and quote`);
+}
+// a value the page does not prove is applied only when ticked
+const tampered = JSON.parse(JSON.stringify(result));
+const monthly = tampered.sections.flatMap((s) => s.fields).find((f) => f.path === "sector.power.fdre.monthly_supply_min_pct");
+monthly.issues = [{ rule: "value_in_quotes", message: "not printed", warning: false }];
+const t2 = tenderTerms(tampered);
+assert.ok(!t2.rules.some((r) => r.id === "monthly"), "an unproved floor is not applied");
+assert.ok(tenderTerms(tampered, { "rule.monthly": true }).rules.some((r) => r.id === "monthly"), "applied once ticked");
+assert.equal(isUsed({ stated: true, source: { proved: true }, id: "x" }, { x: false }), false, "a proved term can be unticked");
 
-const proposals = buildProposals(synthetic);
-const byId = Object.fromEntries(proposals.map((p) => [p.id, p]));
-assert.equal(byId.plantMw.value, 1500);
-assert.equal(byId.greenshoe.value, 500, "greenshoe offered as its own choice");
-assert.equal(byId["rule.annual"].value, 0.8);
-assert.equal(byId["rule.monthly"].value, 0.7);
-assert.equal(byId["rule.peak"].value, 0.9);
-assert.equal(byId["rule.peak"].source.status, "needs_review");
-assert.equal(byId["peak.hours"].value, 4);
-assert.equal(byId["sources.biomass"].value, true);
-assert.equal(byId.ceiling.stated, false, "an unstated field is not proposed");
-assert.equal(byId["rule.annual"].source.page, 10);
+// ---- nothing is filled in for the bidder: sizing waits for every input
+const blank = { ...defaultBidState(), tender: { result } };
+const missing0 = missingInputs(blank, terms);
+assert.ok(missing0.includes("Enter the capacity you bid"));
+assert.ok(missing0.includes("Solar is required by the tender"));
+assert.ok(missing0.some((m) => m.startsWith("Financing:")));
+assert.deepEqual(capacityIssues({ ...blank, bid: { baseMw: 1000, greenshoe: false } }, terms), ["The tender allows no part capacity: the bid must be 1500 MW"]);
+for (const id of Object.keys(blank.src)) {
+  for (const f of SOURCE_FIELDS[id]) assert.equal(blank.src[id][f.key], null, `${id}.${f.key} starts empty`);
+}
 
-const base = defaultBidState();
-const applied = applyProposals(base, proposals, {});
-assert.equal(applied.plantMw, 2000, "base 1,500 MW + 500 MW greenshoe: the most the tender can procure");
-assert.equal(applied.baseMw, 1500);
-assert.equal(applied.greenshoeMw, 500);
-assert.equal(applied.fin.years, 25);
-assert.deepEqual(applied.rules.map((r) => [r.id, r.target, r.enabled, r.hours]), [["annual", 0.8, true, "all"], ["monthly", 0.7, true, "all"], ["peak", 0.9, true, "any"]]);
-assert.equal(applied.peak.setBy, "procurer", "WBSEDCL decides the peak hours: every hour it may pick is checked");
-assert.equal(applied.market.sellFrom, "solar", "only the mandated solar may be sold in the market");
-assert.equal(applied.peak.hours, 4);
-assert.equal(applied.vars.solarMw.min, 4000, "solar at least twice the contracted capacity (incl. greenshoe)");
-assert.ok(applied.vars.solarMw.max >= 8000);
-const baseOnly = applyProposals(base, proposals, { greenshoe: false });
-assert.equal(baseOnly.plantMw, 1500, "unticking the greenshoe sizes the base only");
-assert.equal(baseOnly.vars.solarMw.min, 3000);
-assert.equal(applied.fin.sellSurplus, true);
-assert.equal(applied.fin.extraExportMw, 4000, "mandated solar sells surplus over its own connection");
-assert.equal(applied.guarantees.emdPerMwInr, 100000);
-assert.equal(applied.ceilingTariff, null);
-assert.equal(applied.provenance["rule.annual"].quote, "Supply of minimum 80% CUF for each Accounting Year");
-assert.ok(applied.notes.some((n) => n.id === "green"), "facts that are not modelled are listed");
-// a tender that says nothing about market sales: nothing is sold
-const silent = { ...synthetic, sections: [{ name: "all", label: "All", fields: fields.filter((f) => !f.path.endsWith("market_sale_scope")) }] };
-const silentApplied = applyProposals(base, buildProposals(silent), {});
-assert.equal(silentApplied.fin.sellSurplus, false, "no sale unless the tender allows it");
-const silentPayload = lpPayload({ ...silentApplied, tender: { result: silent }, fin: { ...silentApplied.fin, sellSurplus: true } }, resourceProfiles(silentApplied));
-assert.equal(silentPayload.ctx.sellSurplus, false, "even if switched on, a tender that does not allow sales sells nothing");
-// a proposal the reviewer unticks is not applied
-const skipped = applyProposals(base, proposals, { "rule.monthly": false, plantMw: false, greenshoe: false });
-assert.equal(skipped.plantMw, base.plantMw);
-assert.equal(skipped.rules.find((r) => r.id === "monthly").enabled, false);
-// a value the page does not prove (its quote does not print it, or is not found) is used only when ticked
-const unprovedFields = fields.map((f) => {
-  if (f.path.endsWith("monthly_supply_min_pct")) return { ...f, value: 75, status: "needs_review", issues: [{ rule: "value_in_quotes", message: "75 is not printed in its quotes", warning: false }] };
-  if (f.path.endsWith("green_share_min_pct")) {
-    return { ...f, status: "needs_review", evidence: f.evidence.map((e) => ({ ...e, located: false, resolution: "unresolved" })), issues: [{ rule: "evidence_not_located", message: "not located", warning: false }] };
-  }
-  return f;
-});
-const unprovedProps = buildProposals({
-  ...synthetic,
-  sections: [{ name: "all", label: "All", fields: unprovedFields }],
-  values: Object.fromEntries(unprovedFields.filter((f) => f.value !== null).map((f) => [f.path, f.value])),
-});
-const up = Object.fromEntries(unprovedProps.map((p) => [p.id, p]));
-assert.equal(up["rule.monthly"].source.proved, false);
-assert.equal(up.green.source.proved, false);
-assert.equal(up["rule.annual"].source.proved, true);
-assert.equal(up["rule.peak"].source.proved, true, "a plausibility review does not block a value the page prints");
-const strict = applyProposals(base, unprovedProps, {});
-assert.equal(strict.rules.find((r) => r.id === "monthly").enabled, false, "a value its quote does not print is not used");
-assert.ok(!strict.notes.some((n) => n.id === "green"), "nor a fact whose quote is not on the page");
-assert.equal(strict.rules.find((r) => r.id === "annual").enabled, true);
-const ticked = applyProposals(base, unprovedProps, { "rule.monthly": true, green: true });
-assert.equal(ticked.rules.find((r) => r.id === "monthly").target, 0.75, "used once the reviewer ticks it");
-assert.ok(ticked.notes.some((n) => n.id === "green"));
+// ---- a complete bid: every number below is the bidder's (test values)
+const filled = (() => {
+  const s = defaultBidState();
+  s.tender = { result };
+  s.bid = { baseMw: 1500, greenshoe: true };
+  s.sources = { solar: true, wind: true, hydro: true, biomass: true, thermal: true, bess: true };
+  s.src.solar = { capacity: { mode: "optimise", mw: 8000 }, cuf: 0.26, dcAc: 1.4, degradation: 0.005, capex: 3.6, om: 4 };
+  s.src.wind = { capacity: { mode: "optimise", mw: 4000 }, cuf: 0.35, capex: 6.8, om: 9 };
+  s.src.hydro = { capacity: { mode: "fixed", mw: 300 }, cuf: 0.45, availability: 1, capex: 0, fixed: 150, energy: 1.2, escalation: 0.02, monthlyCuf: null };
+  s.src.biomass = { capacity: { mode: "optimise", mw: 500 }, availability: 0.9, cuf: 0.8, minLoad: 0.3, capex: 7, om: 35, fuel: 4, fuelEscalation: 0.04 };
+  s.src.thermal = { capacity: { mode: "optimise", mw: 800 }, availability: 0.85, cuf: 0.85, minLoad: 0, capex: 0, fixed: 120, energy: 3, rec: 0.15, escalation: 0.03 };
+  s.src.bess = { capacity: { mode: "optimise", mw: 3000 }, duration: "4", rte: 0.87, minSoc: 0.05, maxSoc: 0.95, degradation: 0.02, augmentation: "annual", capex: 1.2, om: 1.2 };
+  s.fin = { ...s.fin, targetEquityIrr: 0.14, debtFraction: 0.7, interestRate: 0.09, tenorYears: 15, taxRate: 0.2517, omEscalation: 0.05, insurancePct: 0.003, tariffEscalation: 0 };
+  s.costs = { preopPct: 0.05, evacuationCr: 0 };
+  s.market = { sell: true, source: "flat", escalation: 0, flatPrice: 2.5 };
+  return s;
+})();
+assert.deepEqual(missingInputs(filled, terms), []);
+assert.equal(plantMw(filled, terms), 2000);
+assert.equal(solarMinMw(filled, terms), 4000);
+assert.ok(missingInputs({ ...filled, src: { ...filled.src, solar: { ...filled.src.solar, capacity: { mode: "fixed", mw: 3000 } } } }, terms)
+  .some((m) => m.includes("at least 4000 MW")), "solar below the tender minimum is refused");
 
-// peak window and the HiGHS request
-assert.deepEqual(peakHours({ start: 22, hours: 4 }), [22, 23, 0, 1]);
-assert.equal(peakLabel({ start: 18, hours: 4 }), "18:00–22:00");
-const mask = peakMask({ start: 18, hours: 4 });
-assert.equal(mask.reduce((a, b) => a + b, 0), 365 * 4);
-const payload = lpPayload(applied, resourceProfiles(applied));
-assert.equal(payload.ctx.demand.length, E.HOURS);
+// ---- the HiGHS request uses the tender's constraints and the bidder's numbers only
+const profiles = resourceProfiles(filled);
+const meanCf = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+assert.ok(Math.abs(meanCf(profiles.solarCf) - 0.26) < 1e-3, "solar profile at the bidder's CUF");
+assert.ok(Math.abs(meanCf(profiles.windCf) - 0.35) < 1e-3, "wind profile at the bidder's CUF");
+assert.ok(Math.abs(meanCf(scaleToCuf(new Float64Array([0.1, 0.9, 0.5, 0.0]), 0.5)) - 0.5) < 1e-6);
+const payload = lpPayload(filled, terms, profiles);
 assert.equal(payload.ctx.demand[100], 2000);
-assert.equal(payload.compliance.length, 3);
-assert.equal(payload.peakMask, undefined, "any hour of the day: no window mask");
-assert.equal(payload.compliance.find((r) => r.id === "peak").hours, "any");
-assert.equal(payload.ppaFirst, true);
-assert.equal(payload.exportSources, "solar");
-assert.ok(payload.vars.biomassMw && payload.biomass, "biomass offered when the tender allows it");
+assert.deepEqual(payload.compliance.map((r) => [r.id, r.target, r.hours]), [["annual", 0.8, "all"], ["monthly", 0.7, "all"], ["peak", 0.9, "any"]]);
+assert.equal(payload.peakMask, undefined, "the procurer picks the hours: every hour of the day is checked");
 assert.equal(payload.vars.solarMw.min, 4000);
-assert.equal(payload.returnLifetime, true);
-const noBio = lpPayload({ ...applied, sources: { ...applied.sources, biomass: false, wind: false } }, resourceProfiles(applied));
-assert.equal(noBio.vars.biomassMw, undefined);
-assert.deepEqual(noBio.vars.windMw, { locked: true, value: 0 });
+assert.equal(payload.vars.solarMw.max, 8000);
+assert.deepEqual(payload.vars.hydroMw, { locked: true, value: 300 });
+assert.equal(payload.vars.bessMwh.max, 3000 * 4);
+assert.equal(payload.greenShareMin, 0.51, "non-RE in the bid: the tender's green share applies");
+assert.deepEqual(payload.plants.map((p) => [p.id, p.green, p.cuf, p.recRsPerKwh]), [["hydro", true, 0.45, 0], ["thermal", false, 0.85, 0.15]]);
+assert.equal(payload.biomass.maxPlf, 0.8);
+assert.equal(payload.ppaFirst, true);
+assert.equal(payload.exportSources, "solar", "only the mandated solar may be sold");
+assert.equal(payload.ctx.extraExportMw, 8000);
+assert.equal(payload.fin.surplusPrice, 2.5);
+assert.equal(payload.costs.plants, undefined, "plant costs travel in plants[]");
+assert.equal(payload.fin.years, 25);
+const noThermal = lpPayload({ ...filled, sources: { ...filled.sources, thermal: false } }, terms, profiles);
+assert.equal(noThermal.greenShareMin, undefined, "all-renewable bid: nothing to cap");
+assert.equal(noThermal.vars.thermalMw, undefined);
+const noSale = lpPayload({ ...filled, market: { ...filled.market, sell: false } }, terms, profiles);
+assert.equal(noSale.ctx.sellSurplus, false);
 
-// financial model from LP lifetime energy: fuel cost flows into opex
+// ---- financial model from the LP's lifetime energy, with hydro and thermal costs
+const m = modelInputs(filled, terms);
 const lp = {
-  sizes: { solarMw: 3000, windMw: 900, bessMw: 400, bessMwh: 1600, biomassMw: 150 },
+  sizes: { solarMw: 4000, windMw: 1200, bessMw: 900, bessMwh: 3600, biomassMw: 200, hydroMw: 300, thermalMw: 600 },
   tariff: 5, years: [1], perYear: [{ year: 1, dfr: 0.82, minMonthlyDfr: 0.71 }],
-  lifetime: Array.from({ length: 25 }, (_, i) => ({ year: i + 1, demandMwh: 1500 * 8760, deliveredMwh: 0.82 * 1500 * 8760, exportMwh: 1e6, biomassMwh: 150 * 8760 * 0.7 })),
+  lifetime: Array.from({ length: 25 }, (_, i) => ({ year: i + 1, demandMwh: 2000 * 8760, deliveredMwh: 0.82 * 2000 * 8760, exportMwh: 1e6, biomassMwh: 1.2e6, hydroMwh: 1.1e6, thermalMwh: 3e6 })),
 };
-const ops = opsFromLp(lp, applied.fin, applied.bess);
-assert.equal(ops.length, 25);
-assert.ok(Math.abs(ops[0].dfr - 0.82) < 1e-9);
-const finance = E.runFinancialModel(null, lp.sizes, { costs: applied.costs, fin: applied.fin, bess: applied.bess, dfrTarget: 0.8, ops, solveBy: "npv" });
-const fuel1 = (150 * 8760 * 0.7 * applied.fin.biomassFuelRsPerKwh) / 1e4;
-assert.ok(Math.abs(finance.rows[0].fuel - fuel1) < 1e-6, "year-1 fuel = MWh × Rs/kWh");
-assert.ok(finance.rows[1].fuel > finance.rows[0].fuel, "fuel escalates");
-assert.ok(Math.abs(finance.capex.hard - (3000 * 3.5 + 900 * 6.5 + 1600 * 1.2 + 150 * applied.costs.biomassCrPerMw)) < 1e-6, "biomass capex counted");
-const noFuel = E.runFinancialModel(null, lp.sizes, { costs: applied.costs, fin: { ...applied.fin, biomassFuelRsPerKwh: 0 }, bess: applied.bess, dfrTarget: 0.8, ops, solveBy: "npv" });
-assert.ok(Math.abs(finance.equityIrr - applied.fin.targetEquityIrr) < 1e-6, "bid tariff gives the target equity IRR");
-assert.ok(finance.tariff > 1 && finance.tariff < 10, `bid tariff in range (${finance.tariff})`);
-// fuel per delivered kWh, before tax and escalation, is a floor on how much it raises the tariff
-assert.ok(finance.tariff - noFuel.tariff > (0.7 * 150 * 8760 * applied.fin.biomassFuelRsPerKwh) / (0.82 * 1500 * 8760) * 0.6, "fuel raises the bid tariff");
+const ops = opsFromLp(lp, m.fin, m.bess);
+assert.equal(ops[0].hydroMWh, 1.1e6);
+const fin = E.runFinancialModel(null, lp.sizes, { costs: m.costs, fin: m.fin, bess: m.bess, dfrTarget: 0.8, ops, solveBy: "npv" });
+const thermal1 = (600 * 120) / 100 + (3e6 * (3 + 0.15)) / 1e4;
+assert.ok(Math.abs(fin.rows[0].thermalCost - thermal1) < 1e-6, "thermal: capacity charge + energy + RECs");
+assert.ok(Math.abs(fin.rows[1].thermalCost - thermal1 * 1.03) < 1e-6, "thermal cost escalates");
+const hydro1 = (300 * 150) / 100 + (1.1e6 * 1.2) / 1e4;
+assert.ok(Math.abs(fin.rows[0].hydroCost - hydro1) < 1e-6);
+assert.ok(Math.abs(fin.capex.hard - (4000 * 3.6 + 1200 * 6.8 + 3600 * 1.2 + 200 * 7)) < 1e-6, "contracted hydro and thermal have no capex here");
+assert.ok(Math.abs(fin.rows[0].surplusRevenue - 1e6 * 2.5 * 1e-4) < 1e-9, "flat sale price");
+assert.ok(Math.abs(fin.equityIrr - 0.14) < 1e-6, "bid tariff gives the bidder's equity IRR");
+const cheaper = E.runFinancialModel(null, lp.sizes, { costs: { ...m.costs, plants: m.costs.plants.map((p) => (p.id === "thermal" ? { ...p, recRsPerKwh: 0 } : p)) }, fin: m.fin, bess: m.bess, dfrTarget: 0.8, ops, solveBy: "npv" });
+assert.ok(fin.tariff > cheaper.tariff, "RECs raise the bid tariff");
 
-// energy mix splits direct delivery by generation shares
-const hourly = { solar: [60, 0], wind: [20, 50], biomass: [20, 50], direct: [100, 80], discharge: [0, 20], charge: [0, 0], export: [0, 0], curtail: [0, 20], demand: [100, 100] };
+// energy mix splits direct delivery over every source's generation
+const hourly = { solar: [60, 0], wind: [20, 50], biomass: [0, 0], hydro: [20, 0], thermal: [0, 50], direct: [100, 80], discharge: [0, 20], charge: [0, 0], export: [0, 0], curtail: [0, 20], demand: [100, 100] };
 const mix = energyMix(hourly);
-assert.ok(Math.abs(mix.solar - 60) < 1e-9 && Math.abs(mix.wind - 60) < 1e-9 && Math.abs(mix.biomass - 60) < 1e-9 && mix.battery === 20);
-
-// IEX market prices for surplus sales
-const fakePrices = { markets: { GDAM: { hourlyRsPerMwh: Array.from({ length: E.HOURS }, (_, t) => (E.HOUR_OF_DAY[t] >= 18 && E.HOUR_OF_DAY[t] < 22 ? 8000 : 2000)), meanRsPerMwh: 3000 } } };
-const mkt = { ...applied, market: { source: "GDAM", escalation: 0.02 } };
-const withMarket = lpPayload(mkt, resourceProfiles(mkt), fakePrices);
-assert.equal(withMarket.ctx.surplusPrice.length, E.HOURS);
-assert.equal(withMarket.ctx.surplusPrice[19], 8);
-assert.equal(withMarket.fin.surplusEscalation, 0.02);
-const flatMarket = lpPayload({ ...mkt, market: { source: "flat", escalation: 0 } }, resourceProfiles(mkt), fakePrices);
-assert.equal(flatMarket.ctx.surplusPrice, undefined, "a flat price sends no series");
-const noSale = lpPayload({ ...mkt, fin: { ...mkt.fin, sellSurplus: false } }, resourceProfiles(mkt), fakePrices);
-assert.equal(noSale.ctx.surplusPrice, undefined, "no series when surplus is not sold");
-// LP lifetime export revenue flows into the financial model instead of the flat price
-const lpM = { ...lp, market: "GDAM", lifetime: lp.lifetime.map((r) => ({ ...r, exportRevenueCr: 123.4 })) };
-const opsM = opsFromLp(lpM, applied.fin, applied.bess);
-assert.equal(opsM[0].surplusRevenueCr, 123.4);
-const finM = E.runFinancialModel(null, lp.sizes, { costs: applied.costs, fin: applied.fin, bess: applied.bess, dfrTarget: 0.8, ops: opsM, solveBy: "npv" });
-assert.ok(Math.abs(finM.rows[0].surplusRevenue - 123.4) < 1e-9, "IEX revenue in the statements");
-assert.ok(Math.abs(finance.rows[0].surplusRevenue - 1e6 * applied.fin.surplusPrice * 1e-4) < 1e-9, "flat price when the sizing used one");
-const mixM = energyMix({ ...hourly, export: [10, 0], price: [8, 2] });
-assert.ok(Math.abs(mixM.exportRevenueCr - 10 * 8 * 1e-4) < 1e-12);
+assert.ok(Math.abs(mix.solar - 60) < 1e-9 && Math.abs(mix.wind - 60) < 1e-9 && Math.abs(mix.hydro - 20) < 1e-9 && Math.abs(mix.thermal - 40) < 1e-9 && mix.battery === 20);
 
 console.log("Tender to Bid model checks passed");
-
-const file = process.argv[2];
-if (file) {
-  const result = JSON.parse(readFileSync(file, "utf8"));
-  for (const p of buildProposals(result)) {
-    console.log(`${p.stated ? "✓" : "·"} ${p.group.padEnd(17)} ${p.label.padEnd(36)} ${String(p.display ?? "not stated").padEnd(34)} ${p.source ? `p.${p.source.page} ${p.source.status}` : ""}`);
-  }
-}

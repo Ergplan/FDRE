@@ -1022,6 +1022,30 @@ def _greenshoe(pages: list[PageText]) -> list[Hit]:
     return hits
 
 
+def _part_capacity(pages: list[PageText]) -> list[Hit]:
+    """No part capacity: a single bidder must bid for the whole capacity."""
+    return [Hit(False, page.page_no, m.start(), m.end()) for page, m in _iter(pages, r"no\s+part\s+capacity")]
+
+
+def _greenshoe_start(pages: list[PageText]) -> list[Hit]:
+    """The greenshoe capacity's supply start date, printed in the sentence on the greenshoe."""
+    hits = []
+    pattern = rf"green\s*-?\s*shoe[^;]{{0,250}}?supply\s+start\s+date\s+(?:of|shall\s+be|:)\s*{DATE2}"
+    for page, m in _iter(pages, pattern):
+        try:
+            value, note = _iso_date(m.group(1))
+        except ValueError:
+            continue
+        hits.append(Hit(value, page.page_no, m.start(1), m.end(1), note=note))
+    return hits
+
+
+def _greenshoe_same_tariff(pages: list[PageText]) -> list[Hit]:
+    """The greenshoe capacity is supplied at the same terms and tariff as the base capacity."""
+    pattern = r"green\s*-?\s*shoe[^;]{0,400}?(?:same\s+terms\s+and\s+conditions\s+and\s+(?:the\s+)?applicable\s+tariff|uniform\s+tariff)"
+    return [Hit(True, page.page_no, m.end() - 30, m.end()) for page, m in _iter(pages, pattern)]
+
+
 def _iso_date(raw: str) -> tuple[str, str]:
     """(YYYY-MM-DD, note) for a printed date; a two-digit year is read as 20YY."""
     from tender_intel.values import _date
@@ -1146,6 +1170,9 @@ RULE_PATHS = (
     "sector.power.fdre.peak_hours_set_by",
     "sector.power.fdre.supply_start_date",
     "sector.power.common.greenshoe_capacity_mw",
+    "sector.power.common.part_capacity_allowed",
+    "sector.power.common.greenshoe_supply_start_date",
+    "sector.power.common.greenshoe_same_tariff",
     "sector.power.bess.capacity_mw",
     "sector.power.bess.capacity_mwh",
     "sector.power.bess.cycles_per_day",
@@ -1274,6 +1301,9 @@ def read(pages: list[PageText], paths: Iterable[str]) -> dict[str, RuleDraft | N
     pick("sector.power.common.scod_reference", references)
     pick("sector.power.common.tariff_ceiling_inr_per_kwh", _ceiling_tariff(text_pages), lambda v: f"₹{v:g}/kWh")
     pick("sector.power.common.greenshoe_capacity_mw", _greenshoe(text_pages), lambda v: f"{v:g} MW")
+    pick("sector.power.common.part_capacity_allowed", _part_capacity(text_pages), lambda v: "yes" if v else "no")
+    pick("sector.power.common.greenshoe_supply_start_date", _greenshoe_start(text_pages))
+    pick("sector.power.common.greenshoe_same_tariff", _greenshoe_same_tariff(text_pages), lambda v: "yes" if v else "no")
 
     fdre_wanted = any(path.startswith("sector.power.fdre.") for path in wanted)
     if fdre_wanted:

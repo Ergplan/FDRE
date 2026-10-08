@@ -2,7 +2,7 @@ import React from "react";
 import { CheckCircle2, CircleMinus, Info, XCircle } from "lucide-react";
 import { Section, nf, pf } from "../rtc/ui";
 import { SourceChip } from "./RequirementsStep";
-import { anyHours, peakLabel } from "./model";
+import { FINANCE_FIELDS, SIZE_KEY, SOURCES, SOURCE_FIELDS, anyHours, plantMw, solarMinMw } from "./model";
 
 const STATUS = {
   met: { label: "Met", icon: CheckCircle2, cls: "ok" },
@@ -17,135 +17,103 @@ function StatusCell({ status }) {
   return <span className={`bid-check ${s.cls}`}><Icon size={14} /> {s.label}</span>;
 }
 
+const fmtDate = (v) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || ""));
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : v;
+};
+
 /**
- * Every tender condition against what the sized plant (and, on Financials, the bid) delivers.
- * Supply floors use the worst of the modelled PPA years.
+ * Every tender requirement against what the sized plant (and, on Financials, the bid) delivers.
+ * Supply floors and the green share use the worst of the modelled PPA years.
  */
-export function buildChecklist(state, lp, bidTariff = null) {
-  const prov = state.provenance || {};
-  const notes = Object.fromEntries((state.notes || []).map((n) => [n.id, n]));
+export function buildChecklist(state, terms, lp, bidTariff = null) {
+  const prov = terms.provenance;
   const sizes = lp?.sizes || {};
+  const years = lp?.perYear || [];
+  const total = plantMw(state, terms);
   const rows = [];
   const add = (row) => rows.push(row);
+  const sized = Boolean(lp);
+  const pending = "Size the plant to check";
 
-  const base = state.baseMw || state.plantMw;
-  add({
-    id: "capacity", condition: "Contracted supply capacity", source: prov.plantMw,
-    tender: prov.plantMw?.display || "Not read from the tender",
-    result: `Supply of ${nf(state.plantMw, 0)} MW in every hour is the delivery target${state.greenshoeMw ? ` (base ${nf(base, 0)} MW + greenshoe ${nf(state.greenshoeMw, 0)} MW)` : ""}`,
-    status: prov.plantMw ? (Math.abs(Number(String(prov.plantMw.display).replace(/[^\d.]/g, "")) - base) < 0.5 ? "met" : "info") : "info",
-  });
-  if (prov.greenshoe) {
-    add({
-      id: "greenshoe", condition: "Greenshoe option", source: prov.greenshoe, tender: prov.greenshoe.display,
-      result: state.greenshoeMw ? "Included: the plant and the tariff cover base + greenshoe" : "Not included: sized for the base only",
-      status: state.greenshoeMw ? "met" : "info",
-    });
+  if (terms.baseMw) {
+    const ok = terms.partAllowed === false ? state.bid.baseMw === terms.baseMw : state.bid.baseMw <= terms.baseMw;
+    add({ id: "capacity", condition: "Bid capacity", source: prov.capacity, tender: `${nf(terms.baseMw, 0)} MW${terms.partAllowed === false ? ", no part capacity" : ""}`,
+      result: `${nf(state.bid.baseMw, 0)} MW bid`, status: ok ? "met" : "failed" });
   }
-
-  const years = lp?.perYear || [];
-  for (const rule of state.rules.filter((r) => r.enabled)) {
+  if (terms.greenshoeMw) {
+    add({ id: "greenshoe", condition: "Greenshoe", source: prov.greenshoe, tender: `${nf(terms.greenshoeMw, 0)} MW at the procurer's option${terms.greenshoeSameTariff ? ", same tariff" : ""}`,
+      result: state.bid.greenshoe ? `Plant and tariff cover ${nf(total, 0)} MW` : "Not sized for: the tariff covers the bid capacity only", status: state.bid.greenshoe ? "met" : "info" });
+  }
+  for (const rule of terms.rules) {
     const outcomes = years.map((y) => (y.rules || []).find((o) => o.id === rule.id)).filter(Boolean);
     const worst = outcomes.length ? Math.min(...outcomes.map((o) => o.achieved)) : null;
-    const anyText = state.peak?.windows?.length ? `every hour inside ${state.peak.windows.map((w) => `${w.start}–${w.end}`).join(" and ")}` : "every hour of the day";
-    const where = `${rule.basis === "monthly" ? "every month" : "each year"}, ${rule.hours === "peak" ? `peak hours ${peakLabel(state.peak)}` : rule.hours === "any" ? `in whichever hours may be picked (${anyText})` : "all hours"}`;
-    const fromTender = prov[`rule.${rule.id}`];
-    const tenderTarget = fromTender ? Number.parseFloat(String(fromTender.display).replace(/[^\d.]/g, "")) / 100 : null;
-    const belowTender = tenderTarget !== null && rule.target < tenderTarget - 1e-9;
-    add({
-      id: `rule.${rule.id}`, condition: rule.label, source: fromTender,
-      tender: fromTender ? `At least ${fromTender.display} of contracted capacity, ${where}` : `Not stated in the tender (model floor ${pf(rule.target, 0)}, ${where})`,
-      result: belowTender ? `Model floor ${pf(rule.target, 0)} is below the tender's ${fromTender.display}`
-        : worst === null ? "Size the plant to check" : `${pf(worst, 1)} in the worst modelled year (years ${years.map((y) => y.year).join(", ")})`,
-      status: belowTender ? "failed" : worst === null ? "info" : outcomes.every((o) => o.met) ? (fromTender || !state.tender ? "met" : "info") : "failed",
-    });
+    const where = `${rule.basis === "monthly" ? "every month" : "each year"}${rule.hours === "all" ? "" : rule.hours === "any" ? `, in each of the ${anyHours(terms.peak).length} hours the procurer may pick` : ", peak hours"}`;
+    add({ id: `rule.${rule.id}`, condition: rule.label, source: prov[`rule.${rule.id}`], tender: `At least ${pf(rule.target, 0)} CUF, ${where}`,
+      result: worst === null ? pending : `${pf(worst, 1)} in the worst modelled year (years ${years.map((y) => y.year).join(", ")})`,
+      status: worst === null ? "info" : outcomes.every((o) => o.met) ? "met" : "failed" });
   }
   if (prov["peak.hours"]) {
-    add({
-      id: "peak.hours", condition: "Peak hours per day", source: prov["peak.hours"], tender: prov["peak.hours"].display,
-      result: state.rules.some((r) => r.enabled && r.hours === "any")
-        ? `Floor checked in each of ${anyHours(state.peak).length} hours that may be picked`
-        : `Peak floor checked over ${peakLabel(state.peak)} (${state.peak.hours} h)`,
-      status: state.rules.some((r) => r.enabled && r.hours === "any") || state.peak.hours >= Number.parseFloat(prov["peak.hours"].display) ? "met" : "failed",
-    });
+    add({ id: "peak.hours", condition: "Peak hours", source: prov["peak.hours"], tender: `${prov["peak.hours"].display} a day${prov["peak.setBy"] ? `; ${prov["peak.setBy"].display.toLowerCase()}` : ""}`,
+      result: terms.peakAny ? `Every hour of the day is checked against the peak floor` : `Checked in the chosen window`, status: "met" });
   }
-  if (prov["solar.min"]) {
-    const min = state.vars.solarMw.min;
-    add({
-      id: "solar.min", condition: "Mandatory solar capacity", source: prov["solar.min"], tender: `${prov["solar.min"].display} = ${nf(min, 0)} MW`,
-      result: lp ? `${nf(sizes.solarMw, 0)} MW of solar` : "Size the plant to check",
-      status: lp ? (sizes.solarMw >= min - 0.5 ? "met" : "failed") : "info",
-    });
+  // sources: every source used must be allowed; mandated ones present
+  for (const src of SOURCES) {
+    const used = state.sources[src.id] && (sizes[SIZE_KEY[src.id]] || 0) > 0.5;
+    const allowed = terms.permitted[src.id];
+    if (allowed === false && state.sources[src.id]) {
+      add({ id: `src.${src.id}`, condition: src.title, source: src.id === "thermal" ? prov.nonRe : prov.sources, tender: "Not allowed", result: used ? "Used" : "Switched on", status: "failed" });
+    }
   }
-  if (prov["sources.biomass"]) {
-    const allowed = /yes/i.test(prov["sources.biomass"].display);
-    const used = (sizes.biomassMw || 0) > 0.5;
-    add({
-      id: "biomass", condition: "Biomass", source: prov["sources.biomass"], tender: allowed ? "Allowed" : "Not allowed",
-      result: !lp ? "Size the plant to check" : used ? `${nf(sizes.biomassMw, 0)} MW of biomass used` : "Offered to the optimizer; not chosen",
-      status: !lp ? "info" : !allowed && used ? "failed" : allowed ? "met" : "na",
-    });
+  if (terms.solarMultiple) {
+    const min = solarMinMw(state, terms);
+    add({ id: "solar.min", condition: "Mandatory solar capacity", source: prov["solar.min"], tender: `${terms.solarMultiple} × contracted capacity = ${nf(min, 0)} MW`,
+      result: sized ? `${nf(sizes.solarMw || 0, 0)} MW of solar` : pending, status: !sized ? "info" : (sizes.solarMw || 0) >= min - 0.5 ? "met" : "failed" });
   }
-  if (prov["sources.bess"]) {
-    const mandatory = /yes/i.test(prov["sources.bess"].display);
-    add({
-      id: "storage", condition: "Energy storage", source: prov["sources.bess"], tender: mandatory ? "Mandatory" : "Optional",
-      result: lp ? ((sizes.bessMw || 0) > 0.5 ? `${nf(sizes.bessMw, 0)} MW / ${nf(sizes.bessMwh, 0)} MWh battery` : "No battery") : "Size the plant to check",
-      status: !lp ? "info" : mandatory ? ((sizes.bessMw || 0) > 0.5 ? "met" : "failed") : "na",
-    });
+  if (terms.mandatory.bess) {
+    add({ id: "storage", condition: "Energy storage", source: prov.storage, tender: "Mandatory",
+      result: sized ? `${nf(sizes.bessMw || 0, 0)} MW / ${nf(sizes.bessMwh || 0, 0)} MWh` : pending, status: !sized ? "info" : (sizes.bessMw || 0) > 0.5 ? "met" : "failed" });
   }
-  if (notes.green) {
-    add({
-      id: "green", condition: "Renewable (traceable green) share", source: notes.green.source, tender: `At least ${notes.green.display}`,
-      result: "100% renewable: solar, wind, biomass, and a battery charged from them", status: "met",
-    });
+  if (terms.greenMin) {
+    const shares = years.map((y) => y.greenShare).filter((v) => v !== undefined);
+    const worst = shares.length ? Math.min(...shares) : 1;
+    const nonRe = state.sources.thermal;
+    add({ id: "green", condition: "Traceable green share", source: prov.green, tender: `At least ${pf(terms.greenMin, 0)} of supply, each accounting year`,
+      result: !sized ? pending : nonRe ? `${pf(worst, 1)} green in the worst modelled year` : "100% green: no non-RE source",
+      status: !sized ? "info" : worst >= terms.greenMin - 1e-6 ? "met" : "failed" });
   }
-  if (notes.nonRe) {
-    add({ id: "nonRe", condition: "Non-RE supply with RECs", source: notes.nonRe.source, tender: notes.nonRe.display === "Yes" ? "Allowed" : "Not allowed", result: "Not used", status: "na" });
+  if (terms.permitted.thermal) {
+    const mu = years[0]?.thermalMu;
+    add({ id: "nonRe", condition: "Non-RE supply with RECs", source: prov.nonRe, tender: "Allowed for the balance; RECs for every non-RE unit",
+      result: !state.sources.thermal ? "No non-RE source in the bid" : !sized ? pending : `${nf(mu || 0, 0)} MU in year 1, RECs costed on every kWh`,
+      status: !state.sources.thermal ? "na" : sized ? "met" : "info" });
   }
-  if (prov.site) {
-    add({ id: "site", condition: "Project location", source: prov.site, tender: prov.site.display, result: state.site?.label || "", status: "info" });
-  }
-  if (prov["fin.years"]) {
-    add({
-      id: "term", condition: "PPA term", source: prov["fin.years"], tender: prov["fin.years"].display,
-      result: `Financial model over ${state.fin.years} years`,
-      status: `${state.fin.years} years` === prov["fin.years"].display ? "met" : "failed",
-    });
-  }
-  const tariff = bidTariff ?? lp?.tariff ?? null;
-  add({
-    id: "ceiling", condition: "Ceiling tariff", source: prov.ceiling,
-    tender: state.ceilingTariff ? `At most ₹${nf(state.ceilingTariff, 2)}/kWh` : "Not stated",
-    result: tariff === null ? "Size the plant to check" : `Bid tariff ₹${nf(tariff, 3)}/kWh${bidTariff === null ? " (HiGHS)" : ""}`,
-    status: !state.ceilingTariff ? "na" : tariff === null ? "info" : tariff <= state.ceilingTariff + 1e-9 ? "met" : "failed",
-  });
-  const crore = (perMw) => (perMw ? `₹${nf((perMw * state.plantMw) / 1e7, 2)} cr` : null);
-  if (prov["guarantees.emd"]) add({ id: "emd", condition: "Bid security (EMD)", source: prov["guarantees.emd"], tender: prov["guarantees.emd"].display, result: `${state.guarantees.emdPerMwInr ? `₹${nf((state.guarantees.emdPerMwInr * base) / 1e7, 2)} cr` : "–"} for the ${nf(base, 0)} MW bid`, status: "info" });
-  if (prov["guarantees.pbg"]) add({ id: "pbg", condition: "Performance guarantee (PBG)", source: prov["guarantees.pbg"], tender: prov["guarantees.pbg"].display, result: `${crore(state.guarantees.pbgPerMwInr)} for ${nf(state.plantMw, 0)} MW`, status: "info" });
-  if (notes.start) add({ id: "start", condition: "Supply start date", source: notes.start.source, tender: notes.start.display, result: "Build schedule is not modelled", status: "info" });
-  const sold = (lp?.perYear || []).some((y) => y.divertedMu !== undefined);
-  if (lp && sold) {
-    const diverted = Math.max(...lp.perYear.map((y) => y.divertedMu || 0));
-    add({
-      id: "ppaFirst", condition: "PPA supplied before any market sale", source: prov.ppaFirst || null,
-      tender: prov.ppaFirst ? "Priority to the PPA before any sale" : "Not stated in the tender; applied as your instruction",
+  if (lp && years.some((y) => y.divertedMu !== undefined)) {
+    const diverted = Math.max(...years.map((y) => y.divertedMu || 0));
+    add({ id: "ppaFirst", condition: "PPA supplied before any sale", source: prov.ppaFirst || null,
+      tender: prov.ppaFirst ? prov.ppaFirst.display : "Not stated; the PPA is supplied first in every hour",
       result: diverted < 0.01 ? "Nothing sold while the PPA had room, in every modelled year" : `${nf(diverted, 1)} MU sold while the PPA had room`,
-      status: diverted < 0.01 ? "met" : "failed",
-    });
-    const solarOnly = lp.exportSources === "solar";
-    add({
-      id: "market", condition: "What may be sold in the market", source: prov["market.sale"] || null,
-      tender: prov["market.sale"]?.display || "Not stated",
-      result: `${solarOnly ? "Solar surplus only" : "Any surplus"}, at ${lp.market ? `IEX ${lp.market} hourly prices` : `₹${nf(lp.flatPrice, 2)}/kWh`}`,
-      status: !state.tender ? "info" : !prov["market.sale"] || /not allowed/i.test(prov["market.sale"].display) ? "failed" : /mandated solar/i.test(prov["market.sale"].display) ? (solarOnly ? "met" : "failed") : "met",
-    });
+      status: diverted < 0.01 ? "met" : "failed" });
+    add({ id: "market", condition: "What may be sold in the market", source: prov["market.sale"], tender: prov["market.sale"]?.display || "Not stated",
+      result: `${lp.exportSources === "solar" ? "Solar surplus only" : "Renewable surplus only"}, at ${lp.market ? `IEX ${lp.market} hourly prices` : `₹${nf(lp.flatPrice, 2)}/kWh`}`,
+      status: terms.sale === "mandated_solar" ? (lp.exportSources === "solar" ? "met" : "failed") : terms.sale === "not_allowed" ? "failed" : "met" });
+  } else if (terms.sale) {
+    add({ id: "market", condition: "What may be sold in the market", source: prov["market.sale"], tender: prov["market.sale"]?.display, result: state.market.sell ? pending : "Nothing sold", status: state.market.sell && !sized ? "info" : "met" });
   }
+  if (terms.site) add({ id: "site", condition: "Project location", source: prov.site, tender: prov.site?.display, result: "Your sites; their profiles set the solar and wind output", status: "info" });
+  if (terms.years) add({ id: "term", condition: "PPA term", source: prov.years, tender: `${terms.years} years`, result: `Modelled and financed over ${terms.years} years`, status: "met" });
+  const tariff = bidTariff ?? lp?.tariff ?? null;
+  add({ id: "ceiling", condition: "Ceiling tariff", source: prov.ceiling, tender: terms.ceiling ? `At most ₹${nf(terms.ceiling, 2)}/kWh` : "Not stated",
+    result: tariff === null ? pending : `Bid tariff ₹${nf(tariff, 3)}/kWh${bidTariff === null ? " (HiGHS)" : ""}`,
+    status: !terms.ceiling ? "na" : tariff === null ? "info" : tariff <= terms.ceiling + 1e-9 ? "met" : "failed" });
+  if (terms.emdPerMw) add({ id: "emd", condition: "Bid security (EMD)", source: prov.emd, tender: prov.emd.display, result: `₹${nf((terms.emdPerMw * (state.bid.baseMw || 0)) / 1e7, 2)} cr for the ${nf(state.bid.baseMw || 0, 0)} MW bid`, status: "info" });
+  if (terms.pbgPerMw) add({ id: "pbg", condition: "Performance guarantee (PBG)", source: prov.pbg, tender: prov.pbg.display, result: `₹${nf((terms.pbgPerMw * (total || 0)) / 1e7, 2)} cr for ${nf(total || 0, 0)} MW`, status: "info" });
+  if (terms.supplyStart) add({ id: "start", condition: "Supply start", source: prov.start, tender: `${fmtDate(terms.supplyStart)}${terms.greenshoeStart ? `; greenshoe ${fmtDate(terms.greenshoeStart)}` : ""}`, result: "Build schedule is not modelled", status: "info" });
   return rows;
 }
 
-export default function Checklist({ state, lp, bidTariff = null, index = "3.4" }) {
-  const rows = buildChecklist(state, lp, bidTariff);
+export default function Checklist({ state, terms, lp, bidTariff = null, index = "4.2" }) {
+  const rows = buildChecklist(state, terms, lp, bidTariff);
   const met = rows.filter((r) => r.status === "met").length;
   const failed = rows.filter((r) => r.status === "failed").length;
   return (
@@ -165,45 +133,34 @@ export default function Checklist({ state, lp, bidTariff = null, index = "3.4" }
   );
 }
 
-/** Every model input the tender does not set: the bidder's own numbers, listed openly. */
-export function BidderInputs({ state, prices, index = "3.5" }) {
-  const { costs, fin, bess, biomass, sources, inputs } = state;
-  const prov = state.provenance || {};
+const show = (f, v) => {
+  if (v === null || v === undefined) return "–";
+  if (f.options) return f.options.find(([k]) => k === v)?.[1] || v;
+  return f.pct ? pf(v, 2) : `${nf(v, 2)}${f.unit ? ` ${f.unit}` : ""}`;
+};
+
+/** Every input the bidder gave (the tender sets none of these), listed openly. */
+export function BidderInputs({ state, prices, index = "4.3" }) {
   const rows = [];
-  const add = (input, value, why) => rows.push({ input, value, why });
-  const profile = (kind, cuf) => (state[`${kind}Upload`] ? `${state[`${kind}Upload`].name}` : `Synthetic profile, CUF ${pf(cuf, 1)}`);
-  if (sources.solar) {
-    add("Solar resource", profile("solar", inputs.solarCuf), "Hourly output; the tender does not give a site");
-    add("Solar cost", `₹${nf(costs.solarCrPerMw, 2)} cr/MW · O&M ₹${nf(fin.solarOmLakhPerMw, 1)} lakh/MW/yr · ${pf(fin.solarDegradation, 2)}/yr degradation`, "Bidder's cost");
+  for (const src of SOURCES) {
+    if (!state.sources[src.id]) continue;
+    const s = state.src[src.id];
+    const cap = s.capacity.mode === "fixed" ? `${nf(s.capacity.mw, 0)} MW fixed` : `optimised, up to ${nf(s.capacity.mw, 0)} MW`;
+    const profile = src.id === "solar" || src.id === "wind" ? ` · profile ${(state[`${src.id}Upload`]?.name) || "typical shape"} scaled to the CUF` : "";
+    rows.push({ input: src.title, value: `${cap} · ${SOURCE_FIELDS[src.id].map((f) => `${f.label.toLowerCase()} ${show(f, s[f.key])}`).join(" · ")}${profile}` });
   }
-  if (sources.wind) {
-    add("Wind resource", profile("wind", inputs.windCuf), "Hourly output; the tender does not give a site");
-    add("Wind cost", `₹${nf(costs.windCrPerMw, 2)} cr/MW · O&M ₹${nf(fin.windOmLakhPerMw, 1)} lakh/MW/yr`, "Bidder's cost");
+  rows.push({ input: "Financing", value: FINANCE_FIELDS.map((f) => `${f.label.toLowerCase()} ${show(f, state[f.section][f.key])}`).join(" · ") });
+  if (state.market.sell) {
+    const m = prices?.markets?.[state.market.source];
+    rows.push({ input: "Market prices", value: state.market.source === "flat" ? `flat ₹${nf(state.market.flatPrice, 2)}/kWh` : `IEX ${state.market.source}${m ? `, ${m.from} to ${m.to}` : ""}, escalation ${pf(state.market.escalation || 0, 1)}/yr` });
   }
-  if (sources.biomass) {
-    add("Biomass operation", `availability ${pf(biomass.availability, 0)} · fuel-limited PLF ${pf(biomass.maxPlf, 0)} · minimum load ${pf(biomass.minLoad, 0)}`, "Plant and fuel supply");
-    add("Biomass cost", `₹${nf(costs.biomassCrPerMw, 2)} cr/MW · O&M ₹${nf(fin.biomassOmLakhPerMw, 0)} lakh/MW/yr · fuel ₹${nf(fin.biomassFuelRsPerKwh, 2)}/kWh, +${pf(fin.biomassFuelEscalation, 1)}/yr`, "Bidder's cost");
-  }
-  if (sources.bess) {
-    add("Battery", `${bess.durationH ? `${bess.durationH}-hour` : "free duration"} · RTE ${pf(bess.rte, 1)}${prov["bess.rte"] ? " (tender)" : ""} · fade ${pf(bess.annualDegradation, 1)}/yr · augmentation ${bess.augmentation}`, "Technology choice");
-    add("Battery cost", `₹${nf(costs.bessCrPerMwh, 2)} cr/MWh · O&M ₹${nf(fin.bessOmLakhPerMwh, 1)} lakh/MWh/yr`, "Bidder's cost");
-  }
-  add("Financing", `equity IRR ${pf(fin.targetEquityIrr, 1)} · debt ${pf(fin.debtFraction, 0)} at ${pf(fin.interestRate, 2)} for ${fin.tenorYears} years · tax ${pf(fin.taxRate, 2)}`, "Bidder's cost of capital");
-  if (fin.sellSurplus && prov["market.sale"]) {
-    const m = prices?.markets?.[state.market?.source];
-    add("Market prices", state.market?.source === "flat" ? `flat ₹${nf(fin.surplusPrice, 2)}/kWh` : `IEX ${state.market?.source}${m ? `, ${m.from} to ${m.to}` : ""}, escalation ${pf(state.market?.escalation || 0, 1)}/yr`, "Your market data; the tender sets no price");
-  }
-  if (!prov.ppaFirst && fin.sellSurplus && prov["market.sale"]) add("PPA before any sale", "Applied", "Your instruction; the tender does not state it");
-  const peakRule = state.rules.find((r) => r.id === "peak" && r.enabled);
-  if (peakRule?.hours === "peak" && !prov["peak.setBy"]) add("Peak window", peakLabel(state.peak), "The tender does not fix the hours");
-  if (!prov.plantMw) add("Contracted capacity", `${nf(state.plantMw, 0)} MW`, "Not read from a tender");
   return (
-    <Section index={index} title="Inputs the tender does not set" note="The bidder's own numbers; change them on this page">
+    <Section index={index} title="Your inputs" note="The bidder's own numbers; the tender sets none of these">
       <div className="bid-checklist" role="table" data-testid="bid-inputs">
-        <div className="bid-checklist-row head bid-inputs-row" role="row"><span>Input</span><span>Value used</span><span>Why it is needed</span></div>
+        <div className="bid-checklist-row head bid-inputs-row" role="row"><span>Input</span><span>Value used</span><span /></div>
         {rows.map((r) => (
           <div key={r.input} className="bid-checklist-row bid-inputs-row" role="row">
-            <span><strong>{r.input}</strong></span><span>{r.value}</span><span className="rtc-note">{r.why}</span>
+            <span><strong>{r.input}</strong></span><span>{r.value}</span><span />
           </div>
         ))}
       </div>

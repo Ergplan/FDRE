@@ -90,3 +90,18 @@ fields:
     min: 0.1
     max: 100000
     help: Additional capacity the procurer may take up under a greenshoe option, in MW.
+  sector.power.common.part_capacity_allowed:
+    section: identity_and_scope
+    label: Part capacity allowed
+    type: bool
+    help: "Whether a bidder may bid for part of the capacity. False when the tender says a single bidder must bid for the whole capacity and no part capacity is allowed. Leave empty when the tender does not say."
+  sector.power.common.greenshoe_supply_start_date:
+    section: identity_and_scope
+    label: Greenshoe supply start date
+    type: date
+    help: Supply start date for the greenshoe capacity, when the tender prints one.
+  sector.power.common.greenshoe_same_tariff:
+    section: identity_and_scope
+    label: Greenshoe at the same tariff
+    type: bool
+    help: "True when the tender says the greenshoe capacity is supplied at the same terms and tariff as the base capacity. Leave empty when the tender does not say."

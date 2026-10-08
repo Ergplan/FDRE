@@ -336,6 +336,9 @@ def test_rules_mode_reads_the_wbsedcl_re_rtc_rfp():
         "sector.power.fdre.non_re_allowed": (True, {10, 11, 15, 47}),
         "sector.power.fdre.min_solar_capacity_multiple": (2, {11, 48, 62}),
         "sector.power.fdre.supply_start_date": ("2028-07-01", {61}),
+        "sector.power.common.part_capacity_allowed": (False, {12}),
+        "sector.power.common.greenshoe_supply_start_date": ("2029-04-01", {10}),
+        "sector.power.common.greenshoe_same_tariff": (True, {10}),
     }
     for field_path, (value, expected_pages) in expected.items():
         assert values.get(field_path) == value, (field_path, values.get(field_path))

@@ -23,7 +23,7 @@ services:
       context: .
       dockerfile: deploy/docker/engine.Dockerfile
       args:
-        INSTALL_DOCLING: ${INSTALL_DOCLING:-true}
+        INSTALL_DOCLING: ${INSTALL_DOCLING:-false}
     restart: unless-stopped
     environment:
       # Tender intelligence (tender_intel): an OpenAI or Anthropic key; without one tenders are read in rules mode

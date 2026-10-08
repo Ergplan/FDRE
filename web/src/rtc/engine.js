@@ -734,6 +734,8 @@ export function capexCr(sizes, costs) {
     + sizes.bessMwh * costs.bessCrPerMwh
     + sizes.bessMw * (costs.bessPcsCrPerMw || 0)
     + (sizes.biomassMw || 0) * (costs.biomassCrPerMw || 0) // Tender to Bid only; 0 for Round the clock
+    // Tender to Bid dispatchable plants (hydro, thermal): capex per MW; none for Round the clock
+    + (costs.plants || []).reduce((sum, pl) => sum + (sizes[`${pl.id}Mw`] || 0) * (pl.capexCrPerMw || 0), 0)
     + (costs.evacuationCr || 0);
   return { hard, preop: hard * (costs.preopPct || 0), total: hard * (1 + (costs.preopPct || 0)) };
 }
@@ -1350,7 +1352,19 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
     const other = (fin.otherFixedCr || 0) * esc;
     // biomass fuel (Tender to Bid): Rs/kWh of biomass generation, escalating; 0 for Round the clock
     const fuel = (op.biomassMWh || 0) * (fin.biomassFuelRsPerKwh || 0) * (1 + (fin.biomassFuelEscalation || 0)) ** (y - 1) * RS_CR_PER_MWH_AT_1RS;
-    const opex = om + insurance + other + fuel;
+    // dispatchable plants (Tender to Bid): fixed charge per MW and energy cost per kWh (RECs for
+    // non-RE), each escalating at the plant's rate; none for Round the clock
+    const plantCost = {};
+    let plantsTotal = 0;
+    for (const pl of costs.plants || []) {
+      const esc = (1 + (pl.escalation || 0)) ** (y - 1);
+      const fixed = ((sizes[`${pl.id}Mw`] || 0) * (pl.fixedLakhPerMw || 0)) / 100 * esc;
+      const energy = (op[`${pl.id}MWh`] || 0) * ((pl.energyRsPerKwh || 0) + (pl.recRsPerKwh || 0)) * esc * RS_CR_PER_MWH_AT_1RS;
+      plantCost[`${pl.id}Cost`] = fixed + energy;
+      plantCost[`${pl.id}Mu`] = (op[`${pl.id}MWh`] || 0) / 1000;
+      plantsTotal += fixed + energy;
+    }
+    const opex = om + insurance + other + fuel + plantsTotal;
     const ebitda = revenue - opex;
     // book depreciation (SLM), augmentation depreciated over remaining life
     if (aug[y] > 0) augBookDep += aug[y] / Math.max(1, years - y + 1);
@@ -1422,6 +1436,7 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
       other,
       fuel,
       biomassMu: (op.biomassMWh || 0) / 1000,
+      ...plantCost,
       opex,
       ebitda,
       bookDep,

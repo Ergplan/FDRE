@@ -27,6 +27,7 @@ tax losses carried forward and DSCR effects are accounted for in the final answe
 from __future__ import annotations
 
 import math
+import re
 import time
 from typing import Any
 
@@ -225,14 +226,17 @@ def tariff_weights(fin: dict, taxed_in: np.ndarray | None = None) -> dict:
 
 def reference_taxable(fin: dict, costs: dict, bess: dict, sizes: dict, delivered_mwh: np.ndarray,
                       export_mwh: np.ndarray, tariff: float, biomass_mwh: np.ndarray | None = None,
-                      export_revenue_cr: np.ndarray | None = None) -> np.ndarray:
+                      export_revenue_cr: np.ndarray | None = None, plants: list | None = None,
+                      plant_mwh: dict | None = None) -> np.ndarray:
     """Taxable income by year (before loss set-off) for a design, as in engine.js."""
     n = int(fin.get("years") or 25)
     y = np.arange(1, n + 1)
     bio_mw = float(sizes.get("biomassMw") or 0)
+    plants = plants or []
     hard = (sizes["solarMw"] * costs["solarCrPerMw"] + sizes["windMw"] * costs["windCrPerMw"]
             + sizes["bessMwh"] * costs["bessCrPerMwh"] + sizes["bessMw"] * float(costs.get("bessPcsCrPerMw") or 0)
             + bio_mw * float(costs.get("biomassCrPerMw") or 0)
+            + sum(float(sizes.get(f"{pl['id']}Mw") or 0) * pl["capex"] for pl in plants)
             + float(costs.get("evacuationCr") or 0))
     capex = hard * (1 + float(costs.get("preopPct") or 0))
     esc = (1 + float(fin.get("omEscalation") or 0)) ** (y - 1)
@@ -242,6 +246,13 @@ def reference_taxable(fin: dict, costs: dict, bess: dict, sizes: dict, delivered
     if biomass_mwh is not None:  # fuel for the biomass plant, Rs/kWh generated
         fuel_esc = (1 + float(fin.get("biomassFuelEscalation") or 0)) ** (y - 1)
         opex = opex + biomass_mwh * float(fin.get("biomassFuelRsPerKwh") or 0) * fuel_esc * RS_CR_PER_MWH_AT_1RS
+    for pl in plants:  # hydro, thermal: fixed charge per MW and energy cost per kWh, escalating
+        pl_esc = (1 + pl["escalation"]) ** (y - 1)
+        mw = float(sizes.get(f"{pl['id']}Mw") or 0)
+        mwh = (plant_mwh or {}).get(pl["id"])
+        opex = opex + mw * pl["fixed"] / 100 * pl_esc
+        if mwh is not None:
+            opex = opex + mwh * pl["variable"] * pl_esc * RS_CR_PER_MWH_AT_1RS
     trf = tariff * (1 + float(fin.get("tariffEscalation") or 0)) ** (y - 1)
     sell = float(fin.get("surplusPrice") or 0) if fin.get("sellSurplus") else 0.0
     if export_revenue_cr is not None:  # surplus sold at hourly market prices
@@ -360,6 +371,42 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         fuel = max(0.0, float(fin.get("biomassFuelRsPerKwh") or 0))
         fuel_esc = (1 + float(fin.get("biomassFuelEscalation") or 0)) ** (np.arange(1, n + 1) - 1)
 
+    # Optional dispatchable plants (Tender to Bid): hydro and thermal, each with a size column
+    # (vars["<id>Mw"]) and an hourly output column per modelled year. Output is limited by the
+    # hourly availability, a minimum load, and its CUF (energy per year, or per month when
+    # monthlyCuf is given). Costs: capex per MW, a fixed charge per MW per year and an energy
+    # cost per kWh (with RECs for non-RE), escalating yearly. green: renewable (counts towards
+    # the green share); non-RE output is capped by greenShareMin and is never sold.
+    plants = []
+    for item in payload.get("plants") or []:
+        pid = str(item.get("id") or "")
+        if not re.fullmatch(r"[a-z][a-zA-Z0-9]{0,30}", pid) or pid in ("solar", "wind", "bess", "biomass"):
+            raise LpInputError(f"plant id {pid!r} is not allowed")
+        spec = variables.get(f"{pid}Mw")
+        if spec is None:
+            continue
+        lo, hi, _ = _bounds(spec, plant)
+        if hi <= 0:
+            continue
+        avail = min(1.0, max(0.0, float(item.get("availability") if item.get("availability") is not None else 1.0)))
+        cuf = item.get("cuf")
+        monthly_cuf = item.get("monthlyCuf")
+        if monthly_cuf is not None:
+            monthly_cuf = [min(avail, max(0.0, float(v))) for v in monthly_cuf]
+            if len(monthly_cuf) != 12:
+                raise LpInputError(f"{pid}: monthlyCuf needs 12 values")
+        plants.append({
+            "id": pid, "lo": lo, "hi": hi, "green": bool(item.get("green")), "avail": avail,
+            "min": min(avail, max(0.0, float(item.get("minLoad") or 0))),
+            "cuf": min(avail, max(0.0, float(cuf))) if cuf is not None else None, "monthlyCuf": monthly_cuf,
+            "capex": max(0.0, float(item.get("capexCrPerMw") or 0)),
+            "fixed": max(0.0, float(item.get("fixedLakhPerMw") or 0)),
+            "variable": max(0.0, float(item.get("energyRsPerKwh") or 0)) + max(0.0, float(item.get("recRsPerKwh") or 0)),
+            "escalation": float(item.get("escalation") or 0),
+        })
+    green_min = float(payload.get("greenShareMin") or 0)
+    non_green = [pl for pl in plants if not pl["green"]]
+
     # Optional supply rules (Tender to Bid): each is a floor on delivered ÷ demand over all hours
     # or over the peak hours (peakMask), for the year or for every month. When given they replace
     # the single DFR floor.
@@ -416,9 +463,16 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     BM_COL = n_size  # biomass MW, after the battery columns (only when has_bio)
     if has_bio:
         n_size += 1
+    for pl in plants:  # plant MW columns, after biomass
+        pl["col"] = n_size
+        n_size += 1
     blocks = 5 if sell else 4
     BIO_BLOCK = blocks  # per-year biomass output block, after dir, ch, dis, soc, [ex]
     if has_bio:
+        blocks += 1
+    for pl in plants:  # per-year plant output blocks, after biomass
+        pl["block"] = blocks
+        pl["cols"] = []
         blocks += 1
     per_year = blocks * HOURS
     n_col = n_size + per_year * len(rep)
@@ -430,6 +484,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         col_lo[3], col_hi[3] = e_lo, e_hi
     if has_bio:
         col_lo[BM_COL], col_hi[BM_COL] = bm_lo, bm_hi
+    for pl in plants:
+        col_lo[pl["col"]], col_hi[pl["col"]] = pl["lo"], pl["hi"]
     E_COL = 3 if free_e else 2
     e_scale = 1.0 if free_e else duration  # battery MWh = e_scale * column E_COL
 
@@ -475,6 +531,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             col_hi[c_ex] = sale_cap
         if has_bio:
             bio_cols.append(c_bio)
+        for pl in plants:
+            pl["cols"].append(base + pl["block"] * HOURS + t)
         dem = demand * f["demandFactor"]
         target = np.minimum(dem, plant)
         demand_by_year.append(dem)
@@ -491,8 +549,42 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         add(r, np.zeros(HOURS, int), -sgen); add(r, np.ones(HOURS, int), -wgen)
         if has_bio:
             add(r, c_bio, -ones)
+        for pl in plants:
+            add(r, pl["cols"][-1], -ones)
         row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
         n_row += HOURS
+        for pl in plants:
+            c_pl = pl["cols"][-1]
+            # output within availability x MW, and at or above the minimum load
+            r = n_row + t
+            add(r, c_pl, ones); add(r, np.full(HOURS, pl["col"]), np.full(HOURS, -pl["avail"]))
+            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
+            n_row += HOURS
+            if pl["min"] > 0:
+                r = n_row + t
+                add(r, c_pl, ones); add(r, np.full(HOURS, pl["col"]), np.full(HOURS, -pl["min"]))
+                row_lo.append(np.zeros(HOURS)); row_hi.append(np.full(HOURS, np.inf))
+                n_row += HOURS
+            # energy within the CUF: per month (monthlyCuf) or per year (cuf), in GWh
+            groups = [(MONTH_OF_HOUR == m, pl["monthlyCuf"][m]) for m in range(12)] if pl["monthlyCuf"] else (
+                [(np.ones(HOURS, bool), pl["cuf"])] if pl["cuf"] is not None and pl["cuf"] < pl["avail"] else [])
+            for mask, share in groups:
+                idx = t[mask]
+                add(np.full(idx.size, n_row), c_pl[idx], np.full(idx.size, 1e-3))
+                add(np.array([n_row]), np.array([pl["col"]]), np.array([-1e-3 * share * idx.size]))
+                row_lo.append(np.array([-np.inf])); row_hi.append(np.array([0.0]))
+                n_row += 1
+        if sell and non_green and not solar_only:
+            # only renewable output is sold: ex - s*S - w*W [- biomass] - green plants <= 0
+            r = n_row + t
+            add(r, c_ex, ones); add(r, np.zeros(HOURS, int), -sgen); add(r, np.ones(HOURS, int), -wgen)
+            if has_bio:
+                add(r, c_bio, -ones)
+            for pl in plants:
+                if pl["green"]:
+                    add(r, pl["cols"][-1], -ones)
+            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
+            n_row += HOURS
         if solar_only:
             # sales come from solar output only: ex - s*S <= 0
             r = n_row + t
@@ -544,6 +636,14 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         add(r, c_soc, ones); add(r, np.full(HOURS, E_COL), np.full(HOURS, -(max_soc - min_soc) * bf * e_scale))
         row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.zeros(HOURS))
         n_row += HOURS
+        if non_green:
+            # green share: non-RE output <= (1 - greenShareMin) x delivered over the year (GWh)
+            for pl in non_green:
+                add(np.full(HOURS, n_row), pl["cols"][-1], np.full(HOURS, 1e-3))
+            add(np.full(HOURS, n_row), c_dir, np.full(HOURS, -1e-3 * (1 - green_min)))
+            add(np.full(HOURS, n_row), c_dis, np.full(HOURS, -1e-3 * (1 - green_min)))
+            row_lo.append(np.array([-np.inf])); row_hi.append(np.array([0.0]))
+            n_row += 1
         # DFR: delivered >= target share of demand (per year, or per month); with supply rules,
         # one such floor per rule over its hours
         floors = rules or [{"id": "dfr", "target": dfr_target, "hours": "all", "basis": "monthly" if monthly else "annual"}]
@@ -603,6 +703,13 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             fuel_w = RS_CR_PER_MWH_AT_1RS * fuel * (weights.T @ (opex_w * fuel_esc))
             for yi, c_bio in enumerate(bio_cols):
                 cost_vec[c_bio] = fuel_w[yi]
+        for pl in plants:
+            pl_esc = (1 + pl["escalation"]) ** (years_arr - 1)
+            cost_vec[pl["col"]] = (tw["capex"] * pl["capex"] * preop + float(opex_w @ pl_esc) * pl["fixed"] / 100
+                                   + pv_flat * pl["capex"] * ins)
+            var_w = RS_CR_PER_MWH_AT_1RS * pl["variable"] * (weights.T @ (opex_w * pl_esc))
+            for yi, c_pl in enumerate(pl["cols"]):
+                cost_vec[c_pl] = var_w[yi]
         energy_vec = np.zeros(n_col)
         for yi, (c_dir, c_dis) in enumerate(deliver_cols):
             energy_vec[c_dir] = energy_w[yi]
@@ -624,6 +731,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         out = {"solarMw": float(x[0]), "windMw": float(x[1]), "bessMw": float(x[2]), "bessMwh": float(x[E_COL] * e_scale)}
         if has_bio:
             out["biomassMw"] = float(x[BM_COL])
+        for pl in plants:
+            out[f"{pl['id']}Mw"] = float(x[pl["col"]])
         return out
 
     def yearly(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -645,10 +754,16 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             return None
         return weights @ np.array([x[c].sum() for c in bio_cols])
 
+    def yearly_plants(x: np.ndarray) -> dict:
+        """MWh from each dispatchable plant in every PPA year (interpolated)."""
+        return {pl["id"]: weights @ np.array([x[c].sum() for c in pl["cols"]]) for pl in plants}
+
     def describe(z: dict) -> str:
         text = f"solar {z['solarMw']:.1f} MW, wind {z['windMw']:.1f} MW, "
         if has_bio:
             text += f"biomass {z['biomassMw']:.1f} MW, "
+        for pl in plants:
+            text += f"{pl['id']} {z[pl['id'] + 'Mw']:.1f} MW, "
         return text + f"BESS {z['bessMw']:.1f} MW / {z['bessMwh']:.1f} MWh"
 
     build_s = time.perf_counter() - started
@@ -758,7 +873,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         z_old = taxed_in
         dl, ex = yearly(x)
         taxed_in = tax_timing(fin, reference_taxable(fin, costs, bess, sizes_of(x), dl, ex, ratio, yearly_biomass(x),
-                                                     yearly_export_revenue(x)))
+                                                     yearly_export_revenue(x), plants, yearly_plants(x)))
         timing_same = bool(np.array_equal(z_old, taxed_in))
         z = sizes_of(x)
         iterations.append({
@@ -804,6 +919,11 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         }
         if has_bio:
             row["biomassMu"] = float(x[bio_cols[yi]].sum() / 1000)
+        for pl in plants:
+            row[f"{pl['id']}Mu"] = float(x[pl["cols"][yi]].sum() / 1000)
+        if non_green:
+            non_re = sum(float(x[pl["cols"][yi]].sum()) for pl in non_green)
+            row["greenShare"] = 1 - non_re / max(1e-9, float(delivered.sum()))
         if sell and (ppa_first or price_series is not None):
             # sold while the PPA still had room: should be nil with ppaFirst
             room = np.maximum(0.0, np.minimum(dem, plant) - delivered)
@@ -844,6 +964,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         "model": {"columns": n_col, "rows": n_row, "nonzeros": int(A.nnz), "mode": mode},
         "ppaFirst": ppa_first,
         "exportSources": "solar" if solar_only else "all",
+        "plants": [{"id": pl["id"], "green": pl["green"]} for pl in plants],
+        "greenShareMin": green_min if non_green else None,
         "seconds": round(seconds, 2),
         "log": lines,
     }
@@ -852,6 +974,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         dl, ex = yearly(x)
         bio_y = yearly_biomass(x)
         rev_y = yearly_export_revenue(x)
+        plant_y = yearly_plants(x)
         if rev_y is None:
             rev_y = ex * surplus_price * RS_CR_PER_MWH_AT_1RS
         result["lifetime"] = [
@@ -862,6 +985,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
                 "exportMwh": float(ex[y - 1]),
                 "exportRevenueCr": float(rev_y[y - 1]),
                 "biomassMwh": float(bio_y[y - 1]) if bio_y is not None else 0.0,
+                **{f"{pid}Mwh": float(v[y - 1]) for pid, v in plant_y.items()},
             }
             for y in range(1, n + 1)
         ]
@@ -874,8 +998,9 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         sgen = solar_cf * f["solarFactor"] * loss * sizes["solarMw"]
         wgen = wind_cf * f["windFactor"] * loss * sizes["windMw"]
         bgen = x[bio_cols[0]] if has_bio else np.zeros(HOURS)
+        pgen = {pl["id"]: x[pl["cols"][0]] for pl in plants}
         exp = x[base + 4 * HOURS + t] if sell else np.zeros(HOURS)
-        curtail = np.maximum(0.0, sgen + wgen + bgen - x[c_dir] - x[c_ch] - exp)
+        curtail = np.maximum(0.0, sgen + wgen + bgen + sum(pgen.values(), np.zeros(HOURS)) - x[c_dir] - x[c_ch] - exp)
         soc = (x[c_soc] + min_soc * e_mwh * f["bessFactor"]) / e_mwh if e_mwh > 1e-9 else np.zeros(HOURS)
         r2 = lambda a: np.round(np.asarray(a, float), 2).tolist()
         result["hourly"] = {
@@ -884,6 +1009,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             "solar": r2(sgen), "wind": r2(wgen), "biomass": r2(bgen),
             "direct": r2(x[c_dir]), "charge": r2(x[c_ch]), "discharge": r2(x[c_dis]),
             "export": r2(exp), "curtail": r2(curtail), "soc": np.round(soc, 4).tolist(),
+            **{pid: r2(v) for pid, v in pgen.items()},
         }
         if price_series is not None:
             result["hourly"]["price"] = np.round(price_series, 3).tolist()

@@ -6,8 +6,8 @@ COPY requirements.txt requirements-docling.txt ./
 RUN pip install -r requirements.txt
 # Docling (layout, tables and OCR for tender PDFs) with CPU-only PyTorch. Optional: if it cannot
 # be installed the engine still builds and tender parsing falls back to the standard extractor.
-# Build with --build-arg INSTALL_DOCLING=false to skip it.
-ARG INSTALL_DOCLING=true
+# Off by default (only the older tender review uses it); build with INSTALL_DOCLING=true to add it.
+ARG INSTALL_DOCLING=false
 ENV DOCLING_ARTIFACTS_PATH=/opt/docling-models
 RUN if [ "$INSTALL_DOCLING" = "true" ]; then \
       (apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*) || true; \

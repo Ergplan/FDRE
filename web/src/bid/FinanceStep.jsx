@@ -5,11 +5,18 @@ import FinanceView from "../rtc/FinanceView";
 import { LiveChart } from "../rtc/charts";
 import { DATA_COLORS } from "../chartTheme";
 import { Section, Stat, nf, pf } from "../rtc/ui";
-import { activeRules, capexBySource, opsFromLp } from "./model";
+import { SOURCES, capexBySource, modelInputs, opsFromLp, plantMw } from "./model";
 import { SourceChip } from "./RequirementsStep";
 import Checklist from "./Checklist";
 
-const FUEL_LINES = [["Biomass fuel", "fuel", 1, -1], ["Biomass generation (MU)", "biomassMu", 1]];
+/** Cost lines of the sources switched on, added after "Other fixed" in the cash-flow table. */
+function costLines(state) {
+  const out = [];
+  if (state.sources.biomass) out.push(["Biomass fuel", "fuel", 1, -1], ["Biomass generation (MU)", "biomassMu", 1]);
+  if (state.sources.hydro) out.push(["Hydro fixed + energy cost", "hydroCost", 1, -1], ["Hydro energy (MU)", "hydroMu", 1]);
+  if (state.sources.thermal) out.push(["Thermal (non-RE) cost incl. RECs", "thermalCost", 1, -1], ["Thermal energy (MU)", "thermalMu", 1]);
+  return out;
+}
 
 /** Revenue by stream and year: PPA supply, IEX surplus sale, shortfall penalty. */
 function RevenueStack({ finance, saleLabel }) {
@@ -35,11 +42,12 @@ function RevenueStack({ finance, saleLabel }) {
 }
 
 /** Step 4: the 25-year financial model of the sized plant, priced as the bid. */
-export default function FinanceStep({ state, patch, set, lockProps, goto }) {
-  const { lp, fin, costs, bess } = state;
-  const prov = state.provenance || {};
+export default function FinanceStep({ state, patch, set, lockProps, goto, terms }) {
+  const { lp } = state;
+  const prov = terms.provenance;
   const sizes = lp?.sizes;
-  const annualTarget = activeRules(state).find((r) => r.id === "annual" || (r.hours === "all" && r.basis === "annual"))?.target ?? 0;
+  const { costs, fin, bess } = useMemo(() => modelInputs(state, terms), [state, terms]);
+  const annualTarget = terms.rules.find((r) => r.id === "annual")?.target ?? 0;
   const ops = useMemo(() => (lp ? opsFromLp(lp, fin, bess) : null), [lp, fin, bess]);
   const finance = useMemo(
     () => (lp ? E.runFinancialModel(null, sizes, { costs, fin, bess, dfrTarget: annualTarget, tariffLocked: state.tariffLocked, ops, solveBy: "npv" }) : null),
@@ -47,26 +55,27 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
   );
   if (!lp || !finance) {
     return (
-      <Section index="4" title="Financials">
+      <Section index="5" title="Financials">
         <p className="rtc-note">Size the plant first: the financial model prices the least-tariff design.</p>
         <button type="button" className="primary" onClick={() => goto("size")}>Go to sizing <ArrowRight size={14} /></button>
       </Section>
     );
   }
   const capex = capexBySource(sizes, costs);
-  const ceiling = state.ceilingTariff;
+  const ceiling = terms.ceiling;
   const headroom = ceiling ? ceiling - finance.tariff : null;
   const crore = (inr) => inr / 1e7;
-  const base = state.baseMw || state.plantMw;
-  const emd = state.guarantees?.emdPerMwInr ? crore(state.guarantees.emdPerMwInr * base) : null;
-  const pbg = state.guarantees?.pbgPerMwInr ? crore(state.guarantees.pbgPerMwInr * state.plantMw) : null;
+  const base = state.bid.baseMw || 0;
+  const total = plantMw(state, terms) || 0;
+  const emd = terms.emdPerMw ? crore(terms.emdPerMw * base) : null;
+  const pbg = terms.pbgPerMw ? crore(terms.pbgPerMw * total) : null;
   const termChanged = (lp.lifetime?.length || 0) !== (fin.years || 25);
   const y1 = finance.rows[0];
   const saleLabel = lp.market ? `IEX ${lp.market} sale` : "Surplus sale";
 
   return (
     <>
-      <Section index="4" title="Bid tariff" note={`Tariff that gives a ${pf(fin.targetEquityIrr, 1)} equity IRR on the least-tariff plant`}>
+      <Section index="5" title="Bid tariff" note={`Tariff that gives a ${pf(fin.targetEquityIrr, 1)} equity IRR on the least-tariff plant`}>
         {termChanged && <div className="alert"><TriangleAlert size={14} /> The PPA term changed after sizing: size the plant again so every year is modelled.</div>}
         <div className="rtc-grid rtc-grid-4" data-testid="bid-finance">
           <Stat label={finance.tariffLocked ? "Tariff (fixed)" : "Bid tariff"} value={`₹${nf(finance.tariff, 3)}/kWh`} detail={`HiGHS screening ₹${nf(lp.tariff, 3)}`} />
@@ -76,40 +85,34 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
           </div>
           <Stat label="Equity IRR" value={pf(finance.equityIrr, 2)} detail={`project IRR ${pf(finance.projectIrr, 2)}`} />
           <Stat label="Minimum DSCR" value={nf(finance.minDscr, 2)} detail={`average ${nf(finance.avgDscr, 2)}`} tone={finance.minDscr !== null && finance.minDscr < 1.1 ? "bad" : undefined} />
-          <Stat label="Project cost" value={`₹${nf(finance.capex.total, 0)} cr`} detail={`₹${nf(finance.capex.total / state.plantMw, 2)} cr per contracted MW`} />
+          <Stat label="Project cost" value={`₹${nf(finance.capex.total, 0)} cr`} detail={`₹${nf(finance.capex.total / (total || 1), 2)} cr per contracted MW`} />
           <Stat label="Levelised cost" value={`₹${nf(finance.lcoe, 3)}/kWh`} detail={`at ${pf(fin.discountRate, 1)}`} />
           <Stat label="Year-1 supply" value={`${nf(y1.deliveredMu, 0)} MU`} detail={`${pf(y1.dfr, 1)} of contracted`} />
-          <Stat label="Year-1 biomass fuel" value={`₹${nf(y1.fuel, 1)} cr`} detail={`${nf(y1.biomassMu, 0)} MU at ₹${nf(fin.biomassFuelRsPerKwh, 2)}/kWh`} />
+          <Stat label="Year-1 operating cost" value={`₹${nf(y1.opex, 0)} cr`} detail={[state.sources.biomass ? `biomass fuel ₹${nf(y1.fuel, 0)} cr` : null, state.sources.hydro ? `hydro ₹${nf(y1.hydroCost || 0, 0)} cr` : null, state.sources.thermal ? `thermal ₹${nf(y1.thermalCost || 0, 0)} cr` : null].filter(Boolean).join(" · ") || "O&M and insurance"} />
         </div>
       </Section>
 
-      <Checklist state={state} lp={lp} bidTariff={finance.tariff} index="4.1" />
+      <Checklist state={state} terms={terms} lp={lp} bidTariff={finance.tariff} index="5.1" />
 
-      <Section index="4.2" title="Money at stake" note="Capex by source and the guarantees the tender asks for">
+      <Section index="5.2" title="Money at stake" note="Capex by source and the guarantees the tender asks for">
         <div className="rtc-grid rtc-grid-4">
-          <Stat label="Solar capex" value={`₹${nf(capex.solar, 0)} cr`} detail={`${nf(sizes.solarMw, 0)} MW`} />
-          <Stat label="Wind capex" value={`₹${nf(capex.wind, 0)} cr`} detail={`${nf(sizes.windMw, 0)} MW`} />
-          <Stat label="Biomass capex" value={`₹${nf(capex.biomass, 0)} cr`} detail={`${nf(sizes.biomassMw || 0, 0)} MW`} />
-          <Stat label="Battery capex" value={`₹${nf(capex.bess, 0)} cr`} detail={`${nf(sizes.bessMwh, 0)} MWh`} />
+          {SOURCES.filter((s) => state.sources[s.id]).map((s) => (
+            <Stat key={s.id} label={`${s.title} capex`} value={`₹${nf(capex[s.id] || 0, 0)} cr`} detail={s.id === "bess" ? `${nf(sizes.bessMwh || 0, 0)} MWh` : `${nf(sizes[`${s.id}Mw`] || 0, 0)} MW`} />
+          ))}
           <div className="bid-input-with-src">
             <Stat label="Bid security (EMD)" value={emd === null ? "Not stated" : `₹${nf(emd, 2)} cr`} detail={emd === null ? "" : `for the ${nf(base, 0)} MW bid`} />
-            <SourceChip source={prov["guarantees.emd"]} />
+            <SourceChip source={prov.emd} />
           </div>
           <div className="bid-input-with-src">
-            <Stat label="Performance guarantee (PBG)" value={pbg === null ? "Not stated" : `₹${nf(pbg, 2)} cr`} detail={pbg === null ? "" : `for ${nf(state.plantMw, 0)} MW${state.greenshoeMw ? " incl. greenshoe" : ""}`} />
-            <SourceChip source={prov["guarantees.pbg"]} />
+            <Stat label="Performance guarantee (PBG)" value={pbg === null ? "Not stated" : `₹${nf(pbg, 2)} cr`} detail={pbg === null ? "" : `for ${nf(total, 0)} MW${state.bid.greenshoe ? " incl. greenshoe" : ""}`} />
+            <SourceChip source={prov.pbg} />
           </div>
           <Stat label="Equity" value={`₹${nf(finance.equity, 0)} cr`} detail={`debt ₹${nf(finance.debt, 0)} cr`} />
           <Stat label="Equity payback" value={finance.payback ? `year ${finance.payback}` : "beyond term"} />
         </div>
-        {state.notes?.length > 0 && (
-          <ul className="bid-notes">
-            {state.notes.map((n) => <li key={n.id}><strong>{n.label}:</strong> {n.display}{n.note ? ` · ${n.note}` : ""} <SourceChip source={n.source} compact /></li>)}
-          </ul>
-        )}
       </Section>
 
-      <Section index="4.3" title="Revenue stack" note={`PPA supply revenue and ${saleLabel.toLowerCase()} revenue, year by year`}>
+      <Section index="5.3" title="Revenue stack" note={`PPA supply revenue and ${saleLabel.toLowerCase()} revenue, year by year`}>
         <div className="rtc-grid rtc-grid-4" data-testid="bid-revenue">
           <Stat label="PPA supply, year 1" value={`₹${nf(y1.energyRevenue, 0)} cr`} detail={`${nf(y1.deliveredMu, 0)} MU at ₹${nf(y1.tariff, 3)}/kWh`} />
           <Stat label={`${saleLabel}, year 1`} value={`₹${nf(y1.surplusRevenue, 0)} cr`} detail={y1.excessMu > 0 ? `${nf(y1.excessMu, 0)} MU at ₹${nf((y1.surplusRevenue * 1e4) / (y1.excessMu * 1000), 2)}/kWh realised` : "nothing sold"} />
@@ -120,7 +123,7 @@ export default function FinanceStep({ state, patch, set, lockProps, goto }) {
       </Section>
 
       <div className="story-divider"><span>Financial model · {fin.years} years</span></div>
-      <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={{ ...sizes, biomassMw: sizes.biomassMw || 0 }} extraLines={FUEL_LINES} />
+      <FinanceView state={{ ...state, fin }} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} extraLines={costLines(state)} />
     </>
   );
 }
