@@ -6,9 +6,10 @@ import { readFileSync } from "node:fs";
 import * as E from "../web/src/rtc/engine.js";
 import {
   BENCHMARKS, SOURCE_FIELDS, capacityIssues, capacityWarnings, defaultBidState, energyMix, fillBenchmarks, lpPayload, missingInputs,
-  modelInputs, opsFromLp, plantMw, resourceProfiles, scaleToCuf, solarMinMw,
+  mergeBidState, modelInputs, opsFromLp, plantMw, resourceProfiles, scaleToCuf, solarMinMw,
 } from "../web/src/bid/model.js";
 import { buildProposals, isUsed, mergeReadings, tenderDates, tenderTerms } from "../web/src/bid/tenderMap.js";
+import { PREBID_QUERIES, PREBID_TENDER, PREBID_TITLE, queriesForWord, queriesText, queriesToSend } from "../web/src/bid/preBidQueries.js";
 
 // ---- the tender's terms, from the built-in WBSEDCL reading (nothing else)
 const { result } = JSON.parse(readFileSync(new URL("../web/db/seed/tenders/wbsedcl-re-rtc-2026-01.json", import.meta.url), "utf8"));
@@ -188,5 +189,31 @@ assert.ok(fin.tariff > cheaper.tariff, "RECs raise the bid tariff");
 const hourly = { solar: [60, 0], wind: [20, 50], biomass: [0, 0], hydro: [20, 0], thermal: [0, 50], direct: [100, 80], discharge: [0, 20], charge: [0, 0], export: [0, 0], curtail: [0, 20], demand: [100, 100] };
 const mix = energyMix(hourly);
 assert.ok(Math.abs(mix.solar - 60) < 1e-9 && Math.abs(mix.wind - 60) < 1e-9 && Math.abs(mix.hydro - 20) < 1e-9 && Math.abs(mix.thermal - 40) < 1e-9 && mix.battery === 20);
+
+// pre-bid queries: ten, for this tender, each citing its clause and page in the RFP's own words
+assert.equal(result.values["core.identity.tender_number"], PREBID_TENDER);
+assert.equal(PREBID_QUERIES.length, 10);
+assert.equal(new Set(PREBID_QUERIES.map((q) => q.id)).size, 10);
+for (const q of PREBID_QUERIES) {
+  assert.ok(q.topic && q.query.includes("(a)") && q.rationale && q.impact && q.model, q.id);
+  assert.ok(q.refs.length && q.refs.every((r) => /^(RFQ|RFP) \d/.test(r.clause) && Number.isInteger(r.page) && r.quote.split(" ").length >= 8), q.id);
+}
+assert.deepEqual(PREBID_QUERIES.slice(0, 2).map((q) => q.id), ["peak", "market"], "largest tariff effect first");
+const prebid = { bidder: "Acme Power", edits: { market: { query: "Is there a cap on IEX sale?" } }, off: { greenshoe: true } };
+const send = queriesToSend(prebid);
+assert.equal(send.length, 9);
+assert.deepEqual(send.map((q) => q.no), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+assert.equal(send[1].query, "Is there a cap on IEX sale?", "the bidder's edit is sent");
+assert.ok(!send.some((q) => q.id === "greenshoe"), "a query left out is not sent");
+const text = queriesText(prebid);
+assert.ok(text.startsWith(PREBID_TITLE) && text.includes("Bidder: Acme Power") && text.includes("Is there a cap on IEX sale?") && !text.includes("Greenshoe 500 MW"));
+const word = queriesForWord(prebid);
+assert.equal(word.rows.length, 9);
+assert.equal(word.rows[0].clause, "RFQ 1.1.1, p. 10");
+assert.equal(word.rows[1].clause, "RFQ 1.1.2, p. 11; RFP 5.3.1, p. 62");
+assert.ok(word.rows[1].provision.includes("or in the market") && word.rows[1].provision.includes("(RFP 5.3.1, p. 62)"));
+assert.deepEqual(defaultBidState().prebid, { bidder: "", edits: {}, off: {} });
+assert.equal(mergeBidState({ ...defaultBidState(), prebid: { bidder: "Acme Power" } }).prebid.bidder, "Acme Power");
+assert.deepEqual(mergeBidState({ ...defaultBidState(), prebid: undefined }).prebid, { bidder: "", edits: {}, off: {} });
 
 console.log("Tender to Bid model checks passed");

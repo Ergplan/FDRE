@@ -6,7 +6,7 @@ opens (its reading ships built in), so the work starts from what the tender requ
 
 | Step | What happens | Where |
 | --- | --- | --- |
-| 1 Tender | Every requirement of the tender on one page: what it says, how the sizing applies it, and the page and quote it comes from. Below it, every field read; then other tenders (read before, or a new upload) | `tenderMap.js` (`buildProposals`, `tenderTerms`), `TenderStep.jsx`, `RequirementsStep.jsx` |
+| 1 Tender | Every requirement of the tender on one page: what it says, how the sizing applies it, and the page and quote it comes from. Then the pre-bid queries (WBSEDCL), every field read, and other tenders (read before, or a new upload) | `tenderMap.js` (`buildProposals`, `tenderTerms`), `TenderStep.jsx`, `RequirementsStep.jsx`, `PreBidQueries.jsx` |
 | 2 Key dates | Every date the tender prints (schedule of bidding, award, PPA, greenshoe offer, supply start) on a calendar, with what is next, days to go and the page and quote of each | `tenderDates` in `tenderMap.js`, `DatesStep.jsx` |
 | 3 Bid capacity | The capacity you bid and whether the plant is sized for the greenshoe too, checked against the tender (WBSEDCL: 1,500 MW, no part capacity, 500 MW greenshoe at the same tariff) | `CapacityStep.jsx` |
 | 4 Supply sources | The sources you have: solar, wind, hydro, biomass, thermal (non-RE) and battery. For each, fixed capacity or the most the optimizer may build, its parameters (CUF, availability, minimum load, battery duration and efficiency) and its costs; then financing and, where the tender allows it, market sale. Every field starts empty | `SourcesStep.jsx`, `model.js` (`SOURCE_FIELDS`, `missingInputs`) |
@@ -88,6 +88,34 @@ Enter capex 0 for power bought under contract.
   raised by a plausibility check alone (a range, the EMD/PBG ratio) does not block a value the
   page prints.
   `TENDER_INTEL_REQUIRE_LLM=1` switches the fallback off: a read that cannot use the model fails.
+
+## Pre-bid queries
+
+Section 1.2 of the Tender step drafts ten pre-bid queries for the WBSEDCL RE-RTC RfQ/RfP
+(`preBidQueries.js`), ordered by how much the answer can move the tariff:
+
+| # | Query | Clause and page |
+| --- | --- | --- |
+| 1 | Peak hours: the window WBSEDCL picks the 4 hours from, the notice, stretch length, and whether 90% is measured daily, monthly or yearly | RFQ 1.1.1, p. 10 |
+| 2 | Sale of the mandated solar in the market: any cap on quantum, time blocks or share; priority; revenue sharing; solar above 3 GW (RFQ 1.1.2 says "or in the market", RFP 5.3.1 omits it) | RFQ 1.1.2, p. 11; RFP 5.3.1, p. 62 |
+| 3 | Payment for supply above 80% annual CUF; any maximum; sale of excess | RFQ 1.2.15, p. 15; RFP 1.1.7, p. 48 |
+| 4 | Shortfall compensation for each of the three floors; double counting; cap; exclusions | RFQ 1.1.1, p. 10; RFP 1.1.6, p. 47 |
+| 5 | The draft PPA and the 51% Traceable Green Power formula; storage and REC-backed energy in it | RFQ 1.1.4, p. 11; RFP 1.1.6, p. 47 |
+| 6 | Year-wise or escalating tariff; discount rate and weights of the levelized tariff; e-RA; greenshoe tariff | RFP 7.9.1, p. 64 |
+| 7 | Non-RE under Merit Order Despatch: deemed supply for the floors, schedule confirmation, RECs, sale of unscheduled energy | RFP 1.1.4, p. 47 |
+| 8 | Battery co-location, charging from the grid or GDAM, market discharge, ISTS charges | RFQ 1.1.4, p. 11 |
+| 9 | Mandated solar: MWac or MWp, existing capacity, commissioning date, and the 15-day vs 3/6-month land and CTU documents | RFQ 1.1.2, p. 11; RFP 1.1.9, p. 48; RFP 5.3, p. 62 |
+| 10 | Greenshoe: option or obligation, timing of the extra 1 GW solar, tariff indexation, PPA term | RFQ 1.1.1, p. 10 |
+
+Each query quotes the RFP word for word with its page (`test_prebid_queries_quote_the_wbsedcl_rfp_word_for_word`
+checks every quote against the RFP when it is available) and carries a rationale for WBSEDCL, plus a
+note for the bidder on why it matters for the tariff and which input changes once it is answered.
+The query text and rationale can be edited and any query left out; **Copy all** puts the letter
+on the clipboard, and **Download Word file** saves it as .docx (`POST /api/bid/queries`), in the
+form RFP clause 1.1.10 asks for: titled "Queries/Request for Additional Information: RFP for
+1500MW with 500MW green shoe option Supply Capacity", one table row per query (S. No., clause and
+page, RFP provision, clarification sought, rationale). The section shows the tender's query
+dates (last date for queries, pre-bid meeting, response) and says when the last date has passed.
 
 ## Financial model workbook
 
@@ -183,7 +211,10 @@ python tools/build_iex_prices.py --gdam GDAM.xlsx --dam DAM.xlsx --rtm RTM.xlsx 
 * `tools/check_bid_model.mjs` — the WBSEDCL terms from the built-in reading, that every bidder
   input starts empty and sizing waits for it, the HiGHS request, and the financial model with
   hydro and thermal costs (RECs) and the NPV-based tariff solve.
-* `tests/test_tender_intel.py` — the tender reader (see `docs/TENDER_INTEL.md`).
+* `tests/test_tender_intel.py` — the tender reader (see `docs/TENDER_INTEL.md`), and that every
+  RFP provision the pre-bid queries quote is on its page.
+* `tools/check_bid_model.mjs` also checks the pre-bid queries: ten, each with clause, page,
+  quote and parts; edits and left-out queries reach the copied text and the Word file rows.
 
 ## Deploying
 

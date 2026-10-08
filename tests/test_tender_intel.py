@@ -10,6 +10,8 @@ import glob
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -373,6 +375,26 @@ def test_rules_mode_reads_the_wbsedcl_re_rtc_rfp():
     # every number and date read is printed in its own quote
     checked = [o for o in result["rules"] if o["rule"] == "value_in_quotes"]
     assert len(checked) >= 15 and all(o["passed"] for o in checked)
+
+
+def test_prebid_queries_quote_the_wbsedcl_rfp_word_for_word():
+    """Every RFP provision the pre-bid queries cite (web/src/bid/preBidQueries.js) is on its page."""
+    path = _rfp_path()
+    if path is None:
+        pytest.skip(f"{RFP_NAME} is not available (set TENDER_INTEL_RFP to its path)")
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    script = (
+        "import { PREBID_HOW, PREBID_QUERIES } from './web/src/bid/preBidQueries.js';"
+        "console.log(JSON.stringify([PREBID_HOW, ...PREBID_QUERIES.flatMap((q) => q.refs)]));"
+    )
+    out = subprocess.run([node, "--input-type=module", "-e", script], cwd=ROOT, capture_output=True, text=True, check=True)
+    refs = json.loads(out.stdout)
+    pages = {p.page_no: p for p in read_pages(path.name, path.read_bytes())}
+    assert len(refs) >= 11
+    for ref in refs:
+        assert _collapse(ref["quote"]) in _collapse(pages[ref["page"]].text), ref
 
 
 # ----------------------------------------------------------------------------- model mode (fake SDK)

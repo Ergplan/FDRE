@@ -147,6 +147,7 @@ export function defaultBidState() {
     tariffLocked: false,
     locks: {},
     lp: null, // last sizing (without the hourly dispatch)
+    prebid: { bidder: "", edits: {}, off: {} }, // pre-bid queries: the bidder's edits and the ones left out
   };
 }
 
@@ -154,7 +155,7 @@ export function mergeBidState(saved) {
   const base = defaultBidState();
   if (!saved || saved.version !== 4) return base;
   const merged = { ...base, ...saved };
-  for (const k of ["bid", "sources", "fin", "costs", "market", "locks", "accepted", "filled"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
+  for (const k of ["bid", "sources", "fin", "costs", "market", "locks", "accepted", "filled", "prebid"]) merged[k] = { ...base[k], ...(saved[k] || {}) };
   merged.src = Object.fromEntries(SOURCE_IDS.map((id) => [id, { ...base.src[id], ...(saved.src?.[id] || {}), capacity: { ...base.src[id].capacity, ...(saved.src?.[id]?.capacity || {}) } }]));
   if (!STEP_IDS.includes(merged.step)) merged.step = "tender";
   return merged;

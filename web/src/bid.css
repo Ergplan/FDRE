@@ -248,3 +248,22 @@
 @media (max-width: 900px) { .bid-agenda-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .bid-agenda-row.head { display: none; } }
 .bid-summary { margin: 10px 0 0; display: grid; gap: 8px; font-size: 14px; line-height: 1.55; }
 .bid-summary p { margin: 0; }
+
+/* tender step 1.2: pre-bid queries */
+.bid-q-head { display: grid; gap: 10px; margin-bottom: 14px; }
+.bid-q-head .rtc-note { line-height: 1.55; }
+.bid-q-list { display: grid; gap: 12px; }
+.bid-q { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
+.bid-q.off { opacity: 0.6; }
+.bid-q > header { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bid-q > header strong { flex: 1 1 260px; font-size: 14px; }
+.bid-q-no { display: inline-grid; place-items: center; min-width: 34px; height: 24px; padding: 0 6px; background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.bid-q .bid-quotes { font-size: 13px; line-height: 1.5; }
+.bid-q-field { display: grid; gap: 4px; }
+.bid-q-field > span { color: var(--muted); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.bid-q-field textarea, .bid-q-field input { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: 0; padding: 9px; font: inherit; font-size: 13px; line-height: 1.5; color: var(--ink); background: var(--bg-2); resize: vertical; }
+.bid-q-field.bidder { max-width: 420px; }
+.bid-q-note { display: flex; gap: 8px 14px; align-items: baseline; flex-wrap: wrap; padding: 9px 12px; border-left: 3px solid var(--signal); background: var(--bg-2); font-size: 13px; line-height: 1.5; }
+.bid-q-note > span:first-child { flex: 1 1 420px; }
+.bid-q-note button { margin-left: auto; }
+@media (max-width: 700px) { .bid-q { padding: 12px; } .bid-q > header .rtc-switch { margin-left: auto; } }

@@ -115,7 +115,7 @@ export function AllFields({ result }) {
   const sections = result.sections || [];
   const visible = (f) => (filter === "all" ? true : filter === "found" ? f.status === "validated" || f.status === "needs_review" : filter === "review" ? f.status === "needs_review" || f.status === "rejected" : f.status === "not_found");
   return (
-    <Section index="1.2" title="Everything read from the tender" note={`${nf(result.counts?.found)} of ${nf(result.counts?.fields)} fields found · type ${result.tender_type}`}
+    <Section index="1.3" title="Everything read from the tender" note={`${nf(result.counts?.found)} of ${nf(result.counts?.fields)} fields found · type ${result.tender_type}`}
       actions={(
         <div className="bid-filter" role="tablist">
           {[["found", "Found"], ["review", "To review"], ["missing", "Not stated"], ["all", "All"]].map(([id, label]) => (

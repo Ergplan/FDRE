@@ -96,6 +96,18 @@ export default function BidTab({ user = null }) {
     }, 400);
     return () => clearTimeout(id);
   }, [state]);
+  // a reload or tab close within the save delay still keeps the last change
+  useEffect(() => {
+    const flush = () => {
+      try {
+        if (sessionState) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionState));
+      } catch {
+        /* storage full or blocked */
+      }
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, []);
   useEffect(() => { sessionHourly = hourly; }, [hourly]);
   useEffect(() => { sessionRun = run; }, [run]);
 
@@ -166,9 +178,9 @@ export default function BidTab({ user = null }) {
   }
 
   function resetAll() {
-    if (!window.confirm("Clear your bid capacity, sources, costs and the sizing in Tender to Bid? The tender stays loaded.")) return;
+    if (!window.confirm("Clear your bid capacity, sources, costs and the sizing in Tender to Bid? The tender and your pre-bid queries stay.")) return;
     stopSizing();
-    setState((s) => ({ ...defaultBidState(), tender: s.tender }));
+    setState((s) => ({ ...defaultBidState(), tender: s.tender, prebid: s.prebid }));
     setHourly(null);
     setRun(null);
     setMessage("");

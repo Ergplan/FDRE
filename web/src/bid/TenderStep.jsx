@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, FileSearch, FolderOpen, Loader2, Sparkles, Upload } from "lucide-react";
 import { Section, nf } from "../rtc/ui";
 import { AllFields, PROVIDER_LABEL, ReadingBanner, TenderRequirements } from "./RequirementsStep";
+import PreBidQueries from "./PreBidQueries";
 
 const TYPE_LABEL = {
   auto: "Detect from the document",
@@ -205,9 +206,11 @@ export default function TenderStep({ state, setState, onRead, onModelRead, goto,
         </Section>
       )}
 
+      {last && <PreBidQueries result={last} prebid={state.prebid} setPrebid={(fn) => setState((s) => ({ ...s, prebid: fn(s.prebid || {}) }))} />}
+
       {last && <AllFields result={last} />}
 
-      <Section index="1.3" title="Another tender" note="Open a tender read before, or read a new one (PDF, Word or text, up to 60 MB)">
+      <Section index="1.4" title="Another tender" note="Open a tender read before, or read a new one (PDF, Word or text, up to 60 MB)">
         {recent === null && <p className="rtc-note"><Loader2 className="spin" size={13} /> Loading</p>}
         {recent?.length > 0 && (
           <div className="bid-recent" role="table" data-testid="bid-recent">
