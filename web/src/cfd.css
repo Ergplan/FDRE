@@ -1,0 +1,101 @@
+/* CfD bid tab (web/src/cfd) */
+.cfd-lead p { margin: 0 0 14px; font-size: 14.5px; line-height: 1.6; max-width: 980px; }
+.cfd-svg { display: block; width: 100%; height: auto; margin: 4px 0 10px; }
+.cfd-node rect { fill: var(--surface); stroke: var(--line-2); stroke-width: 1; }
+.cfd-node .cfd-node-accent { stroke: none; }
+.cfd-node-title { fill: var(--ink); font-size: 15px; font-weight: 700; }
+.cfd-node-line { fill: var(--ink-2); font-size: 12.5px; }
+.cfd-node.bid .cfd-node-accent, .cfd-arrow.bid path { fill: #d4ff3f; stroke: #d4ff3f; }
+.cfd-node.re .cfd-node-accent { fill: #7ddc9a; }
+.cfd-node.group .cfd-node-accent { fill: #4fd1c5; }
+.cfd-node.market .cfd-node-accent { fill: #3fa7d6; }
+.cfd-node.ess .cfd-node-accent { fill: #a98bff; }
+.cfd-node.px .cfd-node-accent { fill: #f2b84b; }
+.cfd-node.pool .cfd-node-accent { fill: #ff8a5f; }
+.cfd-node.you .cfd-node-accent { fill: #f4f4f1; }
+.cfd-node.you rect:first-child { stroke: #d4ff3f; }
+.cfd-arrow path { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.cfd-arrow.dashed path { stroke-dasharray: 6 5; }
+.cfd-arrow.re path { stroke: #7ddc9a; }
+.cfd-arrow.group path { stroke: #4fd1c5; }
+.cfd-arrow.market path { stroke: #3fa7d6; }
+.cfd-arrow.ess path { stroke: #a98bff; }
+.cfd-arrow.px path { stroke: #f2b84b; }
+.cfd-arrow.pool path { stroke: #ff8a5f; }
+.cfd-arrow.bid path { fill: none; }
+.cfd-head { fill: var(--muted); }
+.cfd-arrow-label { fill: var(--ink-2); font-size: 11.5px; font-family: var(--font-mono); }
+.cfd-timeline { margin-top: 8px; }
+.cfd-band.build { fill: rgba(169, 139, 255, 0.18); }
+.cfd-band.early { fill: rgba(63, 167, 214, 0.2); }
+.cfd-band.term { fill: rgba(125, 220, 154, 0.16); }
+.cfd-band-label { fill: var(--ink-2); font-size: 11px; font-family: var(--font-mono); }
+.cfd-axis { stroke: var(--line-2); stroke-width: 1; }
+.cfd-break { stroke: var(--muted); stroke-width: 2; fill: none; }
+.cfd-mark line { stroke: var(--muted); stroke-width: 1; }
+.cfd-mark circle { fill: #d4ff3f; }
+.cfd-mark.end circle { fill: #7ddc9a; }
+.cfd-mark-title { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
+.cfd-mark-sub { fill: var(--muted); font-size: 11.5px; }
+.cfd-todo { margin: 0; padding: 0; list-style: none; counter-reset: todo; display: grid; border: 1px solid var(--line); background: var(--surface); }
+.cfd-todo li { counter-increment: todo; display: grid; grid-template-columns: 34px 140px minmax(0, 1fr); gap: 4px 12px; padding: 12px 14px; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; }
+.cfd-todo li:first-child { border-top: 0; }
+.cfd-todo li::before { content: counter(todo); display: inline-grid; place-items: center; width: 24px; height: 24px; background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.cfd-todo-when { color: var(--signal); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 3px; }
+.cfd-todo-cites { grid-column: 3; display: flex; gap: 6px; flex-wrap: wrap; }
+.cfd-money { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.cfd-money > div { display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
+.cfd-money span { color: var(--muted); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.cfd-money strong { font-size: 16px; }
+.cfd-money small { color: var(--ink-2); line-height: 1.45; }
+.cfd-cite.replaced { text-decoration: line-through; opacity: 0.75; }
+.cfd-docs { display: grid; gap: 8px; margin-bottom: 10px; }
+.cfd-doc { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); background: var(--surface); }
+.cfd-doc > span { display: grid; gap: 2px; }
+.cfd-doc small { color: var(--muted); }
+.cfd-doc.missing { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.cfd-doc.missing svg { color: var(--warn); }
+.cfd-terms { display: grid; border: 1px solid var(--line); background: var(--surface); }
+.cfd-term { border-top: 1px solid var(--line); }
+.cfd-term:first-child { border-top: 0; }
+.cfd-term-head { display: grid; grid-template-columns: 16px minmax(150px, 0.8fr) minmax(220px, 2fr) auto; gap: 10px; align-items: center; width: 100%; padding: 10px 12px; background: transparent; border: 0; color: inherit; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+.cfd-term-head:hover { background: var(--bg-2); }
+.cfd-term-label { font-weight: 600; }
+.cfd-term-value em { color: var(--warn); font-style: normal; }
+.cfd-term.replaced .cfd-term-value { color: var(--muted); }
+.cfd-quote { margin: 0 12px 12px 38px; padding: 8px 12px; border-left: 3px solid var(--signal); background: var(--bg-2); font-style: italic; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.cfd-fill-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.cfd-missing { display: inline-flex; gap: 6px; align-items: center; color: var(--warn); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.cfd-sub { margin: 18px 0 8px; display: flex; gap: 8px; align-items: center; color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.cfd-fields { margin-bottom: 10px; }
+.cfd-fields input[type="date"] { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); padding: 9px; background: var(--bg-2); color: var(--ink); font: inherit; }
+.cfd-dates { display: flex; gap: 8px 18px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); background: var(--bg-2); font-size: 13px; }
+.cfd-dates span { display: inline-flex; gap: 6px; align-items: center; }
+.cfd-optimise { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.cfd-table { display: grid; margin-top: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cfd-row { display: grid; grid-template-columns: minmax(120px, 1.1fr) repeat(7, minmax(84px, 1fr)); gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
+.cfd-row.head { border-top: 0; color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cfd-row > span { display: grid; gap: 2px; }
+.cfd-row small { color: var(--muted); font-size: 11px; }
+.cfd-row.bad { background: rgba(255, 107, 95, 0.06); }
+.cfd-row .ok { color: var(--good); display: inline-flex; gap: 4px; align-items: center; }
+.cfd-row .bad { color: var(--bad); display: inline-flex; gap: 4px; align-items: center; }
+.cfd-day-pick { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; }
+.cfd-day-pick input[type="range"] { flex: 1 1 280px; }
+.cfd-statements { overflow-x: auto; border: 1px solid var(--line); }
+.cfd-statements table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; min-width: 100%; }
+.cfd-statements th, .cfd-statements td { padding: 6px 10px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.cfd-statements th:first-child, .cfd-statements td:first-child { position: sticky; left: 0; background: var(--surface); text-align: left; min-width: 220px; }
+.cfd-statements thead th { color: var(--muted); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--surface); }
+.cfd-statements tr.strong td { font-weight: 700; }
+.cfd-statements tr.band td { background: var(--bg-2); color: var(--signal); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+@media (max-width: 900px) {
+  .cfd-todo li { grid-template-columns: 30px minmax(0, 1fr); }
+  .cfd-todo-when { grid-column: 2; }
+  .cfd-todo li > span:nth-child(2), .cfd-todo-cites { grid-column: 2; }
+  .cfd-money { grid-template-columns: minmax(0, 1fr); }
+  .cfd-term-head { grid-template-columns: 16px minmax(0, 1fr); }
+  .cfd-term-value, .cfd-term-head .cfd-cite { grid-column: 2; }
+  .cfd-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .cfd-row.head { display: none; }
+}
