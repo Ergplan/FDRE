@@ -58,8 +58,8 @@ export const POST = handler(async (req) => {
     row.getCell(2).alignment = { horizontal: "right" };
   }
   cover.addRow([]);
-  cover.addRow(["Tender terms are from the SECI CfD-I CfD Agreement and Amendments 02 and 03, each with its page and quote (sheet Tender terms). Market prices: IEX DAM/GDAM/RTM, Sep 2025 – Sep 2026."]).font = { italic: true, color: { argb: "FF555555" } };
-  cover.getColumn(1).width = 46;
+  cover.addRow(["Tender terms are from the SECI CfD-I RfS, CfD Agreement and Amendments 02 and 03, each with its page and quote (sheet Tender terms). Market prices: IEX DAM/GDAM/RTM, Sep 2025 – Sep 2026."]).font = { italic: true, color: { argb: "FF555555" } };
+  cover.getColumn(1).width = 60;
   cover.getColumn(2).width = 22;
 
   // ---- tender terms

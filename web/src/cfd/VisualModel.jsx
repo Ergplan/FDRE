@@ -36,7 +36,7 @@ export function FlowDiagram({ mw }) {
           <path d="M 0 0 L 10 5 L 0 10 z" className="cfd-head" />
         </marker>
       </defs>
-      <Node x={420} y={16} w={280} h={88} tone="bid" title="You bid one strike price (SP)" lines={["₹/kWh, two decimals, no ceiling", "fixed for the 15-year term"]} />
+      <Node x={420} y={16} w={280} h={88} tone="bid" title="You bid one strike price (SP)" lines={["₹/kWh for 50–150 MW, no ceiling", "e-RA; fixed for the 15-year term"]} />
       <Node x={20} y={140} w={300} h={104} tone="re" title="Your RE plant: solar / wind" lines={["co-located with the battery", "online by ED + 36 months", "after that: at least 25% of supply"]} />
       <Node x={20} y={272} w={300} h={88} tone="group" title="Group-company RE" lines={["after month 36: up to 50%", "only to charge the battery"]} />
       <Node x={20} y={388} w={300} h={104} tone="market" title="Green market (GDAM) / bilateral" lines={["up to 25% for the whole term", "+75% until month 36,", "only to charge the battery"]} />
@@ -63,7 +63,7 @@ export function Timeline({ effectiveDate }) {
   const d = effectiveDate && /^\d{4}-\d{2}-\d{2}$/.test(effectiveDate) ? keyDates(effectiveDate) : null;
   const at = (k) => (d ? fmtDate(d[k]) : "");
   const marks = [
-    { m: 0, up: true, title: "Effective Date", sub: "CfDA signed", date: at("ed") },
+    { m: 0, up: true, title: "Effective Date", sub: "LoA + 30 days; CfDA signed", date: at("ed") },
     { m: 9, up: false, end: true, title: "Financial closure", sub: "6 months before the SCD", date: at("finClose") },
     { m: 15, up: true, title: "SCD: battery commissioned", sub: "supply and CfD settlement start", date: at("scd") },
     { m: 18, up: false, title: "Latest with penalty", sub: "PBG encashed pro rata; later: capacity cut", date: at("lastWithPenalty") },
@@ -141,10 +141,13 @@ export function TypicalDay({ prices, mw, market = "DAM" }) {
 }
 
 const STEPS_TO_DO = [
-  { when: "Bid", text: "Quote one strike price (₹/kWh, two decimals) for all projects you apply for. There is no ceiling; the e-Reverse Auction discovers the strike price.", cites: ["bid", "ceiling", "spDefinition"] },
-  { when: "Before the SCD", text: "Sign the CfDA (the Effective Date) and reach financial closure 6 months before the SCD.", cites: ["finClose"] },
-  { when: "By ED + 15 months", text: "Build and own a battery of at least X MW / 2X MWh, co-located with your RE and connected to an ISTS substation at 220 kV or above. This is the SCD: supply and settlement start.", cites: ["ess", "essOwned", "delivery", "essScd"] },
-  { when: "By ED + 36 months", text: "Commission your own RE generation (solar, wind or other RE, in any mix; it may exceed the Contracted Capacity, the grid connection may not).", cites: ["reCod", "reSize", "connectivity"] },
+  { when: "Bid", text: "Bid once for yourself and your group: 50 to 150 MW in whole MW. Pay the RfS cost (₹50,000) and the bid processing fee (₹20,000/MW, at most ₹20 lakh), plus GST, and give an EMD bank guarantee valid 12 months. Show the net worth and one of the liquidity tests for the plant you propose.", cites: ["capacityBid", "rfsCost", "bidFee", "emd", "netWorth", "turnover"] },
+  { when: "e-Reverse Auction", text: "Quote one first-round strike price (₹/kWh, two decimals, no ceiling) for all your projects; in the e-RA lower it in steps of at least 1 paisa. Every bidder within L1 + 2% wins, in tariff order, up to 80% of the capacity bid (at most 500 MW).", cites: ["bid", "ceiling", "decrement", "range", "se"] },
+  { when: "LoA + 20 days", text: "Pay the Contract Administration Charges (₹1 lakh/MW + GST) and give the PBG (₹24.20 lakh/MW solar, ₹34.20 lakh/MW wind, ₹6 lakh/MWh battery), valid until 6 months after the SCD. Late: ₹1,000/MW a day.", cites: ["docsDue", "cac", "pbg", "pbgValidity", "lateDocs"] },
+  { when: "LoA + 30 days", text: "Sign the CfDA. Its Effective Date is the 30th day from the LoA, and every date below runs from it. Keep at least 51% of the project company until a year after the SCD.", cites: ["cfdaSign", "effectiveDate", "lockIn"] },
+  { when: "SCD − 6 months", text: "Reach financial closure (late: ₹100/MW a day, paid in advance).", cites: ["finClose", "fcLate"] },
+  { when: "By ED + 15 months", text: "Build and own a battery of at least X MW / 2X MWh, co-located with your RE and connected to an ISTS substation at 220 kV or above with non-solar-hour access. This is the SCD: supply and settlement start.", cites: ["ess", "essOwned", "colocated", "delivery", "substation", "essScd"] },
+  { when: "By ED + 36 months", text: "Commission your own RE generation (solar with domestic cells and modules, wind or other RE, in any mix; it may exceed the Contracted Capacity, the grid connection may not).", cites: ["reCod", "reSize", "dcr", "connectivity"] },
   { when: "Every day", text: "Choose 2 hours (eight 15-minute blocks) between 18:00 and 24:00 a day ahead and sell 2 MWh per contracted MW on an exchange, in the market of your choice. Make sure the bids clear: uncleared energy counts as shortfall.", cites: ["twoHours", "mandate", "blocks", "cleared", "markets"] },
   { when: "Every day", text: "Supply only RE. Charge the battery from your own RE; up to 25% may come from the green market or bilateral deals (plus 75% for charging until month 36); after month 36 up to 50% may come from your group companies' RE projects.", cites: ["allRe", "market25", "market75", "group50", "discharged"] },
   { when: "Every week", text: "Supply at least 90% of 14 MWh per MW in each Contract Week, or pay 1.5 × (the week's highest evening MCP across all exchanges − SP) on the shortfall beyond 10%.", cites: ["tolerance", "shortfall", "noPenaltyBelow"] },
@@ -166,7 +169,7 @@ export default function VisualModel({ state, prices }) {
       </Section>
       <Section index="1.1" title="Timeline" note={state.inputs.effectiveDate ? `From the Effective Date you entered (${fmtDate(Date.parse(`${state.inputs.effectiveDate}T00:00:00Z`))})` : "Months from the Effective Date of the CfDA; enter the date on Plant and sourcing to see the calendar dates"}>
         <Timeline effectiveDate={state.inputs.effectiveDate} />
-        <p className="rtc-note">Dates: <Cite id="essScd" /> <Cite id="reCod" /> <Cite id="term" /> <Cite id="finClose" /> <Cite id="delay" /> <Cite id="delayBeyond" /></p>
+        <p className="rtc-note">Dates: <Cite id="effectiveDate" /> <Cite id="essScd" /> <Cite id="reCod" /> <Cite id="term" /> <Cite id="finClose" /> <Cite id="delay" /> <Cite id="delayBeyond" /> <Cite id="fmExtension" /></p>
       </Section>
       <Section index="1.2" title="A day of supply" note="IEX prices, Sep 2025 – Sep 2026">
         <TypicalDay prices={prices} mw={X} market={state.inputs.sellMarket || "DAM"} />
@@ -185,7 +188,7 @@ export default function VisualModel({ state, prices }) {
       <Section index="1.4" title="Your money, in one line" note="What the financial model computes">
         <div className="cfd-money" data-testid="cfd-money">
           <div><span>Revenue</span><strong>SP × energy supplied</strong><small>up to 2 MWh/MW a day, cleared; + 50% of REC sales; + surplus RE sold after the day's supply</small></div>
-          <div><span>Costs</span><strong>Battery + own RE + charging power</strong><small>capex, O&M, augmentation, green-market or group power, exchange fees, LC, PBG, weekly penalties</small></div>
+          <div><span>Costs</span><strong>Battery + own RE + charging power</strong><small>capex, O&M, augmentation, green-market or group power, exchange fees, LC, EMD and PBG guarantees, SECI's charges, weekly penalties</small></div>
           <div><span>Your bid</span><strong>The SP that earns your equity IRR</strong><small>solved on Bid and financials, rounded up to two decimals</small></div>
         </div>
       </Section>

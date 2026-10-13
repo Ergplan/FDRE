@@ -34,6 +34,7 @@ const LINES = [
   ["Profit after tax", "pat"],
   ["Cash flow", null],
   ["Capex", "capex"],
+  ["Bank guarantees: EMD and PBG", "bgCost"],
   ["Debt drawn", "debtDraw"],
   ["CFADS", "cfads"],
   ["Debt service", "debtService"],
@@ -80,7 +81,9 @@ function workbookPayload(state, model) {
       ["Equity IRR", fin.equityIrr, "pct"], ["Project IRR", fin.projectIrr, "pct"],
       ["Minimum DSCR", fin.minDscr, "x"], ["Average DSCR", fin.avgDscr, "x"],
       ["Levelised cost of supply (₹/kWh)", fin.levelisedCost, "tariff"],
-      ["Total capex (₹ cr)", fin.capex.total, "cr"], ["Letter of Credit to SECI (₹ cr)", fin.lcCr, "cr"],
+      ["Total capex (₹ cr)", fin.capex.total, "cr"], ["of which SECI's charges with GST (₹ cr)", fin.capex.seci, "cr"], ["Letter of Credit to SECI (₹ cr)", fin.lcCr, "cr"],
+      ["EMD bank guarantee (₹ cr, RfS 17)", fin.rfs.emdCr, "cr"], ["PBG (₹ cr, RfS 18.1)", fin.rfs.pbgCr, "cr"],
+      ["Net worth required (₹ cr, RfS 37.1)", fin.rfs.netWorthCr, "cr"], ["Turnover required, or PBDIT, or line of credit (₹ cr, RfS 37.2)", `${nf(fin.rfs.turnoverCr, 2)} / ${nf(fin.rfs.pbditCr, 2)} / ${nf(fin.rfs.lineOfCreditCr, 2)}`],
       ["Contracted capacity (MW)", inputs.contractedMw, "mw"], ["Battery (MW)", inputs.contractedMw * inputs.essMwPerMw, "mw"], ["Battery (MWh)", inputs.contractedMw * inputs.essMwhPerMw, "mw"],
       ["Own solar (MWac)", inputs.solarMw, "mw"], ["Own wind (MW)", inputs.windMw || 0, "mw"],
       ["Effective Date", fmtDate(sim.dates.ed)], ["SCD (battery, supply starts)", fmtDate(sim.dates.scd)], ["Own RE commissioned", fmtDate(sim.dates.reCod)], ["Term ends", fmtDate(sim.dates.end)],
@@ -145,8 +148,9 @@ export default function FinanceStep({ state, model }) {
           <Stat label="Equity IRR" value={pf(fin.equityIrr, 2)} detail={`project IRR ${pf(fin.projectIrr, 2)}`} />
           <Stat label="DSCR" value={`${nf(fin.minDscr, 2)} minimum`} detail={`${nf(fin.avgDscr, 2)} average`} tone={fin.minDscr !== null && fin.minDscr < 1.1 ? "bad" : undefined} />
           <Stat label="Levelised cost of supply" value={`₹${nf(fin.levelisedCost, 2)}/kWh`} detail={`at ${pf(inputs.discountRate, 1)}, net of surplus sales and RECs`} />
-          <Stat label="Capex" value={`₹${nf(fin.capex.total, 0)} cr`} detail={`battery and line ₹${nf(fin.capex.atScd, 0)} cr by the SCD; own RE ₹${nf(fin.capex.atRe, 0)} cr by ${fmtDate(sim.dates.reCod)}`} />
+          <Stat label="Capex" value={`₹${nf(fin.capex.total, 0)} cr`} detail={`battery, line and SECI's charges ₹${nf(fin.capex.atScd, 0)} cr by the SCD; own RE ₹${nf(fin.capex.atRe, 0)} cr by ${fmtDate(sim.dates.reCod)}`} />
           <Stat label="Letter of Credit to SECI" value={`₹${nf(fin.lcCr, 2)} cr`} detail={bid >= TENDER.lcMinPrice ? "nil: the strike price is above ₹10/kWh" : "2000 × MW × (₹10 − SP) × 30"} />
+          <Stat label="EMD and PBG" value={`₹${nf(fin.rfs.emdCr, 1)} cr + ₹${nf(fin.rfs.pbgCr, 1)} cr`} detail={`bank guarantees (RfS 17, 18.1); cost ₹${nf(fin.rows[0].bgCost, 2)} cr`} />
           <Stat label="Energy supplied" value={`${nf(sim.years.reduce((a, y) => a + y.deliveredMwh, 0) / 1000, 0)} GWh`} detail="over the term" />
           <Stat label="Average evening market price" value={`₹${nf(poolYear.mcpAvg, 2)}/kWh`} detail={`your 2 best hours in the ${inputs.sellMarket}, 2025–26`} />
         </div>

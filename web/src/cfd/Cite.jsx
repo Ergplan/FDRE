@@ -8,7 +8,7 @@ export default function Cite({ id, compact = false }) {
   if (!t) return null;
   const doc = docById[t.doc];
   return (
-    <span className={`bid-src cfd-cite ${t.status === "replaced" ? "replaced" : ""}`} title={`${doc.title}, ${t.clause}, page ${t.page}:\n“${t.quote}”`}>
+    <span className={`bid-src cfd-cite ${t.status || ""}`} title={`${doc.title}, ${t.clause}, page ${t.page}${doc.pdfOffset ? ` (PDF page ${t.page + doc.pdfOffset})` : ""}:\n“${t.quote}”`}>
       <FileSearch size={10} /> {doc.short} {compact ? "" : `${t.clause.replace(/ \((amended|original.*)\)$/, "")} · `}p. {t.page}
     </span>
   );

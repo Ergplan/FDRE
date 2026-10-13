@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Loader2, Sparkles, Square, TriangleAlert, Wand2 } from "lucide-react";
 import { Field, Section, SelectBox, nf } from "../rtc/ui";
 import Cite from "./Cite.jsx";
-import { BENCHMARK_NOTE, CHOICES, FIELDS, fillBenchmarks, fmtDate, keyDates, missingInputs } from "./model.js";
+import { BENCHMARK_NOTE, BG_YEARS, CHOICES, FIELDS, fillBenchmarks, fmtDate, keyDates, missingInputs, rfsAmounts } from "./model.js";
 
 /** Number inputs of one section; a value filled from the benchmarks is marked until it is changed. */
 function Fields({ state, setInput, section, only }) {
@@ -57,7 +57,8 @@ export function PlantStep({ state, setState, setInput, optimise, optimising, sto
         <h4 className="cfd-sub">Capacity and dates</h4>
         <div className="rtc-grid rtc-grid-4 cfd-fields">
           <div data-testid="cfd-in-contractedMw">
-            <Field label="Contracted capacity you bid" unit="MW" value={i.contractedMw} step={10} min={50} max={500} onChange={(v) => setInput("contractedMw", v)} hint="Of the tender's 500 MW; parts of at least 50 MW" />
+            <Field label="Contracted capacity you bid" unit="MW" value={i.contractedMw} step={1} min={50} max={150} onChange={(v) => setInput("contractedMw", v)} hint="50 to 150 MW in whole MW, one bid for your group" />
+            <Cite id="capacityBid" />
           </div>
           <div className={`rtc-field ${state.filled.effectiveDate ? "bid-benchmark" : ""}`} data-testid="cfd-in-effectiveDate">
             <div className="rtc-field-top"><span>{CHOICES.effectiveDate.label}</span></div>
@@ -67,8 +68,11 @@ export function PlantStep({ state, setState, setInput, optimise, optimising, sto
         </div>
         {dates && (
           <div className="cfd-dates" data-testid="cfd-dates">
+            <span>Letter of Award <strong>{fmtDate(dates.loa)}</strong><Cite id="effectiveDate" compact /></span>
+            <span>PBG, charges, documents <strong>{fmtDate(dates.docsDue)}</strong><Cite id="docsDue" compact /></span>
             <span>Financial closure <strong>{fmtDate(dates.finClose)}</strong><Cite id="finClose" compact /></span>
             <span>SCD: battery and supply <strong>{fmtDate(dates.scd)}</strong><Cite id="essScd" compact /></span>
+            <span>PBG valid to <strong>{fmtDate(dates.pbgUntil)}</strong><Cite id="pbgValidity" compact /></span>
             <span>Own RE by <strong>{fmtDate(dates.reDeadline)}</strong><Cite id="reCod" compact /></span>
             <span>Term ends <strong>{fmtDate(dates.end)}</strong><Cite id="term" compact /></span>
           </div>
@@ -102,6 +106,32 @@ export function PlantStep({ state, setState, setInput, optimise, optimising, sto
   );
 }
 
+const cr = (v) => `₹${nf(v, 2)} cr`;
+
+/** What the RfS asks of a bid for this plant: securities, SECI's charges and the eligibility tests. */
+function RfsAmounts({ inputs }) {
+  const a = rfsAmounts(inputs);
+  const plant = `${nf(a.solarMw)} MW solar${a.windMw ? `, ${nf(a.windMw)} MW wind` : ""}, ${nf(a.essMwh)} MWh battery`;
+  const rows = [
+    ["EMD with the bid", cr(a.emdCr), `bank guarantee, held ~${nf(BG_YEARS.emd * 12, 0)} months`, ["emd"]],
+    ["PBG after the LoA", cr(a.pbgCr), `bank guarantee, held ~${nf(BG_YEARS.pbg * 12, 0)} months`, ["pbg"]],
+    ["Contract Administration Charges", cr(a.cacCr), "+ GST, within 20 days of the LoA", ["cac"]],
+    ["Bid processing fee and RfS cost", cr(a.bidFeeCr + a.rfsCostCr), "+ GST, with the bid", ["bidFee", "rfsCost"]],
+    ["Net worth you must show", cr(a.netWorthCr), "for the installed capacities", ["netWorth"]],
+    ["Liquidity: one of", `${cr(a.turnoverCr)} turnover`, `or ${cr(a.pbditCr)} PBDIT, or a ${cr(a.lineOfCreditCr)} line of credit`, ["turnover", "pbdit", "lineOfCredit"]],
+  ];
+  return (
+    <div className="cfd-rfs" data-testid="cfd-rfs-amounts">
+      <p className="rtc-note">For {nf(inputs.contractedMw || 0)} MW contracted: {plant}. The model charges the bank guarantees at the cost above and adds SECI's charges, with GST, to the project cost.</p>
+      <div className="cfd-rfs-grid">
+        {rows.map(([label, value, note, cites]) => (
+          <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small><span className="cfd-rfs-cites">{cites.map((c) => <Cite key={c} id={c} />)}</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Step 4: capex, running costs, tender costs and financing. */
 export function CostsStep({ state, setState, setInput }) {
   const missing = missingInputs(state);
@@ -110,9 +140,12 @@ export function CostsStep({ state, setState, setInput }) {
       <Section index="4" title="Costs" note="Capex, running costs and the tender's own costs">
         <FillBar state={state} setState={setState} missing={missing} />
         <Fields state={state} setInput={setInput} section="costs" />
-        <p className="rtc-note">Exchange fees <Cite id="pxCharges" />, transmission to the Delivery Point <Cite id="ists" />, the Letter of Credit <Cite id="lc" /> and the PBG are yours. Augmentation replaces the battery's degraded MWh each year at the battery price, falling by the rate above.</p>
+        <p className="rtc-note">Exchange fees <Cite id="pxCharges" />, transmission to the Delivery Point <Cite id="ists" /> <Cite id="lineCost" />, the Letter of Credit <Cite id="lc" />, the bank guarantees and SECI's charges are yours. Augmentation replaces the battery's degraded MWh each year at the battery price, falling by the rate above.</p>
       </Section>
-      <Section index="4.1" title="Financing" note="The strike price is solved for your target equity IRR">
+      <Section index="4.1" title="What the RfS asks of this bid" note="From the RfS formulas, on your contracted MW and installed capacities">
+        <RfsAmounts inputs={state.inputs} />
+      </Section>
+      <Section index="4.2" title="Financing" note="The strike price is solved for your target equity IRR">
         <Fields state={state} setInput={setInput} section="fin" />
         <div className="rtc-grid rtc-grid-4 cfd-fields">
           <Choice state={state} setInput={setInput} k="afterTerm" />

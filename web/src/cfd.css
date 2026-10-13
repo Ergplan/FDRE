@@ -49,6 +49,7 @@
 .cfd-money strong { font-size: 16px; }
 .cfd-money small { color: var(--ink-2); line-height: 1.45; }
 .cfd-cite.replaced { text-decoration: line-through; opacity: 0.75; }
+.cfd-cite.conflict { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
 .cfd-docs { display: grid; gap: 8px; margin-bottom: 10px; }
 .cfd-doc { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); background: var(--surface); }
 .cfd-doc > span { display: grid; gap: 2px; }
@@ -63,6 +64,7 @@
 .cfd-term-label { font-weight: 600; }
 .cfd-term-value em { color: var(--warn); font-style: normal; }
 .cfd-term.replaced .cfd-term-value { color: var(--muted); }
+.cfd-term.conflict { box-shadow: inset 3px 0 0 var(--warn); }
 .cfd-quote { margin: 0 12px 12px 38px; padding: 8px 12px; border-left: 3px solid var(--signal); background: var(--bg-2); font-style: italic; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
 .cfd-fill-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .cfd-missing { display: inline-flex; gap: 6px; align-items: center; color: var(--warn); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -71,6 +73,12 @@
 .cfd-fields input[type="date"] { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); padding: 9px; background: var(--bg-2); color: var(--ink); font: inherit; }
 .cfd-dates { display: flex; gap: 8px 18px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); background: var(--bg-2); font-size: 13px; }
 .cfd-dates span { display: inline-flex; gap: 6px; align-items: center; }
+.cfd-rfs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cfd-rfs-grid > div { display: grid; gap: 4px; align-content: start; padding: 12px; border: 1px solid var(--line); background: var(--surface); }
+.cfd-rfs-grid > div > span:first-child { color: var(--muted); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cfd-rfs-grid strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.cfd-rfs-grid small { color: var(--ink-2); line-height: 1.4; }
+.cfd-rfs-cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .cfd-optimise { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 .cfd-table { display: grid; margin-top: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .cfd-row { display: grid; grid-template-columns: minmax(120px, 1.1fr) repeat(7, minmax(84px, 1fr)); gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
@@ -93,7 +101,7 @@
   .cfd-todo li { grid-template-columns: 30px minmax(0, 1fr); }
   .cfd-todo-when { grid-column: 2; }
   .cfd-todo li > span:nth-child(2), .cfd-todo-cites { grid-column: 2; }
-  .cfd-money { grid-template-columns: minmax(0, 1fr); }
+  .cfd-money, .cfd-rfs-grid { grid-template-columns: minmax(0, 1fr); }
   .cfd-term-head { grid-template-columns: 16px minmax(0, 1fr); }
   .cfd-term-value, .cfd-term-head .cfd-cite { grid-column: 2; }
   .cfd-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

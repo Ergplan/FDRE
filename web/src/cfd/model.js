@@ -1,6 +1,7 @@
 // SECI CfD-I bid model: the plant's day-by-day operation over the CfD term and the financial model
 // that solves the strike price for the bidder's target equity IRR. Tender terms come from
-// ./terms.js (each quoted from the CfDA or an amendment); everything else is the bidder's input.
+// ./terms.js (each quoted from the RfS, the CfDA or an amendment); everything else is the bidder's
+// input.
 //
 // Operation, every day from the SCD to the end of the term:
 //   * the 2 Peak Hours are the two highest-priced hours of 18:00-24:00 in the market chosen for
@@ -30,7 +31,7 @@ const pct = true;
 /** Every input, by section. The tender fixes none of these; each starts empty unless noted. */
 export const FIELDS = [
   // ---- the project
-  { section: "project", key: "contractedMw", label: "Contracted capacity you bid", unit: "MW", min: 50, max: 500, step: 10, hint: "Of the tender's 500 MW; parts of at least 50 MW (CfDA 5.7)" },
+  { section: "project", key: "contractedMw", label: "Contracted capacity you bid", unit: "MW", min: TENDER.bidMinMw, max: TENDER.bidMaxMw, step: 1, hint: "50 to 150 MW in whole MW, one bid for your group (RfS 6.1)" },
   { section: "project", key: "essMwhPerMw", label: "Battery energy", unit: "MWh per contracted MW", min: 2, max: 6, step: 0.05, hint: "At least 2 (Amd-02: X MW / 2X MWh)" },
   { section: "project", key: "essMwPerMw", label: "Battery power", unit: "MW per contracted MW", min: 1, max: 3, step: 0.05, hint: "At least 1" },
   { section: "project", key: "solarMw", label: "Own solar", unit: "MWac", min: 0, max: 5000, step: 5, hint: "Co-located; “Optimise own RE” finds the least-tariff size" },
@@ -51,7 +52,7 @@ export const FIELDS = [
   { section: "sourcing", key: "recPrice", label: "REC price", unit: "₹/REC (MWh)", min: 0, max: 2000, step: 10, hint: "You keep 50% (CfDA 9.2.vi)" },
   // ---- costs
   { section: "costs", key: "essCrPerMwh", label: "Battery capex (all-in)", unit: "₹ cr/MWh", min: 0, max: 5, step: 0.01 },
-  { section: "costs", key: "solarCrPerMw", label: "Solar capex", unit: "₹ cr/MWac", min: 0, max: 10, step: 0.05 },
+  { section: "costs", key: "solarCrPerMw", label: "Solar capex", unit: "₹ cr/MWac", min: 0, max: 10, step: 0.05, hint: "Domestic cells and modules (RfS Annexure-B 1.d)" },
   { section: "costs", key: "windCrPerMw", label: "Wind capex", unit: "₹ cr/MW", min: 0, max: 15, step: 0.05 },
   { section: "costs", key: "evacuationCrPerMw", label: "Transmission to the ISTS substation", unit: "₹ cr per contracted MW", min: 0, max: 3, step: 0.01, hint: "Line and bay at 220 kV or above (CfDA Delivery Point)" },
   { section: "costs", key: "preopPct", label: "Pre-operative & IDC", unit: "% of hard cost", pct, min: 0, max: 30, step: 0.5 },
@@ -64,8 +65,8 @@ export const FIELDS = [
   { section: "costs", key: "omEscalation", label: "O&M escalation", unit: "%/yr", pct, min: 0, max: 15, step: 0.25 },
   { section: "costs", key: "pxFee", label: "Exchange fee on energy sold", unit: "₹/kWh", min: 0, max: 0.5, step: 0.005, hint: "Yours (CfDA 4.2.7)" },
   { section: "costs", key: "lcCostPct", label: "Letter of Credit cost", unit: "% of LC/yr", pct, min: 0, max: 5, step: 0.05, hint: "LC = 2000 × MW × (₹10 − SP) × 30 (CfDA 10.4.2)" },
-  { section: "costs", key: "pbgLakhPerMw", label: "Performance Bank Guarantee", unit: "₹ lakh per contracted MW", min: 0, max: 100, step: 0.5, hint: "Amount set in RfS clause 18.1 (not among the documents loaded)" },
-  { section: "costs", key: "pbgCostPct", label: "PBG cost", unit: "% of PBG/yr", pct, min: 0, max: 5, step: 0.05 },
+  { section: "costs", key: "pbgCostPct", label: "Bank guarantee cost (EMD, PBG)", unit: "% of the guarantee/yr", pct, min: 0, max: 5, step: 0.05, hint: "Amounts and validity from the RfS (17, 18.1)" },
+  { section: "costs", key: "gstRate", label: "GST on SECI's charges", unit: "%", pct, min: 0, max: 28, step: 1, hint: "On the RfS cost, bid fee and Contract Administration Charges; a cost if you cannot set it off" },
   // ---- finance
   { section: "fin", key: "targetEquityIrr", label: "Target equity IRR", unit: "%", pct, min: 0, max: 40, step: 0.25 },
   { section: "fin", key: "debtFraction", label: "Debt share", unit: "% of capex", pct, min: 0, max: 95, step: 1 },
@@ -94,7 +95,7 @@ export const BENCHMARKS = {
   marketCharges: 0.3, groupPrice: 3.0, groupCharges: 0.3, priceEscalation: 0, recPrice: 150,
   essCrPerMwh: 1.0, solarCrPerMw: 4.0, windCrPerMw: 6.5, evacuationCrPerMw: 0.3, preopPct: 0.05, augDecline: 0.05,
   essOmLakhPerMwh: 1.2, solarOmLakhPerMw: 4, windOmLakhPerMw: 9, otherFixedLakhPerMw: 2, insurancePct: 0.003, omEscalation: 0.05,
-  pxFee: 0.02, lcCostPct: 0.01, pbgLakhPerMw: 5, pbgCostPct: 0.01,
+  pxFee: 0.02, lcCostPct: 0.01, pbgCostPct: 0.01, gstRate: 0.18,
   targetEquityIrr: 0.14, debtFraction: 0.75, interestRate: 0.09, tenorYears: 12, taxRate: 0.2517, essLifeYears: 15, reLifeYears: 25, discountRate: 0.1,
   sellMarket: "DAM", useMarket: true, useGroup: false, merchant: true, augmentation: "annual", afterTerm: "none", merchantYears: 0,
 };
@@ -143,6 +144,9 @@ export function missingInputs(state) {
   const i = state.inputs;
   const out = [];
   if (!/^\d{4}-\d{2}-\d{2}$/.test(i.effectiveDate || "")) out.push("Effective Date of the CfDA");
+  if (isNum(i.contractedMw) && (!Number.isInteger(i.contractedMw) || i.contractedMw < TENDER.bidMinMw || i.contractedMw > TENDER.bidMaxMw)) {
+    out.push("Contracted capacity: 50 to 150 MW in whole MW (RfS 6.1)");
+  }
   for (const key of ["sellMarket", "useMarket", "useGroup", "merchant", "augmentation", "afterTerm"]) {
     if (i[key] === null || i[key] === undefined) out.push(CHOICES[key].label);
   }
@@ -166,6 +170,7 @@ export function missingInputs(state) {
 const DAY_MS = 86400000;
 export const parseDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d); };
 export const fmtDate = (t) => new Date(t).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+export const addDays = (t, n) => t + n * DAY_MS;
 export function addMonths(t, n) {
   const d = new Date(t);
   const y = d.getUTCFullYear();
@@ -178,11 +183,15 @@ export function addMonths(t, n) {
 export function keyDates(effectiveDate) {
   const ed = parseDate(effectiveDate);
   const scd = addMonths(ed, TENDER.essScdMonths);
+  const loa = addDays(ed, -TENDER.loaToEdDays); // the Effective Date is the 30th day from the LoA (RfS 21.4)
   return {
+    loa,
+    docsDue: addDays(loa, TENDER.docsDueDays), // PBG, Contract Administration Charges, documents (RfS 21.4)
     ed,
     finClose: addMonths(scd, -TENDER.finCloseMonthsBeforeScd),
     scd,
     lastWithPenalty: addMonths(scd, TENDER.delayMonthsMax),
+    pbgUntil: addMonths(scd, TENDER.pbgAfterScdMonths), // PBG validity (RfS 18.1)
     reDeadline: addMonths(ed, TENDER.reCodMonths),
     extraUntil: addMonths(ed, TENDER.extraMarketMonths),
     end: addMonths(scd, TENDER.termYears * 12),
@@ -427,6 +436,37 @@ export const penaltyCr = (cy, sp) => cy.weeks.reduce((a, w) => a + TENDER.penalt
 /** The Letter of Credit to SECI (₹ cr) at strike price sp: 2000 kWh × MW × (C − SP) × 30, C = ₹10. */
 export const lcCr = (mw, sp) => (2000 * mw * Math.max(0, TENDER.lcMinPrice - sp) * TENDER.lcDays) / 1e7;
 
+/**
+ * What the RfS asks of a bid for this plant (₹ crore): the bid securities and SECI's charges, from the
+ * installed AC capacities (solar and wind MW, battery MWh), and the eligibility thresholds.
+ */
+export function rfsAmounts(inputs) {
+  const X = isNum(inputs.contractedMw) ? inputs.contractedMw : 0;
+  const cap = { solarMw: inputs.solarMw || 0, windMw: inputs.windMw || 0, essMwh: X * (inputs.essMwhPerMw || TENDER.essHoursMin) };
+  const lakh = (rates) => Object.keys(rates).reduce((a, k) => a + rates[k] * cap[k], 0);
+  const gst = isNum(inputs.gstRate) ? inputs.gstRate : 0;
+  const rfsCost = TENDER.rfsCostLakh / 100;
+  const bidFee = Math.min(TENDER.bidFeeLakhPerMw * X, TENDER.bidFeeMaxLakh) / 100;
+  const cac = (TENDER.cacLakhPerMw * X) / 100;
+  return {
+    ...cap,
+    emdCr: lakh(TENDER.emdLakh) / 100,
+    pbgCr: lakh(TENDER.pbgLakh) / 100,
+    rfsCostCr: rfsCost, bidFeeCr: bidFee, cacCr: cac, gst,
+    seciChargesCr: (rfsCost + bidFee + cac) * (1 + gst), // not refunded; with GST
+    netWorthCr: lakh(TENDER.netWorthLakh) / 100,
+    turnoverCr: (TENDER.turnoverLakhPerMw * X) / 100,
+    pbditCr: (TENDER.pbditLakhPerMw * X) / 100,
+    lineOfCreditCr: (TENDER.lineOfCreditLakhPerMw * X) / 100,
+  };
+}
+
+/** Years each bank guarantee is held: the EMD for its validity, the PBG from 20 days after the LoA to 6 months after the SCD; each + the 30-day claim period. */
+export const BG_YEARS = {
+  emd: TENDER.emdValidityMonths / 12 + TENDER.bgClaimDays / 365,
+  pbg: (TENDER.essScdMonths + TENDER.pbgAfterScdMonths) / 12 + (TENDER.loaToEdDays - TENDER.docsDueDays + TENDER.bgClaimDays) / 365,
+};
+
 export function capex(inputs) {
   const X = inputs.contractedMw;
   const pre = 1 + inputs.preopPct;
@@ -434,8 +474,9 @@ export function capex(inputs) {
   const evac = X * inputs.evacuationCrPerMw;
   const solar = (inputs.solarMw || 0) * inputs.solarCrPerMw;
   const wind = (inputs.windMw || 0) * (inputs.windCrPerMw || 0);
-  return { ess, evac, solar, wind, preopEss: (ess + evac) * inputs.preopPct, preopRe: (solar + wind) * inputs.preopPct,
-    atScd: (ess + evac) * pre, atRe: (solar + wind) * pre, total: (ess + evac + solar + wind) * pre };
+  const seci = rfsAmounts(inputs).seciChargesCr; // RfS cost, bid fee, Contract Administration Charges, with GST
+  return { ess, evac, solar, wind, seci, preopEss: (ess + evac) * inputs.preopPct, preopRe: (solar + wind) * inputs.preopPct,
+    atScd: (ess + evac) * pre + seci, atRe: (solar + wind) * pre, total: (ess + evac + solar + wind) * pre + seci };
 }
 
 /** Rate r at which the dated flows' NPV is zero (bisection), or NaN. */
@@ -467,11 +508,14 @@ export function financials(inputs, sim, sp) {
   const reCy = sim.years.findIndex((cy) => reCod < cy.end);
   const essMwh = X * inputs.essMwhPerMw;
   const lc = lcCr(X, sp);
-  const pbg = (inputs.pbgLakhPerMw * X) / 100;
+  const rfs = rfsAmounts(inputs);
   const rows = [];
-  // construction (battery and transmission; the RE comes in the Contract Year of its commissioning)
+  // construction (battery, transmission and SECI's charges; the RE comes in the Contract Year of its
+  // commissioning), with the cost of the EMD and PBG bank guarantees over their validity
   const reAtStart = reCy === 0 && reCod <= scd;
-  rows.push({ period: "Construction", year: 0, t: 0, days: 0, capex: cx.atScd + (reAtStart ? cx.atRe : 0), pbgCost: pbg * inputs.pbgCostPct * ((TENDER.essScdMonths + 1.5) / 12) });
+  const emdCost = rfs.emdCr * inputs.pbgCostPct * BG_YEARS.emd;
+  const pbgCost = rfs.pbgCr * inputs.pbgCostPct * BG_YEARS.pbg;
+  rows.push({ period: "Construction", year: 0, t: 0, days: 0, capex: cx.atScd + (reAtStart ? cx.atRe : 0), emdCost, pbgCost, bgCost: emdCost + pbgCost });
   const tail = inputs.afterTerm === "merchant" ? Math.max(0, Math.round(inputs.merchantYears || 0)) : 0;
   const last = sim.years[sim.years.length - 1];
   const fullYears = sim.years.filter((cy) => cy.days >= 360);
@@ -521,7 +565,7 @@ export function financials(inputs, sim, sp) {
   const drawEss = inputs.debtFraction * cx.atScd;
   const drawRe = inputs.debtFraction * cx.atRe;
   rows[0].debtDraw = drawEss + (reAtStart ? drawRe : 0);
-  rows[0].equityIn = rows[0].capex - rows[0].debtDraw + rows[0].pbgCost;
+  rows[0].equityIn = rows[0].capex - rows[0].debtDraw + rows[0].bgCost;
   let balEss = drawEss;
   let balRe = reAtStart ? drawRe : 0;
   let usedEss = 0;
@@ -560,7 +604,7 @@ export function financials(inputs, sim, sp) {
     r.projectCf = r.cfads - r.capex;
   }
   rows[0].equityCf = -rows[0].equityIn;
-  rows[0].projectCf = -rows[0].capex - rows[0].pbgCost;
+  rows[0].projectCf = -rows[0].capex - rows[0].bgCost;
   // dated flows: construction at t = 0, each period's flows at its end; the RE spend at its commissioning
   const equityFlows = rows.map((r, i) => ({ t: i === 0 ? 0 : r.t, cf: i === 0 ? r.equityCf : r.equityCf + r.equityIn }));
   const projectFlows = rows.map((r, i) => ({ t: i === 0 ? 0 : r.t, cf: i === 0 ? r.projectCf : r.projectCf + r.capex }));
@@ -574,9 +618,9 @@ export function financials(inputs, sim, sp) {
   // over PV of the energy supplied (₹/kWh); the break-even strike price before the equity return
   const termRows = rows.filter((r, i) => i === 0 || !r.merchant);
   const pvEnergy = npvDated(inputs.discountRate, termRows.slice(1).map((r, i) => ({ t: r.t, cf: sim.years[i].deliveredMwh })));
-  const costFlows = termRows.map((r, i) => ({ t: i === 0 ? 0 : r.t, cf: i === 0 ? r.capex + r.pbgCost : r.opex + r.capex + r.tax - r.merchantRevenue - r.recRevenue }));
+  const costFlows = termRows.map((r, i) => ({ t: i === 0 ? 0 : r.t, cf: i === 0 ? r.capex + r.bgCost : r.opex + r.capex + r.tax - r.merchantRevenue - r.recRevenue }));
   return {
-    sp, rows, capex: cx, lcCr: lc, pbgCr: pbg,
+    sp, rows, capex: cx, lcCr: lc, pbgCr: rfs.pbgCr, emdCr: rfs.emdCr, rfs,
     equityIrr: xirr(equityFlows), projectIrr: xirr(projectFlows),
     equityNpv: npvDated(inputs.targetEquityIrr, equityFlows),
     minDscr: dscrs.length ? Math.min(...dscrs) : null, avgDscr: dscrs.length ? dscrs.reduce((a, v) => a + v, 0) / dscrs.length : null,
