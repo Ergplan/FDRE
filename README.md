@@ -78,7 +78,10 @@ the browser; only the HiGHS sizing LP (below) runs in the Python service.
 It reads as a story. Six chapters sit in a vertical rail, each with its own icon and colour:
 
 1. **Energy needed**: annual energy, plant capacity and load factor (linked by locks), plus
-   demand growth and losses.
+   demand growth and **where the units are measured**: the hourly generation files are at the
+   plant's 33 kV main bus bar, the customer is billed at the 220 kV GSS (the point of
+   interconnection), and between them the 33/220 kV power transformer loses 0.4% and the
+   220 kV line 0.5% (both editable; an optional other loss before the bus, default 0).
 2. **Supply type**: round-the-clock, peak-weighted, day-time or night-weighted presets,
    seasonality, or a profile drawn with the mouse or uploaded (8760 / 15-minute CSV).
 3. **DFR**: target, measured annually or every month, a lifetime design check, shortfall
@@ -125,11 +128,22 @@ growth). It runs in four steps, shown in a full-screen animation:
 
 For the default case HiGHS moves the answer from the search's local optimum (695 / 460 / 400 MW
 at ₹5.6562/kWh) to 675 MW solar, 475 MW wind and 395 MW / 1,580 MWh battery at ₹5.6535/kWh,
-against a proven floor of ₹5.6522. The least levelised cost and least capital cost objectives
+against a proven floor of ₹5.6522. Those figures are without the transformer and line losses (as in
+`tools/check_rtc_engine.mjs`). With the default 0.4% + 0.5% (billing at the 220 kV meter) the
+answer is 700 MW solar, 460 MW wind and 410 MW / 1,640 MWh battery at ₹5.7054/kWh, against a
+HiGHS floor of ₹5.7038: ₹0.049/kWh more, close to the 0.898% of energy lost; in year 1 the plant
+injects 2,132.5 MU at 33 kV, the transformer takes 8.5 MU and the line 10.6 MU, and the meter
+records 2,113.4 MU (DFR 86.1%). The least levelised cost and least capital cost objectives
 remain available and use the search only.
 
 The answer is then revealed. Below it are:
 
+- **From the plant to the billing meter**: an isometric drawing of the solar park, the
+  inverters and inverter-duty transformers, the 33 kV collection cables, the 33 kV main bus
+  bar (where generation is measured), the battery, the 33/220 kV power transformer, the 220 kV
+  line and the GSS with the billing meter, each labelled with its loss; the year-1 ladder from
+  the bus to the meter; the solar CUF at the bus and at the meter; and the billing metering
+  point defined (interface meters, main and check, at the 220 kV GSS).
 - the dispatch, with a Day / Month / Year toggle. The Day view uses the
   [Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library,
   vendored in `web/vendor/`.
@@ -142,6 +156,15 @@ The answer is then revealed. Below it are:
 - the optimizer log, including HiGHS's own output.
 
 Every input has a lock toggle. Save the case to the database from the header.
+
+**Metering.** The dispatch runs at the 33 kV bus: solar, wind and the battery are there, and
+everything injected (direct supply, battery discharge, surplus sold) is multiplied by
+η = (1 − transformer loss) × (1 − line loss) = 99.102% on its way to the meter. Demand, the
+plant capacity, the DFR, the tariff revenue and surplus sales are all at the meter, so the
+optimizer sizes the plant to cover the losses, and every year of the financial model (and its
+CSV, the saved-scenario Excel and the comparison fields) shows the units generated at 33 kV,
+the transformer and line losses, and the units at the meter. The HiGHS LP does the same
+(demand and capacity ÷ η at the bus, energy billed × η).
 
 Engine checks: `node tools/check_rtc_engine.mjs` and `python -m pytest tests/test_rtc_lp.py`.
 The synthetic profiles are for screening only, so upload bankable 8760 profiles before

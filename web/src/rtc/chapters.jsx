@@ -44,8 +44,8 @@ export function chapterSummary(id, state, derived) {
     case "energy": return `${nf(inputs.annualEnergyMu)} MU · ${nf(inputs.plantCapacityMw)} MW`;
     case "type": return supplyTypeLabel(state);
     case "dfr": return `${pf(inputs.dfrTarget, 0)} ${inputs.dfrBasis === "monthly" ? "every month" : "annual"}`;
-    case "solar": return `${fixed("solarMw")} MW · CUF ${pf(derived.solarCuf, 1)}`;
-    case "wind": return `${fixed("windMw")} MW · CUF ${pf(derived.windCuf, 1)}`;
+    case "solar": return `${fixed("solarMw")} MW · CUF ${pf(derived.solarCuf, 1)} at 33 kV, ${pf(derived.solarCufMeter, 1)} at 220 kV`;
+    case "wind": return `${fixed("windMw")} MW · CUF ${pf(derived.windCuf, 1)} at 33 kV, ${pf(derived.windCufMeter, 1)} at 220 kV`;
     case "bess": return state.bess.durationH ? `${fixed("bessMw")} MW · ${state.bess.durationH}-hour` : `${fixed("bessMw")} MW · ${fixed("bessMwh")} MWh`;
     default: return "";
   }
@@ -118,16 +118,26 @@ export function EnergyChapter({ state, patch, lockProps, isLocked, setTriplet, l
     <>
       <p className="chapter-lead">How much energy does the customer need, and through how big a connection? Lock any two of energy, capacity and load factor, and editing one moves the third.</p>
       <div className="rtc-grid rtc-grid-3">
-        <Field label="Annual energy requirement" unit="MU" value={inputs.annualEnergyMu} onChange={(v) => setTriplet("energy", v)} {...lockProps("annualEnergyMu")} step={5} min={1} hint={`${nf(avgMw, 1)} MW average`} />
-        <Field label="Plant capacity" unit="MW" value={inputs.plantCapacityMw} onChange={(v) => setTriplet("plant", v)} {...lockProps("plantCapacityMw")} step={1} min={1} disabled={isLocked("loadFactor") && isLocked("annualEnergyMu")} hint="Maximum delivery / export" />
+        <Field label="Annual energy requirement" unit="MU" value={inputs.annualEnergyMu} onChange={(v) => setTriplet("energy", v)} {...lockProps("annualEnergyMu")} step={5} min={1} hint={`${nf(avgMw, 1)} MW average, at the 220 kV meter`} />
+        <Field label="Plant capacity" unit="MW" value={inputs.plantCapacityMw} onChange={(v) => setTriplet("plant", v)} {...lockProps("plantCapacityMw")} step={1} min={1} disabled={isLocked("loadFactor") && isLocked("annualEnergyMu")} hint="Maximum delivery / export at the 220 kV meter" />
         <Field label="Load factor" pct value={loadFactor} onChange={(v) => setTriplet("lf", v)} {...lockProps("loadFactor")} step={0.1} min={1} max={100} disabled={isLocked("annualEnergyMu") && isLocked("plantCapacityMw")} hint="Energy ÷ (capacity × 8760)" digits={3} />
         <Field label="Demand growth" pct value={inputs.demandGrowth} onChange={(v) => patch("inputs", { demandGrowth: v })} {...lockProps("demandGrowth")} step={0.1} hint="per year, in the 25-year model" />
-        <Field label="Losses to delivery point" pct value={inputs.lossPct} onChange={(v) => patch("inputs", { lossPct: v })} {...lockProps("lossPct")} step={0.1} min={0} max={30} hint="Auxiliary + transmission" />
         <div className="rtc-stat-pair">
           <Stat label="Peak demand" value={`${nf(peakDemand, 1)} MW`} detail={peakDemand > inputs.plantCapacityMw + 1e-6 ? "above plant capacity" : "within capacity"} tone={peakDemand > inputs.plantCapacityMw + 1e-6 ? "bad" : undefined} />
           <Stat label="Year-1 demand" value={`${nf(sim.demandMWh / 1000, 0)} MU`} detail={`${nf(avgMw, 1)} MW average`} />
         </div>
       </div>
+      <Group title="Where the units are measured" note="Generation at the 33 kV main bus bar; billing at the 220 kV GSS">
+        <p className="chapter-lead small">
+          The hourly generation files are at the plant's <b>33 kV main bus bar</b>. The customer is billed on the units recorded by the <b>billing meter at the 220 kV GSS</b> (the point of interconnection): the demand, the DFR, the plant capacity and surplus sales are all counted there. On the way, everything the plant injects (solar, wind and battery) loses the power transformer and transmission line losses.
+        </p>
+        <div className="rtc-grid rtc-grid-4">
+          <Field label="Power transformer loss" pct value={inputs.trafoLossPct} onChange={(v) => patch("inputs", { trafoLossPct: v })} {...lockProps("trafoLossPct")} step={0.05} min={0} max={5} digits={3} hint="33/220 kV, at the pooling substation" />
+          <Field label="Transmission line loss" pct value={inputs.lineLossPct} onChange={(v) => patch("inputs", { lineLossPct: v })} {...lockProps("lineLossPct")} step={0.05} min={0} max={10} digits={3} hint="220 kV line to the GSS" />
+          <Field label="Other losses before the 33 kV bus" pct value={inputs.lossPct} onChange={(v) => patch("inputs", { lossPct: v })} {...lockProps("lossPct")} step={0.1} min={0} max={30} hint="Auxiliary; 0 when your files are at the 33 kV bus" />
+          <Stat label="Reaches the meter" value={pf(E.evacuationEfficiency(inputs), 3)} detail={`of each MWh injected at 33 kV · ${pf(1 - E.evacuationEfficiency(inputs), 3)} lost`} />
+        </div>
+      </Group>
       <div className="rtc-grid rtc-grid-2">
         <div className="rtc-card"><div className="rtc-card-head"><span>Average day vs plant capacity (MW)</span></div><LiveChart option={dayOption} height={250} /></div>
         <div className="rtc-card"><div className="rtc-card-head"><span>Demand · month × hour (MW)</span></div><LiveChart option={heat} height={250} /></div>
@@ -274,7 +284,7 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
     <>
       <p className="chapter-lead">
         {isSolar
-          ? "Solar sets the daytime supply. Load an hourly PVsyst/SolarGIS profile, or use the synthetic Beed profile tuned to your CUF."
+          ? "Solar sets the daytime supply. Load an hourly PVsyst/SolarGIS profile at the 33 kV main bus bar, or use the synthetic Beed profile tuned to your CUF. The power transformer and line losses to the 220 kV meter are applied on top (Energy needed chapter)."
           : "Wind fills the evening and the monsoon. Load an hourly wind profile, or use the synthetic Beed profile tuned to your CUF."}
       </p>
       <div className="chapter-split">
@@ -303,7 +313,7 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
               <Field label="Annual CUF" pct value={state.inputs.windCuf} onChange={(v) => patch("inputs", { windCuf: v })} {...lockProps("windCuf")} disabled={Boolean(upload)} step={0.1} min={10} max={55} />
             )}
             <Field label="Upload reference MW" unit="MW" value={state[`${kind}RefMw`] ?? 0} onChange={(v) => set(`${kind}RefMw`, v)} {...lockProps(`${kind}RefMw`)} step={1} min={0} hint="Plant capacity for MW uploads; 0 = from the CUF column or the peak" />
-            <Stat label="Modelled CUF" value={pf(cuf, 2)} detail={scaled ? "after monthly redraw" : "as loaded"} />
+            <Stat label="CUF at the 33 kV bus" value={pf(cuf * (1 - (state.inputs.lossPct || 0)), 2)} detail={`${scaled ? "after monthly redraw" : "as loaded"}; at the 220 kV meter ${pf(cuf * (1 - (state.inputs.lossPct || 0)) * E.evacuationEfficiency(state.inputs), 2)}`} />
           </div>
         </div>
         <div className="rtc-grid rtc-grid-2">

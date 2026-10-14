@@ -10,7 +10,9 @@ import { logEvent } from "@/lib/activity";
 export const dynamic = "force-dynamic";
 
 const RTC_LINES = [
-  ["Demand (MU)", "demandMu"], ["Delivered (MU)", "deliveredMu"], ["DFR", "dfr", "pct"], ["Surplus sold (MU)", "excessMu"], ["Curtailed (MU)", "curtailMu"],
+  ["Demand at the 220 kV meter (MU)", "demandMu"], ["Generated at the 33 kV bus (MU)", "genBusMu"], ["Injected at the 33 kV bus (MU)", "injectedMu"],
+  ["Power transformer loss (MU)", "trafoLossMu"], ["Transmission line loss (MU)", "lineLossMu"], ["At the 220 kV billing meter (MU)", "meterMu"],
+  ["Delivered to the customer at the meter (MU)", "deliveredMu"], ["DFR", "dfr", "pct"], ["Surplus sold (MU)", "excessMu"], ["Curtailed (MU)", "curtailMu"],
   ["Shortfall vs target (MU)", "shortfallMu"], ["Tariff (Rs/kWh)", "tariff"], ["Energy revenue", "energyRevenue"],
   ["Surplus revenue", "surplusRevenue"], ["Shortfall penalty", "penalty"], ["Total revenue", "revenue"], ["O&M", "om"],
   ["Insurance", "insurance"], ["Other fixed", "other"], ["EBITDA", "ebitda"], ["Book depreciation", "bookDep"],

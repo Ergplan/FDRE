@@ -350,6 +350,12 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
     if plant <= 0:
         raise LpInputError("plantMw must be positive")
     loss = 1 - float(ctx.get("lossPct") or 0)
+    # evacuation from the 33 kV main bus (where the profiles are) to the 220 kV GSS billing meter:
+    # the dispatch runs at the bus with demand and capacity referred back to it (÷ poi); energy is
+    # billed, sold and reported at the meter (× poi), as in engine.js simulate(). 1 when unset.
+    poi = (1 - float(ctx.get("trafoLossPct") or 0)) * (1 - float(ctx.get("lineLossPct") or 0))
+    if not 0.5 < poi <= 1:
+        raise LpInputError("transformer and line losses must leave between 50% and 100% of the energy")
     sell = bool(ctx.get("sellSurplus"))
     extra = max(0.0, float(ctx.get("extraExportMw") or 0))
     bess = payload.get("bess") or {}
@@ -560,13 +566,13 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         c_ex = base + 4 * HOURS + t if sell else None
         c_bio = base + BIO_BLOCK * HOURS + t if has_bio else None
         if sale_cap is not None:
-            col_hi[c_ex] = sale_cap
+            col_hi[c_ex] = sale_cap / poi
         if has_bio:
             bio_cols.append(c_bio)
         for pl in plants:
             pl["cols"].append(base + pl["block"] * HOURS + t)
-        dem = demand * f["demandFactor"]
-        target = np.minimum(dem, plant)
+        dem = demand * f["demandFactor"] / poi  # at the bus
+        target = np.minimum(dem, plant / poi)
         demand_by_year.append(dem)
         deliver_cols.append((c_dir, c_dis))
         sgen = solar_cf * f["solarFactor"] * loss
@@ -663,7 +669,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         if sell:
             r = n_row + t
             add(r, c_dir, ones); add(r, c_dis, ones); add(r, c_ex, ones)
-            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.full(HOURS, plant + extra))
+            row_lo.append(np.full(HOURS, -np.inf)); row_hi.append(np.full(HOURS, (plant + extra) / poi))
             n_row += HOURS
         # battery power: ch - P <= 0, dis - P <= 0
         for c in (c_ch, c_dis):
@@ -760,18 +766,18 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
                 cost_vec[c_pl] = var_w[yi]
         energy_vec = np.zeros(n_col)
         for yi, (c_dir, c_dis) in enumerate(deliver_cols):
-            energy_vec[c_dir] = energy_w[yi]
-            energy_vec[c_dis] = energy_w[yi]
+            energy_vec[c_dir] = energy_w[yi] * poi  # billed at the meter
+            energy_vec[c_dis] = energy_w[yi] * poi
             if ppa_first:
                 # a sale is worth at most what the same MWh earns on the PPA (0.5% less, so the
                 # PPA wins a tie): supplying the PPA always comes first
                 prices = price_series if price_series is not None else np.full(HOURS, surplus_price)
                 cap = 0.995 * lam_now * energy_w[yi] / market_w[yi] if market_w[yi] > 0 else 0.0
-                cost_vec[ex_cols[yi]] = -market_w[yi] * np.minimum(prices, cap)
+                cost_vec[ex_cols[yi]] = -market_w[yi] * np.minimum(prices, cap) * poi
             elif sell and price_series is not None:
-                cost_vec[ex_cols[yi]] = -market_w[yi] * price_series
+                cost_vec[ex_cols[yi]] = -market_w[yi] * price_series * poi
             elif sell:
-                cost_vec[ex_cols[yi]] = -surplus_w[yi]
+                cost_vec[ex_cols[yi]] = -surplus_w[yi] * poi
         const = tw["capex"] * evac * preop + pv_flat * evac * ins + pv_om * float(fin.get("otherFixedCr") or 0)
         return cost_vec, energy_vec, const, energy_w
 
@@ -784,16 +790,16 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         return out
 
     def yearly(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Delivered and exported MWh in every PPA year (interpolated between modelled years)."""
-        dl = np.array([x[c_dir].sum() + x[c_dis].sum() for c_dir, c_dis in deliver_cols])
-        ex = np.array([x[c].sum() for c in ex_cols]) if sell else np.zeros(len(rep))
+        """Delivered and exported MWh at the meter in every PPA year (interpolated between modelled years)."""
+        dl = np.array([x[c_dir].sum() + x[c_dis].sum() for c_dir, c_dis in deliver_cols]) * poi
+        ex = (np.array([x[c].sum() for c in ex_cols]) if sell else np.zeros(len(rep))) * poi
         return weights @ dl, weights @ ex
 
     def yearly_export_revenue(x: np.ndarray) -> np.ndarray | None:
         """Surplus sale revenue (Rs cr) in every PPA year at the hourly market price, or None."""
         if not sell or price_series is None:
             return None
-        rep_rev = np.array([RS_CR_PER_MWH_AT_1RS * float(x[c] @ price_series) for c in ex_cols])
+        rep_rev = np.array([RS_CR_PER_MWH_AT_1RS * float(x[c] @ price_series) * poi for c in ex_cols])
         return (weights @ rep_rev) * surplus_esc
 
     def yearly_biomass(x: np.ndarray) -> np.ndarray | None:
@@ -834,8 +840,9 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             best = max(best, rule["target"] * dem[covered].sum())
         return best
 
-    floor_mwh = np.array([energy_floor(d) for d in demand_by_year])
-    cap_mwh = np.array([np.minimum(d, plant).sum() for d in demand_by_year])
+    # at the meter, like energy_vec
+    floor_mwh = np.array([energy_floor(d) for d in demand_by_year]) * poi
+    cap_mwh = np.array([np.minimum(d, plant / poi).sum() for d in demand_by_year]) * poi
 
     h = highspy.Highs()
     h.setOptionValue("output_flag", True)
@@ -967,8 +974,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             "year": year,
             "dfr": float(delivered.sum() / dem.sum()),
             "minMonthlyDfr": min(monthly_dfr),
-            "deliveredMu": float(delivered.sum() / 1000),
-            "exportMu": float(x[base + 4 * HOURS + t].sum() / 1000) if sell else 0.0,
+            "deliveredMu": float(delivered.sum() * poi / 1000),
+            "exportMu": float(x[base + 4 * HOURS + t].sum() * poi / 1000) if sell else 0.0,
         }
         if has_bio:
             row["biomassMu"] = float(x[bio_cols[yi]].sum() / 1000)
@@ -979,8 +986,8 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
             row["greenShare"] = 1 - non_re / max(1e-9, float(delivered.sum()))
         if sell and (ppa_first or price_series is not None):
             # sold while the PPA still had room: should be nil with ppaFirst
-            room = np.maximum(0.0, np.minimum(dem, plant) - delivered)
-            row["divertedMu"] = float(np.minimum(x[ex_cols[yi]], room).sum() / 1000)
+            room = np.maximum(0.0, np.minimum(dem, plant / poi) - delivered)
+            row["divertedMu"] = float(np.minimum(x[ex_cols[yi]], room).sum() * poi / 1000)
         if rules:
             row["rules"] = [rule_outcome(rule, delivered, dem) for rule in rules]
         year_rows.append(row)
@@ -1023,6 +1030,7 @@ def solve(payload: dict, on_log=None, on_progress=None, log_limit: int = 1500) -
         "exportSources": "solar" if solar_only else "all",
         "plants": [{"id": pl["id"], "green": pl["green"]} for pl in plants],
         "greenShareMin": green_min if non_green else None,
+        "evacuationEfficiency": poi,
         "seconds": round(seconds, 2),
         "log": lines,
     }

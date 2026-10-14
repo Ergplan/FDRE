@@ -50,14 +50,22 @@ const FIN_LINES = [
   ["DSCR", "dscr", 2],
 ];
 
-export default function FinanceView({ state, patch, set, lockProps, finance, sizes, extraLines = null }) {
+export default function FinanceView({ state, patch, set, lockProps, finance, sizes, extraLines = null, energyLines = null }) {
   const { fin } = state;
-  // extraLines: [label, key, fmt, sign] rows a caller adds after "Other fixed" (Tender to Bid: biomass fuel)
+  // extraLines: [label, key, fmt, sign] rows a caller adds after "Other fixed" (Tender to Bid: biomass fuel);
+  // energyLines: rows added before "Delivered" (Round the clock: the 33 kV bus to the 220 kV meter)
   const lines = useMemo(() => {
-    if (!extraLines?.length) return FIN_LINES;
-    const at = FIN_LINES.findIndex((l) => l[1] === "other") + 1;
-    return [...FIN_LINES.slice(0, at), ...extraLines, ...FIN_LINES.slice(at)];
-  }, [extraLines]);
+    let out = FIN_LINES;
+    if (energyLines?.length) {
+      const at = out.findIndex((l) => l[1] === "deliveredMu");
+      out = [...out.slice(0, at), ...energyLines, ["Delivered to the customer at the meter (MU)", "deliveredMu", 1], ...out.slice(at + 1)];
+    }
+    if (extraLines?.length) {
+      const at = out.findIndex((l) => l[1] === "other") + 1;
+      out = [...out.slice(0, at), ...extraLines, ...out.slice(at)];
+    }
+    return out;
+  }, [extraLines, energyLines]);
   const rows = finance.rows;
   const years = rows.map((r) => `Y${r.year}`);
   const plOption = useMemo(() => ({

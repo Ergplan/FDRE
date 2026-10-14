@@ -99,3 +99,33 @@ def test_lp_meets_dfr_and_matches_engine_dispatch():
     # and 5% less of everything cannot meet the target: the answer is not oversized
     smaller = {k: v * 0.95 for k, v in res["sizes"].items()}
     assert _greedy_dfr(solar, wind, demand, 285, smaller, bess) < 0.85
+
+
+@pytest.mark.skipif(M.highspy is None, reason="highspy not installed")
+def test_lp_bills_at_the_220kv_meter_after_transformer_and_line_losses():
+    """Profiles at the 33 kV bus, billing at the 220 kV GSS: the LP with a 0.4% power transformer and
+    a 0.5% line loss is the lossless LP for demand and capacity referred to the bus (÷ η), with every
+    MWh billed η smaller, so the same plant and a tariff 1/η higher."""
+    solar, wind, demand = _case()
+    fin = {**FIN, "solarDegradation": 0}
+    bess = {**BESS, "annualDegradation": 0}
+    eta = (1 - 0.004) * (1 - 0.005)
+
+    def run(ctx_extra, dem, plant):
+        payload = {
+            "ctx": {"demand": dem.tolist(), "solarCf": solar.tolist(), "windCf": wind.tolist(), "plantMw": plant, **ctx_extra},
+            "bess": bess, "costs": COSTS, "fin": fin, "dfrTarget": 0.85, "dfrBasis": "annual",
+            "vars": {"solarMw": {"min": 0, "max": 1200}, "windMw": {"min": 0, "max": 900}, "bessMw": {"min": 0, "max": 500}},
+            "tariffGuess": 5.5, "gapTol": 1e-6,
+        }
+        return M.solve(payload)
+
+    lossy = run({"trafoLossPct": 0.004, "lineLossPct": 0.005}, demand, 285)
+    bus = run({}, demand / eta, 285 / eta)
+    assert lossy["ok"] and bus["ok"]
+    assert lossy["evacuationEfficiency"] == pytest.approx(eta)
+    for k in ("solarMw", "windMw", "bessMw"):
+        assert lossy["sizes"][k] == pytest.approx(bus["sizes"][k], rel=1e-3, abs=0.5)
+    assert lossy["tariff"] * eta == pytest.approx(bus["tariff"], rel=1e-4)
+    assert lossy["perYear"][0]["dfr"] == pytest.approx(bus["perYear"][0]["dfr"], abs=1e-6)
+    assert lossy["perYear"][0]["deliveredMu"] == pytest.approx(bus["perYear"][0]["deliveredMu"] * eta, rel=1e-6)

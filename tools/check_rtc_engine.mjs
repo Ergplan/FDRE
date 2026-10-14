@@ -45,6 +45,32 @@ assert.ok(Math.abs(bt.solar.direct + bt.solar.charge + bt.solar.export + bt.sola
 assert.ok(Math.abs(bt.wind.direct + bt.wind.charge + bt.wind.export + bt.wind.curtail - r.windGenMWh) < 1e-2, "wind flows add up");
 console.log(`surplus: ${(r.curtailMWh / 1000).toFixed(1)} MU curtailed when not sold; with sales + 100 MW extra export ${(rs.excessMWh / 1000).toFixed(1)} MU sold, ${(rs.curtailMWh / 1000).toFixed(1)} MU curtailed`);
 
+// the 33 kV main bus bar → 220 kV GSS billing meter: power transformer 0.4%, line 0.5%
+const eta = (1 - 0.004) * (1 - 0.005);
+const plant = { solarMw: 500, windMw: 350, bessMw: 150, bessMwh: 600 };
+const ctxL = buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: DEFAULT_BESS, trafoLossPct: 0.004, lineLossPct: 0.005, sellSurplus: true, extraExportMw: 100 });
+const rl = simulate(ctxL, plant);
+assert.ok(Math.abs(rl.evac.efficiency - eta) < 1e-12);
+assert.ok(Math.abs(rl.solarGenMWh - rs.solarGenMWh) < 1e-6, "generation at the bus is the profile's");
+const genL = rl.solarGenMWh + rl.windGenMWh;
+assert.ok(Math.abs(genL - (rl.solarDirectMWh + rl.windDirectMWh + rl.chargeMWh + rl.excessMWh / eta + rl.curtailMWh)) < 1e-3 * genL, "bus balance: direct + charge + sold + curtailed");
+assert.ok(Math.abs(rl.deliveredMWh - (rl.solarDirectMWh + rl.windDirectMWh + rl.dischargeMWh) * eta) < 1e-3, "delivered at the meter = bus injection × η");
+const ev = rl.evac;
+assert.ok(Math.abs(ev.injectedMWh - (rl.deliveredMWh + rl.excessMWh) / eta) < 1e-3, "injected at the bus");
+assert.ok(Math.abs(ev.trafoLossMWh - 0.004 * ev.injectedMWh) < 1e-6 && Math.abs(ev.lineLossMWh - 0.005 * 0.996 * ev.injectedMWh) < 1e-6, "transformer then line");
+assert.ok(Math.abs(ev.injectedMWh - ev.trafoLossMWh - ev.lineLossMWh - ev.meterMWh) < 1e-6 && Math.abs(ev.meterMWh - rl.deliveredMWh - rl.excessMWh) < 1e-3, "meter = injected − losses = delivered + sold");
+assert.ok(rl.dfr < rs.dfr, "the losses cost DFR on the same plant");
+assert.ok(Math.abs(rl.dischargePoiMWh - rl.dischargeMWh * eta) < 1e-6);
+// a plant 1/η bigger (every size) meets the meter exactly as the lossless plant meets the bus
+const bigger = Object.fromEntries(Object.entries(plant).map(([k, v]) => [k, v / eta]));
+const rb = simulate(buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: DEFAULT_BESS, trafoLossPct: 0.004, lineLossPct: 0.005 }), bigger);
+assert.ok(Math.abs(rb.dfr - r.dfr) < 1e-9, `scale invariance: ${rb.dfr} vs ${r.dfr}`);
+const finL = runFinancialModel(ctxL, plant, { costs: DEFAULT_COSTS, fin: { ...DEFAULT_FINANCE, sellSurplus: true }, bess: DEFAULT_BESS, dfrTarget: inputs.dfrTarget, tariffLocked: true });
+const y1 = finL.rows[0];
+assert.ok(Math.abs(y1.meterMu - y1.deliveredMu - y1.excessMu) < 1e-9 && Math.abs(y1.injectedMu - y1.trafoLossMu - y1.lineLossMu - y1.meterMu) < 1e-9, "finance rows: bus → losses → meter");
+assert.ok(Math.abs(y1.energyRevenue - y1.deliveredMu * 1000 * DEFAULT_FINANCE.tariff * 1e-4) < 1e-9, "revenue on the units at the meter");
+console.log(`33 kV → 220 kV: η ${(eta * 100).toFixed(3)}%, ${(ev.trafoLossMWh / 1000).toFixed(2)} MU transformer + ${(ev.lineLossMWh / 1000).toFixed(2)} MU line loss; DFR ${(rs.dfr * 100).toFixed(2)}% → ${(rl.dfr * 100).toFixed(2)}% on the same plant`);
+
 // monotonicity: more storage never reduces DFR
 const r2 = simulate(ctx, { solarMw: 500, windMw: 350, bessMw: 150, bessMwh: 900 });
 assert.ok(r2.dfr >= r.dfr - 1e-9, "DFR monotone in MWh");

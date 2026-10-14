@@ -64,7 +64,7 @@ export function Answer({ sizes, sim, finance, capex, inputs, revealKey, optimize
           <strong>₹<CountUp value={finance.lcoe} play={play} format={(v) => v.toFixed(3)} /></strong>
         </div>
         <div className={`answer-kpi ${ok ? "good" : "bad"}`} style={{ animationDelay: "620ms" }}>
-          <span>DFR year 1 · target {pf(inputs.dfrTarget, 0)}</span>
+          <span>DFR year 1 at the 220 kV meter · target {pf(inputs.dfrTarget, 0)}</span>
           <strong><CountUp value={sim.dfr * 100} play={play} format={(v) => `${v.toFixed(2)}%`} /></strong>
         </div>
         <div className="answer-kpi" style={{ animationDelay: "720ms" }}>
@@ -76,6 +76,11 @@ export function Answer({ sizes, sim, finance, capex, inputs, revealKey, optimize
           <strong>{nf(finance.minDscr, 2)}<em>× · yr {finance.payback ?? "–"}</em></strong>
         </div>
       </div>
+      {sim.evac && (
+        <p className="answer-cert" data-testid="rtc-answer-meter">
+          Billed at the 220 kV GSS meter: {nf(sim.deliveredMWh / 1000, 1)} MU delivered in year 1 of {nf(sim.demandMWh / 1000, 1)} MU demand. The plant injects {nf(sim.evac.injectedMWh / 1000, 1)} MU at its 33 kV bus; the power transformer ({pf(sim.evac.trafoLossPct, 2)}) and the 220 kV line ({pf(sim.evac.lineLossPct, 2)}) take {nf((sim.evac.trafoLossMWh + sim.evac.lineLossMWh) / 1000, 2)} MU on the way.
+        </p>
+      )}
       {optimized && highs && (
         <p className={`answer-cert ${highs.ok ? "" : "warn"}`}>
           {highs.ok
@@ -136,7 +141,7 @@ function EnergyFlowSummary({ sim }) {
   return (
     <div className="rtc-stats flush-top single-col-stats">
       <Stat label="Generated" value={`${MU(gen)} MU`} detail={`solar ${MU(sim.solarGenMWh)} · wind ${MU(sim.windGenMWh)}`} />
-      <Stat label="Used by the customer" value={`${MU(sim.deliveredMWh)} MU`} detail={`${pf(sim.deliveredMWh / gen, 1)} of generation, incl. battery`} />
+      <Stat label="Used by the customer" value={`${MU(sim.deliveredMWh)} MU`} detail={`at the 220 kV meter · ${pf(sim.deliveredMWh / gen, 1)} of generation, incl. battery`} />
       <Stat label="Sold to grid" value={`${MU(sim.excessMWh)} MU`} detail={sim.sellSurplus ? "surplus sales on" : "surplus sales off"} />
       <Stat label="Curtailed" value={`${MU(sim.curtailMWh)} MU`} detail={`${pf(sim.curtailMWh / gen, 1)} of generation · see below`} tone={sim.curtailMWh / gen > 0.15 ? "bad" : undefined} />
     </div>
@@ -198,7 +203,7 @@ export function DispatchStory({ sim, inputs, sizes }) {
       <div className="rtc-stats flush-top">
         <Stat label="DFR year 1" value={pf(sim.dfr, 2)} detail={`target ${pf(inputs.dfrTarget, 0)}`} tone={ok ? "good" : "bad"} />
         <Stat label="Lowest month" value={pf(sim.minMonthlyDfr, 1)} detail={E.MONTHS[sim.monthlyDfr.indexOf(sim.minMonthlyDfr)]} />
-        <Stat label="Delivered" value={`${nf(sim.deliveredMWh / 1000, 1)} MU`} detail={`of ${nf(sim.demandMWh / 1000, 1)} MU`} />
+        <Stat label="Delivered" value={`${nf(sim.deliveredMWh / 1000, 1)} MU`} detail={`of ${nf(sim.demandMWh / 1000, 1)} MU, at the 220 kV meter`} />
         <Stat label="Curtailed" value={`${nf(sim.curtailMWh / 1000, 1)} MU`} detail={`${pf(sim.curtailMWh / Math.max(1, sim.solarGenMWh + sim.windGenMWh), 1)} of generation · ${nf(sim.excessMWh / 1000, 1)} MU sold`} />
         <Stat label="Battery cycles" value={nf(sim.cycles, 0)} detail={`${nf(sizes.bessMw)} MW / ${nf(sizes.bessMwh)} MWh`} />
       </div>
@@ -251,6 +256,9 @@ export function EnergyFlow({ sim, inputs, fin }) {
   const surplus = sim.excessMWh + sim.curtailMWh;
   const cr = sim.curtailReasons;
   const lost = sim.chargeMWh - sim.dischargeMWh;
+  // generation and the battery at the 33 kV bus; the customer and sales at the 220 kV meter
+  const eta = sim.evac?.efficiency ?? 1;
+  const evacLoss = (sim.evac?.trafoLossMWh ?? 0) + (sim.evac?.lineLossMWh ?? 0);
   const option = useMemo(() => {
     const nodes = [
       { name: "Solar", itemStyle: { color: DATA_COLORS.solar } },
@@ -260,12 +268,15 @@ export function EnergyFlow({ sim, inputs, fin }) {
       { name: "Sold to grid", itemStyle: { color: DATA_COLORS.surplus } },
       { name: "Curtailed", itemStyle: { color: "#6a6a64" } },
       { name: "Battery losses", itemStyle: { color: "#4a4a4a" } },
+      { name: "Transformer & line losses", itemStyle: { color: "#8a5a3c" } },
     ];
     const L = (source, target, v) => (v > 1 ? { source, target, value: Number((v / 1000).toFixed(2)) } : null);
     const links = [
-      L("Solar", "Customer", bt.solar.direct), L("Solar", "Battery", bt.solar.charge), L("Solar", "Sold to grid", bt.solar.export), L("Solar", "Curtailed", bt.solar.curtail),
-      L("Wind", "Customer", bt.wind.direct), L("Wind", "Battery", bt.wind.charge), L("Wind", "Sold to grid", bt.wind.export), L("Wind", "Curtailed", bt.wind.curtail),
-      L("Battery", "Customer", sim.dischargeMWh), L("Battery", "Battery losses", lost),
+      L("Solar", "Customer", bt.solar.direct * eta), L("Solar", "Battery", bt.solar.charge), L("Solar", "Sold to grid", bt.solar.export * eta), L("Solar", "Curtailed", bt.solar.curtail),
+      L("Solar", "Transformer & line losses", (bt.solar.direct + bt.solar.export) * (1 - eta)),
+      L("Wind", "Customer", bt.wind.direct * eta), L("Wind", "Battery", bt.wind.charge), L("Wind", "Sold to grid", bt.wind.export * eta), L("Wind", "Curtailed", bt.wind.curtail),
+      L("Wind", "Transformer & line losses", (bt.wind.direct + bt.wind.export) * (1 - eta)),
+      L("Battery", "Customer", sim.dischargeMWh * eta), L("Battery", "Battery losses", lost), L("Battery", "Transformer & line losses", sim.dischargeMWh * (1 - eta)),
     ].filter(Boolean);
     const used = new Set(links.flatMap((l) => [l.source, l.target]));
     return {
@@ -304,21 +315,22 @@ export function EnergyFlow({ sim, inputs, fin }) {
           <table>
             <thead><tr><th>Energy balance · year 1</th><th className="num">MU</th><th className="num">share</th></tr></thead>
             <tbody>
-              <tr className="rtc-model-group"><td colSpan={3}>Customer demand</td></tr>
+              <tr className="rtc-model-group"><td colSpan={3}>Customer demand · at the 220 kV billing meter</td></tr>
               <tr><td>Demand</td><td className="rtc-num">{MU(sim.demandMWh)}</td><td className="rtc-num rtc-muted">100%</td></tr>
-              <tr><td className="rtc-indent">Met directly by solar</td><td className="rtc-num">{MU(sim.solarDirectMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.solarDirectMWh / sim.demandMWh, 1)}</td></tr>
-              <tr><td className="rtc-indent">Met directly by wind</td><td className="rtc-num">{MU(sim.windDirectMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.windDirectMWh / sim.demandMWh, 1)}</td></tr>
-              <tr><td className="rtc-indent">Met by the battery</td><td className="rtc-num">{MU(sim.dischargeMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.dischargeMWh / sim.demandMWh, 1)}</td></tr>
+              <tr><td className="rtc-indent">Met directly by solar</td><td className="rtc-num">{MU(sim.solarDirectMWh * eta)}</td><td className="rtc-num rtc-muted">{pf((sim.solarDirectMWh * eta) / sim.demandMWh, 1)}</td></tr>
+              <tr><td className="rtc-indent">Met directly by wind</td><td className="rtc-num">{MU(sim.windDirectMWh * eta)}</td><td className="rtc-num rtc-muted">{pf((sim.windDirectMWh * eta) / sim.demandMWh, 1)}</td></tr>
+              <tr><td className="rtc-indent">Met by the battery</td><td className="rtc-num">{MU(sim.dischargeMWh * eta)}</td><td className="rtc-num rtc-muted">{pf((sim.dischargeMWh * eta) / sim.demandMWh, 1)}</td></tr>
               <tr className="rtc-model-total"><td>Delivered (DFR)</td><td className="rtc-num">{MU(sim.deliveredMWh)}</td><td className="rtc-num">{pf(sim.dfr, 1)}</td></tr>
               <tr><td>Shortfall</td><td className="rtc-num">{MU(sim.unmetMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.unmetMWh / sim.demandMWh, 1)}</td></tr>
-              <tr className="rtc-model-group"><td colSpan={3}>Plant generation</td></tr>
+              <tr className="rtc-model-group"><td colSpan={3}>Plant generation · at the 33 kV main bus bar</td></tr>
               <tr><td>Generated (solar {MU(sim.solarGenMWh)} + wind {MU(sim.windGenMWh)})</td><td className="rtc-num">{MU(gen)}</td><td className="rtc-num rtc-muted">100%</td></tr>
               <tr><td className="rtc-indent">Straight to the customer</td><td className="rtc-num">{MU(sim.solarDirectMWh + sim.windDirectMWh)}</td><td className="rtc-num rtc-muted">{pf((sim.solarDirectMWh + sim.windDirectMWh) / gen, 1)}</td></tr>
               <tr><td className="rtc-indent">Into the battery</td><td className="rtc-num">{MU(sim.chargeMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.chargeMWh / gen, 1)}</td></tr>
               <tr><td className="rtc-indent">… returned to the customer</td><td className="rtc-num">{MU(sim.dischargeMWh)}</td><td className="rtc-num rtc-muted" /></tr>
               <tr><td className="rtc-indent">… lost in round trip</td><td className="rtc-num">{MU(lost)}</td><td className="rtc-num rtc-muted" /></tr>
-              <tr><td className="rtc-indent">Sold to grid</td><td className="rtc-num">{MU(sim.excessMWh)}</td><td className="rtc-num rtc-muted">{pf(sim.excessMWh / gen, 1)}</td></tr>
+              <tr><td className="rtc-indent">Sold to grid</td><td className="rtc-num">{MU(sim.excessMWh / eta)}</td><td className="rtc-num rtc-muted">{pf(sim.excessMWh / eta / gen, 1)}</td></tr>
               <tr className="rtc-model-total"><td className="rtc-indent">Curtailed (wasted)</td><td className="rtc-num">{MU(sim.curtailMWh)}</td><td className="rtc-num">{pf(sim.curtailMWh / gen, 1)}</td></tr>
+              <tr><td className="rtc-muted">Power transformer + line losses to the meter</td><td className="rtc-num rtc-muted">{MU(evacLoss)}</td><td className="rtc-num rtc-muted">{pf(evacLoss / gen, 1)}</td></tr>
             </tbody>
           </table>
         </div>

@@ -39,7 +39,11 @@ export const DEFAULT_RTC_INPUTS = {
   dfrBasis: "annual", // 'annual' | 'monthly' (every month must meet the target)
   designCheck: "lifetime", // 'year1' | 'lifetime' (also meet the target in the most degraded year)
   demandGrowth: 0,
-  lossPct: 0,
+  lossPct: 0, // other losses before the 33 kV main bus (auxiliary); the hourly profiles are at that bus
+  // evacuation from the 33 kV main bus bar to the point of interconnection (POI) at the 220 kV
+  // GSS, where the billing meter is: delivered energy, the DFR and sales are counted there
+  trafoLossPct: 0.004, // 33/220 kV power transformer
+  lineLossPct: 0.005, // 220 kV transmission line to the GSS
   solarCuf: 0.245,
   windCuf: 0.33,
   solarDcAc: 1.4,
@@ -535,14 +539,31 @@ export function profileTemplateCsv(kind) {
 // ---------------------------------------------------------------- dispatch
 
 /**
+ * Share of the energy injected at the 33 kV main bus bar that reaches the point of
+ * interconnection (the 220 kV GSS and its billing meter): after the power transformer loss and
+ * the transmission line loss. 1 when neither is set (Tender to Bid).
+ */
+export function evacuationEfficiency(ctx) {
+  return (1 - (ctx.trafoLossPct || 0)) * (1 - (ctx.lineLossPct || 0));
+}
+
+/**
  * Hourly dispatch of solar + wind + BESS against demand, limited by plant (export) capacity.
  * Priority: RE direct to load → charge BESS from surplus → discharge BESS to deficit →
  * remaining surplus exported within spare plant capacity → rest curtailed. BESS charges only
  * from RE.
+ *
+ * Where it is measured: generation, the battery and curtailment at the 33 kV main bus bar (the
+ * hourly profiles are there); demand, plant capacity, delivered energy, the DFR and surplus sold
+ * at the POI (220 kV GSS, the billing meter). Everything injected at the bus (solar, wind and
+ * battery discharge) loses the power transformer and line losses on its way to the meter, so the
+ * dispatch runs at the bus with the demand and the capacity referred back to it (÷ η).
  */
 export function simulate(ctx, sizes, opts = {}) {
   const { demand, solarCf, windCf, plantMw, bess } = ctx;
   const loss = 1 - (ctx.lossPct || 0);
+  const poi = evacuationEfficiency(ctx); // η: bus → meter
+  const busCap = plantMw / poi;
   const sF = (opts.solarFactor ?? 1) * loss;
   const wF = (opts.windFactor ?? 1) * loss;
   const dF = opts.demandFactor ?? 1;
@@ -572,6 +593,8 @@ export function simulate(ctx, sizes, opts = {}) {
   const mDelivered = new Float64Array(12);
   let tDemand = 0;
   let tDelivered = 0;
+  let tInjected = 0; // at the 33 kV bus: delivered + sold, before the transformer and line
+  let tDischargePoi = 0;
   let tSolarGen = 0;
   let tWindGen = 0;
   let tSolarDirect = 0;
@@ -591,8 +614,9 @@ export function simulate(ctx, sizes, opts = {}) {
   let tUnmet = 0;
   let aboveCap = 0;
   for (let t = 0; t < HOURS; t += 1) {
-    const d = demand[t] * dF;
-    const target = d < plantMw ? d : plantMw;
+    const d = demand[t] * dF; // at the meter
+    const dBus = d / poi; // what the bus must inject to deliver d at the meter
+    const target = dBus < busCap ? dBus : busCap;
     if (d > plantMw) aboveCap += d - plantMw;
     const s = S * solarCf[t] * sF;
     const w = W * windCf[t] * wF;
@@ -612,12 +636,13 @@ export function simulate(ctx, sizes, opts = {}) {
       if (dis < 0) dis = 0;
       soc -= dis / eta;
     }
-    const delivered = direct + dis;
+    const deliveredBus = direct + dis;
+    const delivered = deliveredBus * poi; // at the meter
     const rest = surplus - ch;
     // Surplus the customer and the battery cannot take is sold only if surplus sales are on,
     // through spare plant capacity plus any extra export capacity; the rest is curtailed.
-    const room = sell ? Math.max(0, plantMw - delivered) + extraExport : 0;
-    const ex = rest < room ? rest : room;
+    const room = sell ? Math.max(0, busCap - deliveredBus) + extraExport / poi : 0;
+    const ex = rest < room ? rest : room; // at the bus; ex * poi is sold at the meter
     const cu = rest - ex;
     if (cu > 1e-9) {
       if (E <= 0 || B <= 0) cuNoStorage += cu;
@@ -639,16 +664,19 @@ export function simulate(ctx, sizes, opts = {}) {
     tWindDirect += direct * (1 - shareS);
     tCharge += ch;
     tDischarge += dis;
-    tExcess += ex;
+    tDischargePoi += dis * poi;
+    tInjected += deliveredBus + ex;
+    tExcess += ex * poi;
     tCurtail += cu;
     tUnmet += d - delivered;
     if (H) {
+      // what serves the customer at the meter (it adds up to the demand served); surplus at the bus
       H.demand[t] = d;
-      H.solar[t] = direct * shareS;
-      H.wind[t] = direct * (1 - shareS);
-      H.discharge[t] = dis;
+      H.solar[t] = direct * shareS * poi;
+      H.wind[t] = direct * (1 - shareS) * poi;
+      H.discharge[t] = dis * poi;
       H.charge[t] = ch;
-      H.excess[t] = ex;
+      H.excess[t] = ex * poi;
       H.curtail[t] = cu;
       H.unmet[t] = d - delivered;
       H.soc[t] = E > 0 ? soc / E : 0;
@@ -656,27 +684,40 @@ export function simulate(ctx, sizes, opts = {}) {
   }
   const monthlyDfr = Array.from(mDemand, (v, m) => (v > 0 ? mDelivered[m] / v : 1));
   const usable = E * (bess.maxSoc - bess.minSoc);
+  const trafo = ctx.trafoLossPct || 0;
   return {
     demandMWh: tDemand,
-    deliveredMWh: tDelivered,
+    deliveredMWh: tDelivered, // at the meter (POI)
+    // the bus-to-meter chain: what was injected at the 33 kV bus and what the power transformer
+    // and the line took on the way to the billing meter
+    evac: {
+      efficiency: poi,
+      trafoLossPct: trafo,
+      lineLossPct: ctx.lineLossPct || 0,
+      injectedMWh: tInjected,
+      trafoLossMWh: tInjected * trafo,
+      lineLossMWh: tInjected * (1 - trafo) * (ctx.lineLossPct || 0),
+      meterMWh: tInjected * poi, // delivered + sold, at the meter
+    },
     dfr: tDemand > 0 ? tDelivered / tDemand : 1,
     monthlyDfr,
     minMonthlyDfr: Math.min(...monthlyDfr),
     monthlyDemandMWh: Array.from(mDemand),
     monthlyDeliveredMWh: Array.from(mDelivered),
-    solarGenMWh: tSolarGen,
+    solarGenMWh: tSolarGen, // at the 33 kV bus, as in the profile
     windGenMWh: tWindGen,
-    solarDirectMWh: tSolarDirect,
+    solarDirectMWh: tSolarDirect, // at the bus
     windDirectMWh: tWindDirect,
-    chargeMWh: tCharge,
-    dischargeMWh: tDischarge,
-    excessMWh: tExcess,
-    curtailMWh: tCurtail,
+    chargeMWh: tCharge, // at the bus
+    dischargeMWh: tDischarge, // at the bus
+    dischargePoiMWh: tDischargePoi, // battery energy that reached the meter
+    excessMWh: tExcess, // sold, at the meter
+    curtailMWh: tCurtail, // at the bus
     curtailReasons: { batteryFull: cuBatteryFull, batteryPower: cuBatteryPower, noStorage: cuNoStorage },
-    // where each technology's output went (surplus flows split by the hour's solar/wind share)
+    // where each technology's output went at the bus (surplus flows split by the hour's solar/wind share)
     byTech: {
       solar: { direct: tSolarDirect, charge: sCharge, export: sExport, curtail: sCurtail },
-      wind: { direct: tWindDirect, charge: tCharge - sCharge, export: tExcess - sExport, curtail: tCurtail - sCurtail },
+      wind: { direct: tWindDirect, charge: tCharge - sCharge, export: tExcess / poi - sExport, curtail: tCurtail - sCurtail },
     },
     sellSurplus: sell,
     exportLimitMw: sell ? plantMw + extraExport : 0,
@@ -1269,6 +1310,8 @@ export function highsPayload(ctx, model, seed) {
       windCf: round(ctx.windCf, 6),
       plantMw: ctx.plantMw,
       lossPct: ctx.lossPct || 0,
+      trafoLossPct: ctx.trafoLossPct || 0,
+      lineLossPct: ctx.lineLossPct || 0,
       sellSurplus: Boolean(ctx.sellSurplus),
       extraExportMw: ctx.extraExportMw || 0,
     },
@@ -1419,6 +1462,13 @@ function cashflows(ops, sizes, costs, fin, bess, dfrTarget, tariff) {
       year: y,
       tariff: trf,
       demandMu: op.demandMWh / 1000,
+      // the units billed: generation at the 33 kV bus, the power transformer and line losses on
+      // the way to the 220 kV GSS, and what the billing meter records there
+      genBusMu: ((op.solarGenMWh || 0) + (op.windGenMWh || 0)) / 1000,
+      injectedMu: (op.evac?.injectedMWh ?? 0) / 1000,
+      trafoLossMu: (op.evac?.trafoLossMWh ?? 0) / 1000,
+      lineLossMu: (op.evac?.lineLossMWh ?? 0) / 1000,
+      meterMu: (op.evac?.meterMWh ?? op.deliveredMWh + (op.excessMWh || 0)) / 1000,
       deliveredMu: op.deliveredMWh / 1000,
       dfr: op.dfr,
       minMonthlyDfr: op.minMonthlyDfr,
@@ -1554,8 +1604,8 @@ export function tariffAgeingBreakdown(ctx, sizes, { costs, fin, bess, dfrTarget 
   };
 }
 
-export function buildContext({ demand, solarCf, windCf, plantMw, bess, lossPct = 0, sellSurplus = false, extraExportMw = 0 }) {
-  return { demand, solarCf, windCf, plantMw, bess, lossPct, sellSurplus, extraExportMw };
+export function buildContext({ demand, solarCf, windCf, plantMw, bess, lossPct = 0, trafoLossPct = 0, lineLossPct = 0, sellSurplus = false, extraExportMw = 0 }) {
+  return { demand, solarCf, windCf, plantMw, bess, lossPct, trafoLossPct, lineLossPct, sellSurplus, extraExportMw };
 }
 
 export function buildModel({ inputs, costs, fin, bess, vars, objective = "tariff", gridPoints = 11 }) {

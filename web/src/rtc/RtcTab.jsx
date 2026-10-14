@@ -4,10 +4,20 @@ import * as E from "./engine";
 import SaveDialog from "../scenarios/SaveDialog";
 import OptimizerTheatre from "./Theatre";
 import FinanceView from "./FinanceView";
+import PlantToMeter from "./MeterView";
 import { trackEvent } from "../activity";
 import { Answer, Alternatives, AgeingImpact, DispatchStory, EnergyFlow, SolverLog, TariffMap } from "./results";
 import { BessChapter, CHAPTERS, DfrChapter, EnergyChapter, ResourceChapter, TypeChapter, chapterSummary } from "./chapters";
 import { Section, SelectBox, nf, pf } from "./ui";
+
+// the units billed, year by year: generation at the 33 kV bus, the losses to the 220 kV meter
+const METER_LINES = [
+  ["Generated at the 33 kV bus (MU)", "genBusMu", 1],
+  ["Injected at the 33 kV bus (MU)", "injectedMu", 1],
+  ["Power transformer loss (MU)", "trafoLossMu", 2, -1],
+  ["Transmission line loss (MU)", "lineLossMu", 2, -1],
+  ["At the 220 kV billing meter (MU)", "meterMu", 1],
+];
 
 // ---------------------------------------------------------------- state
 
@@ -127,8 +137,8 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     [inputs.annualEnergyMu, d.hourShape, d.monthShape, d.demandUpload],
   );
   const ctx = useMemo(
-    () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
-    [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct, d.fin.sellSurplus, d.fin.extraExportMw],
+    () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct, trafoLossPct: inputs.trafoLossPct, lineLossPct: inputs.lineLossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
+    [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct, inputs.trafoLossPct, inputs.lineLossPct, d.fin.sellSurplus, d.fin.extraExportMw],
   );
   // battery energy follows the chosen discharge duration (2 h or 4 h)
   const sizes = useMemo(() => E.withDuration(Object.fromEntries(Object.entries(d.vars).map(([k, v]) => [k, v.value])), d.bess), [d.vars, d.bess]);
@@ -143,7 +153,10 @@ export default function RtcTab({ initialScenario = null, user = null }) {
   const peakDemand = useMemo(() => Math.max(...demand), [demand]);
   const maxDfr = sim.demandMWh > 0 ? 1 - sim.demandAboveCapMWh / sim.demandMWh : 1;
   const stale = d !== state;
-  const derived = { solarCuf: E.mean(solarCf), windCuf: E.mean(windCf) };
+  // CUF at the 33 kV bus (the profiles, after any other loss) and at the 220 kV billing meter
+  const busFactor = 1 - (state.inputs.lossPct || 0);
+  const meterFactor = busFactor * E.evacuationEfficiency(state.inputs);
+  const derived = { solarCuf: E.mean(solarCf) * busFactor, windCuf: E.mean(windCf) * busFactor, solarCufMeter: E.mean(solarCf) * meterFactor, windCufMeter: E.mean(windCf) * meterFactor };
 
   // ---- plant capacity, annual energy and load factor are linked through locks
   function setTriplet(field, value) {
@@ -224,7 +237,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     };
     worker.postMessage({
       id,
-      ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct, sellSurplus: ctx.sellSurplus, extraExportMw: ctx.extraExportMw },
+      ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct, trafoLossPct: ctx.trafoLossPct, lineLossPct: ctx.lineLossPct, sellSurplus: ctx.sellSurplus, extraExportMw: ctx.extraExportMw },
       modelInput: { inputs: state.inputs, costs: state.costs, fin: state.fin, bess: state.bess, vars: state.vars, objective: state.objective, gridPoints: state.gridPoints },
       useHighs: tariffMode && state.solver !== "search",
     });
@@ -290,6 +303,12 @@ export default function RtcTab({ initialScenario = null, user = null }) {
         minMonthlyDfr: sim.minMonthlyDfr,
         minLifetimeDfr: finance.minLifetimeDfr,
         deliveredMu: sim.deliveredMWh / 1000,
+        meterMu: sim.evac.meterMWh / 1000,
+        evacLossMu: (sim.evac.trafoLossMWh + sim.evac.lineLossMWh) / 1000,
+        trafoLossPct: inputs.trafoLossPct,
+        lineLossPct: inputs.lineLossPct,
+        solarCufBus: derived.solarCuf,
+        solarCufMeter: derived.solarCufMeter,
         curtailMu: sim.curtailMWh / 1000,
         capexCr: capex.total,
         tariff: finance.tariff,
@@ -426,12 +445,13 @@ export default function RtcTab({ initialScenario = null, user = null }) {
           Demand above the {nf(inputs.plantCapacityMw, 0)} MW plant capacity ({nf(sim.demandAboveCapMWh / 1000, 1)} MU) cannot be served, so the highest achievable DFR is {pf(maxDfr, 1)}. Raise the plant capacity or flatten the consumption profile.
         </div>
       )}
+      <PlantToMeter sizes={sizes} sim={sim} inputs={inputs} finance={finance} fin={d.fin} />
       <DispatchStory sim={sim} inputs={inputs} sizes={sizes} />
       <Section index="E" title="Where the energy goes" note="Every MWh generated in year 1: to the customer, through the battery, sold, or curtailed">
         <EnergyFlow sim={sim} inputs={inputs} fin={d.fin} />
       </Section>
       <div className="story-divider"><span>Financial model · {state.fin.years} years</span></div>
-      <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} />
+      <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} energyLines={METER_LINES} />
       <AgeingImpact ctx={ctx} sizes={sizes} costs={d.costs} fin={finInput} bess={d.bess} dfrTarget={inputs.dfrTarget} finance={finance} />
       <TariffMap opt={opt} sizes={sizes} applySizes={applySizes} />
       <Alternatives opt={opt} sizes={sizes} target={inputs.dfrTarget} applySizes={applySizes} />

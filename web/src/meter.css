@@ -1,0 +1,52 @@
+/* Round the clock: from the plant to the billing meter (MeterView.jsx) */
+.iso-card { padding: 6px 8px; margin-top: 12px; }
+.iso-svg { display: block; width: 100%; height: auto; }
+.iso-pad { fill: #101010; stroke: var(--line-2); stroke-width: 1; }
+.iso-pad.park { fill: #11140d; }
+.iso-pad.yard { fill: #121212; stroke-dasharray: 4 3; }
+.iso-pad.gss { stroke: color-mix(in srgb, var(--signal) 55%, transparent); }
+.iso-box polygon { stroke: #0a0a0a; stroke-width: 0.6; stroke-linejoin: round; }
+.iso-steel .f-top, .iso-post .f-top { fill: #8e8e88; } .iso-steel .f-right, .iso-post .f-right { fill: #5f5f5a; } .iso-steel .f-front, .iso-post .f-front { fill: #74746e; }
+.iso-inverter .f-top { fill: #d9d9d3; } .iso-inverter .f-right { fill: #9a9a94; } .iso-inverter .f-front { fill: #b8b8b2; }
+.iso-idt .f-top { fill: #6f8fb0; } .iso-idt .f-right { fill: #3f5a76; } .iso-idt .f-front { fill: #536f8e; }
+.iso-bus .f-top { fill: var(--signal); } .iso-bus .f-right { fill: #8fae1f; } .iso-bus .f-front { fill: #a8c92a; }
+.iso-trafo .f-top { fill: #8a6a4a; } .iso-trafo .f-right { fill: #5a4129; } .iso-trafo .f-front { fill: #6f5235; }
+.iso-fin .f-top { fill: #6f5235; } .iso-fin .f-right { fill: #46311e; } .iso-fin .f-front { fill: #5a4129; }
+.iso-bushing .f-top { fill: #d9d9d3; } .iso-bushing .f-right { fill: #9a9a94; } .iso-bushing .f-front { fill: #b8b8b2; }
+.iso-bess .f-top { fill: #c9b8ff; } .iso-bess .f-right { fill: #7d64c9; } .iso-bess .f-front { fill: #a08ae6; }
+.iso-gss .f-top { fill: #7a7a74; } .iso-gss .f-right { fill: #4d4d48; } .iso-gss .f-front { fill: #62625d; }
+.iso-meter .f-top { fill: #f4f4f1; } .iso-meter .f-right { fill: #a9c92c; } .iso-meter .f-front { fill: var(--signal); }
+.iso-pv { fill: #23406b; stroke: #5f86bd; stroke-width: 0.7; }
+.iso-pv-grid { stroke: #5f86bd; stroke-width: 0.5; opacity: 0.7; }
+.iso-leg { stroke: #6a6a64; stroke-width: 1; }
+.iso-wire { fill: none; stroke: #b8b8b2; stroke-width: 1.1; }
+.iso-wire.dc { stroke: var(--solar); stroke-width: 1; }
+.iso-wire.mv { stroke: var(--signal); stroke-width: 1.2; opacity: 0.85; }
+.iso-tower line { stroke: #9a9a94; stroke-width: 1.3; }
+.iso-turbine line { stroke: #c2c2bc; stroke-width: 1.4; }
+.iso-turbine .iso-turbine-tower { stroke-width: 2.2; }
+.iso-turbine circle { fill: #f4f4f1; }
+.iso-callout rect { fill: #151515; stroke: var(--line-3); }
+.iso-callout.loss rect { stroke: #c08420; }
+.iso-callout.meter rect { stroke: var(--signal); }
+.iso-callout.bus rect { stroke: #8fae1f; }
+.iso-leader { stroke: var(--line-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.iso-callout.loss .iso-leader { stroke: #c08420; }
+.iso-callout.meter .iso-leader { stroke: var(--signal); }
+.iso-dot { fill: var(--ink); }
+.iso-callout.loss .iso-dot { fill: #c08420; }
+.iso-callout.meter .iso-dot { fill: var(--signal); }
+.iso-callout-title { fill: var(--ink); font-size: 12.5px; font-weight: 700; }
+.iso-callout-line { fill: var(--ink-2); font-size: 12px; }
+.iso-callout-line.muted { fill: var(--muted); }
+.iso-callout-line.loss { fill: #e0a040; font-weight: 600; }
+.iso-callout-line.meter { fill: var(--signal); font-weight: 600; }
+.meter-grid { margin-top: 12px; }
+.rtc-loss { color: #e0a040; }
+.rtc-model-group-row td { color: var(--ink); font-weight: 600; }
+.rtc-model-total.meter td { color: var(--signal); }
+.meter-notes { display: grid; gap: 10px; align-content: start; }
+.meter-def { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); background: var(--surface); }
+.meter-def svg { color: var(--signal); flex: none; margin-top: 2px; }
+.meter-def strong { display: block; margin-bottom: 4px; }
+.meter-def p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
