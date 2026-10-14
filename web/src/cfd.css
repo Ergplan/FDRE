@@ -97,11 +97,63 @@
 .cfd-statements thead th { color: var(--muted); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--surface); }
 .cfd-statements tr.strong td { font-weight: 700; }
 .cfd-statements tr.band td { background: var(--bg-2); color: var(--signal); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+/* worked example */
+@media (min-width: 1101px) {
+  .cfd-steps { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cfd-steps .bid-step { gap: 8px; padding: 12px 10px; }
+}
+.cfd-example-controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-bottom: 16px; }
+.cfd-example-controls > div { min-width: 180px; }
+.cfd-chips { display: inline-flex; border: 1px solid var(--line-2); }
+.cfd-chips button { padding: 10px 16px; border: 0; border-right: 1px solid var(--line-2); background: var(--bg-2); color: var(--muted); font-family: var(--font-mono); font-size: 12px; cursor: pointer; }
+.cfd-chips button:last-child { border-right: 0; }
+.cfd-chips button.active { background: var(--ink); color: var(--bg); }
+.cfd-answer { border: 1px solid color-mix(in srgb, var(--signal) 45%, transparent); background: var(--surface); padding: 16px 18px; }
+.cfd-answer-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+.cfd-answer-head svg { color: var(--signal); flex: none; margin-top: 2px; }
+.cfd-answer-head span { display: block; color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cfd-answer-head strong { font-size: 18px; }
+.cfd-answer ul { margin: 0; padding-left: 30px; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.55; }
+.cfd-phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--surface); }
+.cfd-phases > div { display: grid; gap: 6px; align-content: start; padding: 14px 16px; border-left: 1px solid var(--line); }
+.cfd-phases > div:first-child { border-left: 0; }
+.cfd-phases span { color: var(--signal); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cfd-phases strong { font-size: 14.5px; line-height: 1.4; }
+.cfd-phases small { color: var(--ink-2); line-height: 1.5; }
+.cfd-evenings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.cfd-evening { display: grid; gap: 10px; align-content: start; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
+.cfd-evening-head { display: grid; gap: 2px; }
+.cfd-evening-head span { color: var(--muted); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.cfd-evening-head strong { font-size: 16px; }
+.cfd-evening-hours { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.cfd-evening > small { color: var(--muted); line-height: 1.45; }
+.cfd-settle { display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 8px 10px; align-items: center; font-size: 12.5px; }
+.cfd-settle > span { color: var(--ink-2); }
+.cfd-settle > b { font-variant-numeric: tabular-nums; text-align: right; }
+.cfd-settle-bar { height: 12px; background: var(--bg-2); }
+.cfd-settle-bar i { display: block; height: 100%; border-radius: 0 3px 3px 0; }
+.cfd-settle-bar i.ex { background: #6b6b66; }
+.cfd-settle-bar i.you { background: var(--signal); }
+.cfd-week p { margin: 0 0 10px; font-size: 14px; }
+.cfd-week-rows { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid var(--line); background: var(--surface); font-size: 13px; }
+.cfd-week-rows > * { padding: 8px 12px; border-top: 1px solid var(--line); }
+.cfd-week-rows > :nth-child(-n+2) { border-top: 0; }
+.cfd-week-rows > b { text-align: right; font-variant-numeric: tabular-nums; }
+.cfd-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px 0; font-size: 12px; color: var(--ink-2); }
+.cfd-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.cfd-legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.cfd-legend i.box { width: 10px; height: 10px; border-radius: 2px; }
+.cfd-legend i.dashed { background: repeating-linear-gradient(90deg, #d4ff3f 0 5px, transparent 5px 8px); }
+.cfd-bidline { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); background: var(--surface); }
+.cfd-bidline p { margin: 0; font-size: 14px; line-height: 1.6; }
+.cfd-bidline-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 900px) {
   .cfd-todo li { grid-template-columns: 30px minmax(0, 1fr); }
   .cfd-todo-when { grid-column: 2; }
   .cfd-todo li > span:nth-child(2), .cfd-todo-cites { grid-column: 2; }
-  .cfd-money, .cfd-rfs-grid { grid-template-columns: minmax(0, 1fr); }
+  .cfd-money, .cfd-rfs-grid, .cfd-phases, .cfd-evenings { grid-template-columns: minmax(0, 1fr); }
+  .cfd-phases > div { border-left: 0; border-top: 1px solid var(--line); }
+  .cfd-phases > div:first-child { border-top: 0; }
   .cfd-term-head { grid-template-columns: 16px minmax(0, 1fr); }
   .cfd-term-value, .cfd-term-head .cfd-cite { grid-column: 2; }
   .cfd-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

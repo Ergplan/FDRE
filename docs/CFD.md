@@ -8,11 +8,34 @@ an administrator grants it like the other tabs.
 | Step | What it shows | Where |
 | --- | --- | --- |
 | 1 How it works | The tender as a picture: a flow diagram of energy and money (RE plant, group RE, green market → battery → exchange → CfD Pool → the bidder), the timeline from the Effective Date to the end of the term, a day of supply on IEX evening prices, the bidder's obligations in order from the bid and the e-RA to the end of the term, and the money in one line | `VisualModel.jsx` |
-| 2 Tender terms | 95 terms in 10 groups, each with its document, clause, page and quote; terms an amendment replaced are kept and marked; where the RfS and the CfDA still differ the term is marked "documents differ" | `terms.js`, `TermsStep.jsx` |
-| 3 Plant and sourcing | Contracted MW (50–150, whole MW), Effective Date (the LoA, PBG and tender dates follow), battery, own solar and wind, charging sources and markets; **Fill up for me please**; **Optimise own RE** | `InputsStep.jsx` |
-| 4 Costs and finance | Capex, O&M, augmentation, exchange fees, LC, bank-guarantee cost, GST on SECI's charges, financing; what the RfS asks of this bid (EMD, PBG, SECI's charges, net worth, liquidity) | `InputsStep.jsx` |
-| 5 Operations | Every day of the term: supply, where the energy came from against the limits, surplus sold, curtailment, weekly penalties; any day's hourly operation | `model.js simulate`, `OperationsStep.jsx` |
-| 6 Bid and financials | The strike price for the target equity IRR (rounded up to two decimals), IRRs, DSCR, levelised cost, the CfD Pool at that price, revenue and costs by year, the statements; **Download financial model (Excel)** | `model.js financials`, `FinanceStep.jsx`, `POST /api/cfd/model` |
+| 2 Worked example | One bid size (50–150 MW) worked through: whether a plant is needed already (no), what the bidder signs up for, what it builds and how the battery is charged in each phase, the money put up before revenue, three real IEX evenings settled against a strike price, a Contract Week with a missed evening, and a year of evenings | `example.js`, `ExampleStep.jsx` |
+| 3 Tender terms | 100 terms in 10 groups, each with its document, clause, page and quote; terms an amendment replaced are kept and marked; where the RfS and the CfDA still differ the term is marked "documents differ" | `terms.js`, `TermsStep.jsx` |
+| 4 Plant and sourcing | Contracted MW (50–150, whole MW), Effective Date (the LoA, PBG and tender dates follow), battery, own solar and wind, charging sources and markets; **Fill up for me please**; **Optimise own RE** | `InputsStep.jsx` |
+| 5 Costs and finance | Capex, O&M, augmentation, exchange fees, LC, bank-guarantee cost, GST on SECI's charges, financing; what the RfS asks of this bid (EMD, PBG, SECI's charges, net worth, liquidity) | `InputsStep.jsx` |
+| 6 Operations | Every day of the term: supply, where the energy came from against the limits, surplus sold, curtailment, weekly penalties; any day's hourly operation | `model.js simulate`, `OperationsStep.jsx` |
+| 7 Bid and financials | The strike price for the target equity IRR (rounded up to two decimals), IRRs, DSCR, levelised cost, the CfD Pool at that price, revenue and costs by year, the statements; **Download financial model (Excel)** | `model.js financials`, `FinanceStep.jsx`, `POST /api/cfd/model` |
+
+## Worked example (`workedExample`)
+
+For a bid of X MW (default: the contracted MW, else 100) and a strike price (default: the solved bid,
+else ₹9.00 as a labelled example):
+
+* **No plant is needed to bid.** Bidders qualify as companies on net worth and liquidity (RfS 35, 37);
+  the battery is built by month 15 from the Effective Date and own RE by month 36 (Amd-02); until
+  month 36 the battery may be charged entirely from the green market (25% + 75%); after it own RE
+  must give at least 25% of the energy with 50% group-company RE, or 75% without. Plants already
+  built with untied capacity may bid too (RfS 2.6).
+* Commitments: 2X MWh every evening, 14X MWh a Contract Week (at least 90%), 730X MWh a year, a
+  battery of at least X MW / 2X MWh.
+* Own solar sized on energy alone: share × 730X MWh / round-trip efficiency / (8,760 h × CUF), with
+  the bidder's efficiency and CUF or labelled examples (87%, 25%).
+* Money up front: EMD, PBG (with that solar), SECI's charges, the LC at the strike price.
+* Three real evenings (the cheapest, a middle one and the dearest in the selling market's best two
+  hours of 18:00–24:00): the exchange pays MCP × energy, the Pool settles (SP − MCP) × energy, the
+  bidder ends with SP × energy.
+* A Contract Week (Monday to Sunday) with one evening missed: 2X short, 1.4X free, 0.6X penalised at
+  1.5 × (the week's highest evening price on any market − SP), plus the evening's revenue lost.
+* A year of evenings in date order against the strike price.
 
 ## The tender, from its documents
 
@@ -109,7 +132,8 @@ security (CfDA 10.4(b)).
 
 ## Checks
 
-* `tools/check_cfd_model.mjs`: the terms, dates and Contract Years, the RfS's EMD, PBG, charges and
+* `tools/check_cfd_model.mjs`: the terms, dates and Contract Years, the worked example (exchange + Pool =
+  SP × energy every evening and over the year, the week's penalty, the solar sizing), the RfS's EMD, PBG, charges and
   eligibility amounts, the 50–150 MW bid, the LC and penalty formulas, the
   benchmarks, operation within the sourcing limits on synthetic prices, too little own RE falling
   short, the strike price earning exactly the target IRR, debt repaid, the Pool flows, and the real

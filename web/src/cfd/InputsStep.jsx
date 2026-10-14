@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Loader2, Sparkles, Square, TriangleAlert, Wand2 } from "lucide-react";
 import { Field, Section, SelectBox, nf } from "../rtc/ui";
-import Cite from "./Cite.jsx";
+import Cite, { Cites } from "./Cite.jsx";
 import { BENCHMARK_NOTE, BG_YEARS, CHOICES, FIELDS, fillBenchmarks, fmtDate, keyDates, missingInputs, rfsAmounts } from "./model.js";
 
 /** Number inputs of one section; a value filled from the benchmarks is marked until it is changed. */
@@ -125,7 +125,7 @@ function RfsAmounts({ inputs }) {
       <p className="rtc-note">For {nf(inputs.contractedMw || 0)} MW contracted: {plant}. The model charges the bank guarantees at the cost above and adds SECI's charges, with GST, to the project cost.</p>
       <div className="cfd-rfs-grid">
         {rows.map(([label, value, note, cites]) => (
-          <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small><span className="cfd-rfs-cites">{cites.map((c) => <Cite key={c} id={c} />)}</span></div>
+          <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small><span className="cfd-rfs-cites"><Cites ids={cites} /></span></div>
         ))}
       </div>
     </div>

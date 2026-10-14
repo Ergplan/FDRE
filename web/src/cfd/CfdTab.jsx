@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, BookOpen, ChevronLeft, CircleDollarSign, Factory, FileSearch, Gauge, RotateCcw, Scale, Wallet } from "lucide-react";
+import { ArrowRight, BookOpen, Calculator, ChevronLeft, CircleDollarSign, Factory, FileSearch, Gauge, RotateCcw, Scale, Wallet } from "lucide-react";
 import { trackEvent } from "../activity";
 import { nf } from "../rtc/ui";
 import { loadMarketPrices } from "../bid/model.js";
 import { STORAGE_KEY, defaultCfdState, mergeCfdState, missingInputs, optimiseOwnRe, runModel } from "./model.js";
 import VisualModel from "./VisualModel.jsx";
+import ExampleStep from "./ExampleStep.jsx";
+import { exampleMw } from "./example.js";
 import TermsStep from "./TermsStep.jsx";
 import { CostsStep, PlantStep } from "./InputsStep.jsx";
 import OperationsStep from "./OperationsStep.jsx";
@@ -12,6 +14,7 @@ import FinanceStep from "./FinanceStep.jsx";
 
 const STEPS = [
   { id: "model", title: "How it works", icon: BookOpen, color: "#d4ff3f" },
+  { id: "example", title: "Worked example", icon: Calculator, color: "#b79cff" },
   { id: "terms", title: "Tender terms", icon: FileSearch, color: "#ff8a5f" },
   { id: "plant", title: "Plant and sourcing", icon: Factory, color: "#4fd1c5" },
   { id: "costs", title: "Costs and finance", icon: Wallet, color: "#3fa7d6" },
@@ -63,6 +66,7 @@ export default function CfdTab() {
     return { ...s, inputs: { ...s.inputs, [key]: value }, filled };
   }), []);
   const goto = useCallback((id) => setState((s) => ({ ...s, step: id })), []);
+  const setExample = useCallback((patch) => setState((s) => ({ ...s, example: { ...(s.example || {}), ...patch } })), []);
   const missing = missingInputs(state);
   const model = useMemo(() => (missing.length || !prices ? null : runModel(state, prices)), [state.inputs, prices]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -100,7 +104,8 @@ export default function CfdTab() {
 
   const summary = {
     model: "The tender as a picture",
-    terms: "From the CfDA and amendments",
+    example: `${nf(exampleMw(state))} MW, step by step`,
+    terms: "From the RfS, CfDA and amendments",
     plant: missing.length ? `${missing.length} input${missing.length > 1 ? "s" : ""} needed` : `${nf(state.inputs.contractedMw)} MW · ${nf(state.inputs.solarMw)} MW solar`,
     costs: missing.length ? "Costs and financing" : "Ready",
     operations: model ? `${model.sim.years.length} Contract Years` : "After the inputs",
@@ -139,6 +144,7 @@ export default function CfdTab() {
       </nav>
       <div className="bid-page" style={{ "--chapter": step.color }} key={step.id}>
         {step.id === "model" && <VisualModel state={state} prices={prices} />}
+        {step.id === "example" && <ExampleStep state={state} prices={prices} model={model} setExample={setExample} goto={goto} />}
         {step.id === "terms" && <TermsStep />}
         {step.id === "plant" && <PlantStep state={state} setState={setState} setInput={setInput} optimise={optimise} optimising={optimising} stopOptimise={() => abortRef.current?.abort()} />}
         {step.id === "costs" && <CostsStep state={state} setState={setState} setInput={setInput} />}

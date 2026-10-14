@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DOCUMENTS, TENDER, TERMS, termById } from "../web/src/cfd/terms.js";
+import { exampleMw, workedExample } from "../web/src/cfd/example.js";
 import {
   BG_YEARS, addMonths, capex as capexOf, capShortfall, contractYears, defaultCfdState, fillBenchmarks, financials, keyDates, lcCr, missingInputs, modelInputs,
   optimiseOwnRe, parseDate, penaltyCr, poolFlows, priceBook, profiles, rfsAmounts, runModel, simulate, solveStrikePrice,
@@ -107,6 +108,27 @@ near(pool[1].netCr, sim.years[1].mcpDeliveredCr - s.sp * sim.years[1].deliveredM
 
 // ---- the real IEX price year: the model solves and the optimiser meets every day's supply
 const prices = JSON.parse(readFileSync(new URL("../web/public/market/iex_hourly_prices.json", import.meta.url), "utf8"));
+
+// ---- the worked example: every evening ends at SP × energy; the Pool settles the gap; the week's penalty
+const x = workedExample({ mw: 100, sp: 9, prices, market: "DAM", rte: 0.87, solarCuf: 0.25 });
+assert.deepEqual([x.commit.dailyMwh, x.commit.weeklyMwh, x.commit.weeklyMinMwh, x.commit.yearlyMwh, x.commit.batteryMwh], [200, 1400, 1260, 73000, 200]);
+for (const e of Object.values(x.evenings)) {
+  near(e.exchangeLakh + e.poolLakh, e.youLakh, 1e-9, "exchange + Pool = what you keep");
+  near(e.youLakh, (9 * 200 * 1000) / 1e5, 1e-9, "you keep SP × 2 MWh/MW");
+  assert.ok(e.hours.every((h) => h >= 18 && h < 24) && e.hours.length === 2, "2 hours between 18:00 and 24:00");
+}
+assert.ok(x.evenings.low.poolLakh > 0 && x.evenings.low.avg <= x.evenings.middle.avg && x.evenings.middle.avg <= x.evenings.high.avg, "cheap evening: the Pool pays");
+near(x.charging.solarAlone, (0.75 * 73000) / 0.87 / (8760 * 0.25), 1e-9, "own solar for 75% of the energy");
+near(x.charging.solarWithGroup, (0.25 * 73000) / 0.87 / (8760 * 0.25), 1e-9, "own solar for 25% with group RE");
+assert.equal(new Date(x.week.start).getUTCDay(), 1, "a Contract Week starts on Monday");
+near(x.week.penalisedMwh, 200 - 140, 1e-9, "a missed evening: 200 MWh short, 140 MWh free");
+near(x.week.penaltyLakh, (1.5 * Math.max(0, x.week.refPrice - 9) * 60 * 1000) / 1e5, 1e-9, "penalty 1.5 × (ref − SP)");
+near(x.year.exchangeCr + x.year.poolCr, x.year.youCr, 1e-9, "a year: exchange + Pool = SP × energy");
+assert.equal(x.year.daysPoolPays + x.year.daysYouPay <= 365, true);
+assert.equal(workedExample({ mw: 150, sp: 10.5, prices, market: "DAM" }).year.daysYouPay, 0, "above the year's highest price the Pool pays every evening");
+assert.equal(exampleMw({ inputs: { contractedMw: 120 } }), 120);
+assert.equal(exampleMw({ inputs: { contractedMw: 500 } }), 100, "an invalid bid falls back to 100 MW");
+assert.equal(exampleMw({ inputs: { contractedMw: 120 }, example: { mw: 60 } }), 60);
 const real = runModel(st, prices);
 assert.ok(real.sp > 0 && Number.isFinite(real.fin.equityIrr));
 const best = await optimiseOwnRe(st, prices);

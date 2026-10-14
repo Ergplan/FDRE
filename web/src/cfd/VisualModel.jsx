@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Section, nf } from "../rtc/ui";
 import { LiveChart } from "../rtc/charts";
-import Cite from "./Cite.jsx";
+import Cite, { Cites } from "./Cite.jsx";
 import { TENDER } from "./terms.js";
 import { fmtDate, keyDates } from "./model.js";
 
@@ -164,12 +164,13 @@ export default function VisualModel({ state, prices }) {
       <Section index="1" title="How SECI CfD-I works" note="Assured peak supply of 1000 MWh a day (500 MW × 2 h), settled against your strike price">
         <div className="cfd-lead">
           <p>You build a battery with your own renewable generation, sell <strong>2 MWh per contracted MW every evening</strong> on a power exchange, and SECI's CfD Pool tops your price up to the <strong>strike price you bid</strong> (or takes the excess) on every kWh. Since Amendment-03 you keep no market gain and bear no market loss on that energy <Cite id="noRisk" compact />.</p>
+          <p>You need no plant to bid: you build the battery and your own solar or wind after you win, and until month 36 the battery may be charged entirely from the green market <Cite id="newProject" compact /> <Cite id="market75" compact />. Step 2, <strong>Worked example</strong>, walks a bid of your size through real evenings.</p>
         </div>
         <FlowDiagram mw={X} />
       </Section>
       <Section index="1.1" title="Timeline" note={state.inputs.effectiveDate ? `From the Effective Date you entered (${fmtDate(Date.parse(`${state.inputs.effectiveDate}T00:00:00Z`))})` : "Months from the Effective Date of the CfDA; enter the date on Plant and sourcing to see the calendar dates"}>
         <Timeline effectiveDate={state.inputs.effectiveDate} />
-        <p className="rtc-note">Dates: <Cite id="effectiveDate" /> <Cite id="essScd" /> <Cite id="reCod" /> <Cite id="term" /> <Cite id="finClose" /> <Cite id="delay" /> <Cite id="delayBeyond" /> <Cite id="fmExtension" /></p>
+        <p className="rtc-note">Dates: <Cites ids={["effectiveDate", "essScd", "reCod", "term", "finClose", "delay", "delayBeyond", "fmExtension"]} /></p>
       </Section>
       <Section index="1.2" title="A day of supply" note="IEX prices, Sep 2025 – Sep 2026">
         <TypicalDay prices={prices} mw={X} market={state.inputs.sellMarket || "DAM"} />
@@ -180,7 +181,7 @@ export default function VisualModel({ state, prices }) {
             <li key={i}>
               <span className="cfd-todo-when">{s.when}</span>
               <span>{s.text}</span>
-              <span className="cfd-todo-cites">{s.cites.map((c) => <Cite key={c} id={c} />)}</span>
+              <span className="cfd-todo-cites"><Cites ids={s.cites} /></span>
             </li>
           ))}
         </ol>
