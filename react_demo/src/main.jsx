@@ -34,6 +34,7 @@ import "./styles.css";
 import Login from "./platform/Login";
 import WorkspaceBar from "./platform/WorkspaceBar";
 import TenderTab from "./platform/TenderTab";
+import SupplyTab from "./platform/SupplyTab";
 import { auth as platformAuth } from "./platform/api";
 
 async function api(path, body) {
@@ -3111,6 +3112,7 @@ function App() {
   const [org, setOrg] = useState(null);
   const [tenderId, setTenderId] = useState("");
   const [tenderView, setTenderView] = useState("platform");
+  const [platformScenario, setPlatformScenario] = useState(null);
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3425,6 +3427,7 @@ function App() {
   const tabs = [
     ["tender", FileText, "Tender Upload"],
     ["project", Settings2, "Project Configuration"],
+    ["supply", BatteryCharging, "Supply Modules"],
     ["yield", BarChart3, "Yield Assessment"],
     ["joulewiseReport", FileText, "Joulewise EYA Report"],
     ["finance", CircleDollarSign, "Financial Inputs"],
@@ -3462,6 +3465,8 @@ function App() {
           onRunLoaded={showRun}
           tenderId={tenderId}
           setTenderId={setTenderId}
+          scenario={platformScenario}
+          setScenario={setPlatformScenario}
         />
         {error && <div className="alert">{error}</div>}
         {loading && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
@@ -3474,6 +3479,7 @@ function App() {
         )}
         {activeTab === "tender" && tenderView === "platform" && <TenderTab org={org} tenderId={tenderId} me={me} />}
         {activeTab === "tender" && tenderView === "legacy" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
+        {activeTab === "supply" && <SupplyTab org={org} scenarioId={platformScenario?.id} scenarioRevision={platformScenario?.revision} onSaved={(s) => setPlatformScenario((prev) => (prev ? { ...prev, revision: s.revision, current_input_version: s.current_input_version } : prev))} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
         {activeTab === "joulewiseReport" && <JoulewiseReportTab report={defaults?.joulewise_report} customResult={customResult} settings={settings} setSettings={setSettings} />}

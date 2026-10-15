@@ -70,7 +70,7 @@ and the day checklists are updated at the end of every day, in the same commit a
 
 - [x] **Day 1 — foundation** (done 2026-10-15, `DAY-1-REPORT.md`): package layout, settings, migrations, identity, organisations, memberships, roles, tenders (platform record), scenarios with revision checks, runs + input snapshots, jobs + worker, audit events, notifications table, storage interface, legacy mount, login and workspace bar in the UI, gate tests, Day 1 report.
 - [x] **Day 2 — tender engine and amendments** (done 2026-10-15, `DAY-2-REPORT.md`): adapter, tender documents and amendment chain, requirement versions, rule-set versions, impact mapping, stale flags, notifications, tasks, timeline, gate tests.
-- [ ] **Day 3 — supply inputs and isometric flows**: six modules, profiles with validation, loss chains with reconciliation, diagrams, gate tests.
+- [x] **Day 3 — supply inputs and isometric flows** (done 2026-10-15, `DAY-3-REPORT.md`): six modules, profiles with validation, loss chains with reconciliation, diagrams, gate tests.
 - [ ] **Day 4 — MILP and both economic workflows**: formulation, tariff search, fixed-tariff evaluation, job controls, independent validation, benchmark, gate tests.
 - [ ] **Day 5 — financial export, history and collaboration**: formula workbook with LibreOffice recalculation check, historical awards seed and comparables, chat/comments/mentions, concurrent-edit tests.
 - [ ] **Day 6 — chat, voice and DPR**: tool registry, knowledge layer, assistant, RealTalk, DPR workspace, adversarial tests.

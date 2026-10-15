@@ -77,13 +77,14 @@ def _run_engine(run: Run, heartbeat: Heartbeat) -> tuple[dict[str, Any], dict[st
     options = inputs.get("run_options", {}) if isinstance(inputs, dict) else {}
     project = legacy._project_from_payload(inputs.get("project"))
     years = legacy._years(options.get("years_mode", "fast"), project)
-    custom_cf = legacy._custom_wind_cf(bool(options.get("use_wind_profile", False)), options.get("wind_p_level", "P50"))
+    custom_cf = _custom_cf(inputs, legacy, options)
     if not heartbeat({"phase": "dispatch", "years": list(years)}):
         raise RunCancelled()
     if run.kind == "evaluate":
         result = E.evaluate_project(project, years=years, custom_cf=custom_cf)
         response = legacy._response(project, result, custom_cf is not None, options.get("wind_p_level", "P50"))
         response["mode"] = "fixed_sizing"
+        response["first_year"] = {**response.get("first_year", {}), "generation_by_asset": _generation_by_asset(result.get("first_year_dispatch"), project, E)}
         extra: dict[str, Any] = {}
     elif run.kind == "optimize":
         bounds = {k: tuple(v) for k, v in (options.get("bounds") or {}).items()} or None
@@ -113,6 +114,30 @@ def _run_engine(run: Run, heartbeat: Heartbeat) -> tuple[dict[str, Any], dict[st
         status = "succeeded"
     metrics = {"status_reason": reason, "tariff_rs_per_kwh": tariff, "years_simulated": list(years), **extra}
     return response, metrics, status
+
+
+def _custom_cf(inputs: dict[str, Any], legacy: Any, options: dict[str, Any]) -> Any:
+    """Profile columns compiled from the supply configuration (Day 3) take precedence over
+    the legacy wind CSV path."""
+    compiled = (inputs.get("supply_compiled") or {}).get("custom_cf") or {}
+    if compiled:
+        import pandas as pd
+
+        return pd.DataFrame({k: list(v) for k, v in compiled.items()})
+    return legacy._custom_wind_cf(bool(options.get("use_wind_profile", False)), options.get("wind_p_level", "P50"))
+
+
+def _generation_by_asset(first: Any, project: Any, E: Any) -> dict[str, float]:
+    """First-year energy per generator at the engine's generation boundary (after availability
+    and before the POI deduction), for reconciliation against the loss chain."""
+    if first is None or getattr(first, "hourly", None) is None or first.hourly is None:
+        return {}
+    out: dict[str, float] = {}
+    for gen in project.generators:
+        col = f"gen_{E._safe_name(gen.name)}"
+        if col in first.hourly.columns:
+            out[gen.name] = float(first.hourly[col].sum())
+    return out
 
 
 def _inputs_of(run: Run) -> dict[str, Any]:
