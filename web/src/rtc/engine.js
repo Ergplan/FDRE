@@ -44,6 +44,15 @@ export const DEFAULT_RTC_INPUTS = {
   // GSS, where the billing meter is: delivered energy, the DFR and sales are counted there
   trafoLossPct: 0.004, // 33/220 kV power transformer
   lineLossPct: 0.005, // 220 kV transmission line to the GSS
+  // each technology's losses before the 33 kV bus, and where its hourly profile is measured: the
+  // stages before that point are already in the profile; the stages after it are applied (the
+  // values are typical, and used only when the profile is measured before the stage)
+  solarLoss: { dc: 0.02, inverter: 0.015, idt: 0.01, cable: 0.005 },
+  solarFileAt: 4, // after all four stages: the 33 kV main bus bar
+  windLoss: { wtgTrafo: 0.01, cable: 0.005 },
+  windFileAt: 2, // the 33 kV main bus bar
+  bessLoss: { pcs: 0.015, mvTrafo: 0.008, cable: 0.003 }, // each way
+  bessRteAt: 3, // the round-trip efficiency is quoted at the 33 kV bus
   solarCuf: 0.245,
   windCuf: 0.33,
   solarDcAc: 1.4,
@@ -534,6 +543,55 @@ export function profileTemplateCsv(kind) {
   const rows = [head];
   for (let t = 0; t < HOURS; t += 1) rows.push(`${t + 1},${MONTH_OF_HOUR[t] + 1},${HOUR_OF_DAY[t]},${kind === "demand" ? 280 : 0}`);
   return rows.join("\n");
+}
+
+// ---------------------------------------------------------------- losses on the way to the meter
+
+/** Each technology's stages from the source to the 33 kV main bus bar, in order. */
+export const LOSS_STAGES = {
+  solar: [
+    { key: "dc", label: "DC losses", detail: "soiling, mismatch, DC cables", max: 0.1 },
+    { key: "inverter", label: "Inverters", detail: "DC to LV AC", max: 0.05 },
+    { key: "idt", label: "Inverter-duty transformers", detail: "LV / 33 kV", max: 0.05 },
+    { key: "cable", label: "33 kV collection cables", detail: "inverter stations to the pooling substation", max: 0.05 },
+  ],
+  wind: [
+    { key: "wtgTrafo", label: "WTG step-up transformers", detail: "0.69 / 33 kV at each turbine", max: 0.05 },
+    { key: "cable", label: "33 kV collection cables", detail: "turbines to the pooling substation", max: 0.05 },
+  ],
+  bess: [
+    { key: "pcs", label: "Power conversion system (PCS)", detail: "DC to AC, each way", max: 0.05 },
+    { key: "mvTrafo", label: "MV transformers", detail: "LV / 33 kV, each way", max: 0.05 },
+    { key: "cable", label: "33 kV feeder cables", detail: "to the pooling substation, each way", max: 0.05 },
+  ],
+};
+
+/**
+ * Share of the energy at the point a profile is measured that reaches the 33 kV bus: the product
+ * of (1 - loss) over the stages after that point (`measuredAt` = how many stages the profile
+ * already includes; all of them = measured at the bus).
+ */
+export function toBusFactor(kind, losses = {}, measuredAt = LOSS_STAGES[kind].length) {
+  const stages = LOSS_STAGES[kind];
+  let f = 1;
+  for (let i = Math.max(0, measuredAt); i < stages.length; i += 1) f *= 1 - (losses?.[stages[i].key] || 0);
+  return f;
+}
+
+/** The battery's round-trip efficiency seen from the 33 kV bus: the quoted one less the stages after it, both ways. */
+export function rteAtBus(rte, losses, quotedAt) {
+  const f = toBusFactor("bess", losses, quotedAt);
+  return Math.min(1, rte * f * f);
+}
+
+/** All the bus factors for a set of inputs: solar and wind profiles, the battery's round trip, the bus-to-meter efficiency. */
+export function lossFactors(inputs, rte) {
+  return {
+    solar: toBusFactor("solar", inputs.solarLoss, inputs.solarFileAt ?? LOSS_STAGES.solar.length),
+    wind: toBusFactor("wind", inputs.windLoss, inputs.windFileAt ?? LOSS_STAGES.wind.length),
+    rteBus: rteAtBus(rte, inputs.bessLoss, inputs.bessRteAt ?? LOSS_STAGES.bess.length),
+    meter: evacuationEfficiency(inputs),
+  };
 }
 
 // ---------------------------------------------------------------- dispatch

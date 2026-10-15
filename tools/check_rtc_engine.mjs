@@ -5,7 +5,7 @@ import {
   HOURS, DEFAULT_RTC_INPUTS, DEFAULT_BESS, DEFAULT_COSTS, DEFAULT_FINANCE, DEFAULT_VARS,
   synthSolarCf, synthWindCf, buildDemand, buildContext, buildModel, simulate, optimize,
   runFinancialModel, parseProfileCsv, parseDatedProfile, mean, irr, withDuration, tariffAgeingBreakdown,
-  optimizeSteps, highsPayload,
+  optimizeSteps, highsPayload, LOSS_STAGES, toBusFactor, rteAtBus, lossFactors,
 } from "../web/src/rtc/engine.js";
 
 const inputs = DEFAULT_RTC_INPUTS;
@@ -70,6 +70,17 @@ const y1 = finL.rows[0];
 assert.ok(Math.abs(y1.meterMu - y1.deliveredMu - y1.excessMu) < 1e-9 && Math.abs(y1.injectedMu - y1.trafoLossMu - y1.lineLossMu - y1.meterMu) < 1e-9, "finance rows: bus → losses → meter");
 assert.ok(Math.abs(y1.energyRevenue - y1.deliveredMu * 1000 * DEFAULT_FINANCE.tariff * 1e-4) < 1e-9, "revenue on the units at the meter");
 console.log(`33 kV → 220 kV: η ${(eta * 100).toFixed(3)}%, ${(ev.trafoLossMWh / 1000).toFixed(2)} MU transformer + ${(ev.lineLossMWh / 1000).toFixed(2)} MU line loss; DFR ${(rs.dfr * 100).toFixed(2)}% → ${(rl.dfr * 100).toFixed(2)}% on the same plant`);
+
+// losses before the bus: only the stages after the point a profile is measured apply
+const sl = { dc: 0.02, inverter: 0.015, idt: 0.01, cable: 0.005 };
+assert.equal(toBusFactor("solar", sl, 4), 1, "a profile at the 33 kV bus already has every stage");
+assert.ok(Math.abs(toBusFactor("solar", sl, 2) - 0.99 * 0.995) < 1e-12, "measured at the inverter output: IDT and cables apply");
+assert.ok(Math.abs(toBusFactor("solar", sl, 0) - 0.98 * 0.985 * 0.99 * 0.995) < 1e-12, "measured at the modules: every stage applies");
+assert.ok(Math.abs(rteAtBus(0.9, { pcs: 0.015, mvTrafo: 0.008, cable: 0.003 }, 0) - 0.9 * (0.985 * 0.992 * 0.997) ** 2) < 1e-12, "a DC round trip loses the PCS, transformer and cables both ways");
+assert.equal(rteAtBus(0.87, { pcs: 0.015 }, LOSS_STAGES.bess.length), 0.87, "an RTE quoted at the bus is used as is");
+const lf = lossFactors(inputs, 0.87);
+assert.deepEqual([lf.solar, lf.wind, lf.rteBus], [1, 1, 0.87], "the defaults: every profile and the RTE at the 33 kV bus");
+assert.ok(Math.abs(lf.meter - (1 - 0.004) * (1 - 0.005)) < 1e-12);
 
 // monotonicity: more storage never reduces DFR
 const r2 = simulate(ctx, { solarMw: 500, windMw: 350, bessMw: 150, bessMwh: 900 });

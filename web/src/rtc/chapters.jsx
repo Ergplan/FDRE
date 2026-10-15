@@ -4,6 +4,7 @@ import * as E from "./engine";
 import { LiveChart, PaintChart } from "./charts";
 import { DATA_COLORS } from "../chartTheme";
 import ProfileLibrary from "./ProfileLibrary";
+import LossChain from "./LossChain";
 import { Field, HOUR_LABELS, LockButton, NumberInput, SelectBox, Stat, SwitchBox, UploadButton, downloadText, heatmapOption, nf, pf } from "./ui";
 
 // ---------------------------------------------------------------- chapter catalogue
@@ -127,15 +128,17 @@ export function EnergyChapter({ state, patch, lockProps, isLocked, setTriplet, l
           <Stat label="Year-1 demand" value={`${nf(sim.demandMWh / 1000, 0)} MU`} detail={`${nf(avgMw, 1)} MW average`} />
         </div>
       </div>
-      <Group title="Where the units are measured" note="Generation at the 33 kV main bus bar; billing at the 220 kV GSS">
+      <Group title="Where the units are measured" note="Billing at the 220 kV GSS; every loss on the way is set in the Solar, Wind and Battery chapters">
         <p className="chapter-lead small">
-          The hourly generation files are at the plant's <b>33 kV main bus bar</b>. The customer is billed on the units recorded by the <b>billing meter at the 220 kV GSS</b> (the point of interconnection): the demand, the DFR, the plant capacity and surplus sales are all counted there. On the way, everything the plant injects (solar, wind and battery) loses the power transformer and transmission line losses.
+          The customer is billed on the units the <b>billing meter at the 220 kV GSS</b> (the point of interconnection) records: the demand, the DFR, the plant capacity and surplus sales are all counted there.
+          Solar, wind and the battery each reach the plant's <b>33 kV main bus bar</b> through their own inverters, transformers and cables, then share the 33/220 kV power transformer and the 220 kV line.
+          Each chapter draws its path with a loss slider at every part and the point where your hourly file is measured.
         </p>
         <div className="rtc-grid rtc-grid-4">
-          <Field label="Power transformer loss" pct value={inputs.trafoLossPct} onChange={(v) => patch("inputs", { trafoLossPct: v })} {...lockProps("trafoLossPct")} step={0.05} min={0} max={5} digits={3} hint="33/220 kV, at the pooling substation" />
-          <Field label="Transmission line loss" pct value={inputs.lineLossPct} onChange={(v) => patch("inputs", { lineLossPct: v })} {...lockProps("lineLossPct")} step={0.05} min={0} max={10} digits={3} hint="220 kV line to the GSS" />
-          <Field label="Other losses before the 33 kV bus" pct value={inputs.lossPct} onChange={(v) => patch("inputs", { lossPct: v })} {...lockProps("lossPct")} step={0.1} min={0} max={30} hint="Auxiliary; 0 when your files are at the 33 kV bus" />
-          <Stat label="Reaches the meter" value={pf(E.evacuationEfficiency(inputs), 3)} detail={`of each MWh injected at 33 kV · ${pf(1 - E.evacuationEfficiency(inputs), 3)} lost`} />
+          <Stat label="Power transformer" value={pf(inputs.trafoLossPct || 0, 2)} detail="33/220 kV, shared" />
+          <Stat label="220 kV line" value={pf(inputs.lineLossPct || 0, 2)} detail="to the GSS, shared" />
+          <Stat label="Reaches the meter" value={pf(E.evacuationEfficiency(inputs), 3)} detail="of each MWh at the 33 kV bus" />
+          <Field label="Other losses at the 33 kV bus" pct value={inputs.lossPct} onChange={(v) => patch("inputs", { lossPct: v })} {...lockProps("lossPct")} step={0.1} min={0} max={30} hint="Auxiliary consumption; 0 if none" />
         </div>
       </Group>
       <div className="rtc-grid rtc-grid-2">
@@ -259,7 +262,7 @@ export function DfrChapter({ state, patch, lockProps, maxDfr, sim }) {
 
 // ---------------------------------------------------------------- 04 / 05 solar and wind
 
-export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, isLocked, cf, base, user }) {
+export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, isLocked, cf, base, user, sizes, sim }) {
   const isSolar = kind === "solar";
   const meta = CHAPTERS.find((c) => c.id === kind);
   const upload = state[`${kind}Upload`];
@@ -272,6 +275,8 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
   const matrix = useMemo(() => E.monthHourMatrix(cf).map((r) => r.map((v) => v * 100)), [cf]);
   const heat = useMemo(() => heatmapOption(matrix, { name: kind, unit: "%", max: isSolar ? 90 : 70, colors: ["#121212", isSolar ? "#6b4f16" : "#1d4661", meta.color] }), [matrix, kind, isSolar, meta.color]);
   const cuf = E.mean(cf);
+  // the profile's stages to the 33 kV bus (the chain below) and any other loss at the bus
+  const toBus = E.toBusFactor(kind, state.inputs[`${kind}Loss`], state.inputs[`${kind}FileAt`] ?? E.LOSS_STAGES[kind].length) * (1 - (state.inputs.lossPct || 0));
   const scaled = state[scaleKey].some((v) => Math.abs(v - 1) > 1e-6);
   const { costs, fin } = state;
 
@@ -284,8 +289,8 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
     <>
       <p className="chapter-lead">
         {isSolar
-          ? "Solar sets the daytime supply. Load an hourly PVsyst/SolarGIS profile at the 33 kV main bus bar, or use the synthetic Beed profile tuned to your CUF. The power transformer and line losses to the 220 kV meter are applied on top (Energy needed chapter)."
-          : "Wind fills the evening and the monsoon. Load an hourly wind profile, or use the synthetic Beed profile tuned to your CUF."}
+          ? "Solar sets the daytime supply. Load an hourly PVsyst/SolarGIS profile, or use the synthetic Beed profile tuned to your CUF. Below, mark where your file is measured (default: the 33 kV main bus bar) and set the loss of every part from the panels to the 220 kV billing meter."
+          : "Wind fills the evening and the monsoon. Load an hourly wind profile, or use the synthetic Beed profile tuned to your CUF. Below, mark where your file is measured (default: the 33 kV main bus bar) and set the loss of every part from the turbines to the 220 kV billing meter."}
       </p>
       <div className="chapter-split">
         <SizeCard label={`${meta.title} capacity`} unit={isSolar ? "MWac" : "MW"} spec={state.vars[varKey]} onChange={(v) => setVar(varKey, v)} color={meta.color} />
@@ -297,6 +302,9 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
           </div>
         </Group>
       </div>
+      <Group title={isSolar ? "From the panels to the billing meter" : "From the turbines to the billing meter"} note="Every part with its loss · year 1">
+        <LossChain kind={kind} state={state} patch={patch} sizes={sizes} sim={sim} cf={cf} />
+      </Group>
       <Group
         title="Generation profile"
         note={upload ? `${upload.source === "library" ? "Library" : "Uploaded"}: ${upload.name} · ${upload.note}` : `Synthetic ${E.BEED_SITE.name} profile`}
@@ -313,7 +321,7 @@ export function ResourceChapter({ kind, state, patch, set, setVar, lockProps, is
               <Field label="Annual CUF" pct value={state.inputs.windCuf} onChange={(v) => patch("inputs", { windCuf: v })} {...lockProps("windCuf")} disabled={Boolean(upload)} step={0.1} min={10} max={55} />
             )}
             <Field label="Upload reference MW" unit="MW" value={state[`${kind}RefMw`] ?? 0} onChange={(v) => set(`${kind}RefMw`, v)} {...lockProps(`${kind}RefMw`)} step={1} min={0} hint="Plant capacity for MW uploads; 0 = from the CUF column or the peak" />
-            <Stat label="CUF at the 33 kV bus" value={pf(cuf * (1 - (state.inputs.lossPct || 0)), 2)} detail={`${scaled ? "after monthly redraw" : "as loaded"}; at the 220 kV meter ${pf(cuf * (1 - (state.inputs.lossPct || 0)) * E.evacuationEfficiency(state.inputs), 2)}`} />
+            <Stat label="CUF of the profile" value={pf(cuf, 2)} detail={`${scaled ? "after monthly redraw" : "as loaded"}; ${pf(cuf * toBus, 2)} at the 33 kV bus, ${pf(cuf * toBus * E.evacuationEfficiency(state.inputs), 2)} at the 220 kV meter`} />
           </div>
         </div>
         <div className="rtc-grid rtc-grid-2">
@@ -386,11 +394,14 @@ export function BessChapter({ state, patch, setVar, lockProps, sizes, sim }) {
       </Group>
       <Group title="Performance">
         <div className="rtc-grid rtc-grid-4">
-          <Field label="Round-trip efficiency" pct value={bess.rte} onChange={(v) => patch("bess", { rte: v })} {...lockProps("bess.rte")} step={0.5} min={50} max={100} hint="AC-AC" />
+          <Field label="Round-trip efficiency" pct value={bess.rte} onChange={(v) => patch("bess", { rte: v })} {...lockProps("bess.rte")} step={0.5} min={50} max={100} hint="Where it is quoted: below, in the battery's path" />
           <Field label="Minimum SoC" pct value={bess.minSoc} onChange={(v) => patch("bess", { minSoc: Math.min(v, bess.maxSoc - 0.05) })} {...lockProps("bess.minSoc")} step={1} min={0} max={50} />
           <Field label="Maximum SoC" pct value={bess.maxSoc} onChange={(v) => patch("bess", { maxSoc: Math.max(v, bess.minSoc + 0.05) })} {...lockProps("bess.maxSoc")} step={1} min={50} max={100} hint={`Usable depth ${pf(bess.maxSoc - bess.minSoc, 0)}`} />
           <Field label="Initial SoC" pct value={bess.initSoc} onChange={(v) => patch("bess", { initSoc: v })} {...lockProps("bess.initSoc")} step={5} min={0} max={100} />
         </div>
+      </Group>
+      <Group title="From the battery to the billing meter" note={`Round trip ${pf(bess.rte, 1)} as entered · ${pf(E.rteAtBus(bess.rte, state.inputs.bessLoss, state.inputs.bessRteAt ?? E.LOSS_STAGES.bess.length), 2)} at the 33 kV bus`}>
+        <LossChain kind="bess" state={state} patch={patch} sizes={sizes} sim={sim} />
       </Group>
       <Group title="Ageing & augmentation">
         <div className="rtc-grid rtc-grid-4">

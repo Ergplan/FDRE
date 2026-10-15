@@ -132,31 +132,39 @@ export default function RtcTab({ initialScenario = null, user = null }) {
   const windBase = useMemo(() => (d.windUpload ? Float64Array.from(d.windUpload.values) : E.synthWindCf({ targetCuf: inputs.windCuf })), [d.windUpload, inputs.windCuf]);
   const solarCf = useMemo(() => E.applyMonthlyScale(solarBase, d.solarMonthScale), [solarBase, d.solarMonthScale]);
   const windCf = useMemo(() => E.applyMonthlyScale(windBase, d.windMonthScale), [windBase, d.windMonthScale]);
+  // the profiles are where they were measured; the stages after that point (Solar, Wind and
+  // Battery chapters) take them to the 33 kV bus, where the dispatch runs
+  const lf = useMemo(() => E.lossFactors(inputs, d.bess.rte), [inputs, d.bess.rte]);
+  const solarBusCf = useMemo(() => (lf.solar === 1 ? solarCf : Float64Array.from(solarCf, (v) => v * lf.solar)), [solarCf, lf.solar]);
+  const windBusCf = useMemo(() => (lf.wind === 1 ? windCf : Float64Array.from(windCf, (v) => v * lf.wind)), [windCf, lf.wind]);
+  const bessBus = useMemo(() => (lf.rteBus === d.bess.rte ? d.bess : { ...d.bess, rte: lf.rteBus }), [d.bess, lf.rteBus]);
   const demand = useMemo(
     () => E.buildDemand({ annualEnergyMu: inputs.annualEnergyMu, hourShape: d.hourShape, monthShape: d.monthShape, custom: d.demandUpload?.values }),
     [inputs.annualEnergyMu, d.hourShape, d.monthShape, d.demandUpload],
   );
   const ctx = useMemo(
-    () => E.buildContext({ demand, solarCf, windCf, plantMw: inputs.plantCapacityMw, bess: d.bess, lossPct: inputs.lossPct, trafoLossPct: inputs.trafoLossPct, lineLossPct: inputs.lineLossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
-    [demand, solarCf, windCf, inputs.plantCapacityMw, d.bess, inputs.lossPct, inputs.trafoLossPct, inputs.lineLossPct, d.fin.sellSurplus, d.fin.extraExportMw],
+    () => E.buildContext({ demand, solarCf: solarBusCf, windCf: windBusCf, plantMw: inputs.plantCapacityMw, bess: bessBus, lossPct: inputs.lossPct, trafoLossPct: inputs.trafoLossPct, lineLossPct: inputs.lineLossPct, sellSurplus: d.fin.sellSurplus, extraExportMw: d.fin.extraExportMw }),
+    [demand, solarBusCf, windBusCf, inputs.plantCapacityMw, bessBus, inputs.lossPct, inputs.trafoLossPct, inputs.lineLossPct, d.fin.sellSurplus, d.fin.extraExportMw],
   );
   // battery energy follows the chosen discharge duration (2 h or 4 h)
   const sizes = useMemo(() => E.withDuration(Object.fromEntries(Object.entries(d.vars).map(([k, v]) => [k, v.value])), d.bess), [d.vars, d.bess]);
   const sim = useMemo(() => E.simulate(ctx, sizes, { hourly: true }), [ctx, sizes]);
   const finInput = useMemo(() => ({ ...d.fin, demandGrowth: inputs.demandGrowth }), [d.fin, inputs.demandGrowth]);
   const finance = useMemo(
-    () => E.runFinancialModel(ctx, sizes, { costs: d.costs, fin: finInput, bess: d.bess, dfrTarget: inputs.dfrTarget, tariffLocked: d.tariffLocked }),
-    [ctx, sizes, d.costs, finInput, d.bess, inputs.dfrTarget, d.tariffLocked],
+    () => E.runFinancialModel(ctx, sizes, { costs: d.costs, fin: finInput, bess: bessBus, dfrTarget: inputs.dfrTarget, tariffLocked: d.tariffLocked }),
+    [ctx, sizes, d.costs, finInput, bessBus, inputs.dfrTarget, d.tariffLocked],
   );
   const capex = useMemo(() => E.capexCr(sizes, d.costs), [sizes, d.costs]);
   const loadFactor = (state.inputs.annualEnergyMu * 1000) / (state.inputs.plantCapacityMw * E.HOURS);
   const peakDemand = useMemo(() => Math.max(...demand), [demand]);
   const maxDfr = sim.demandMWh > 0 ? 1 - sim.demandAboveCapMWh / sim.demandMWh : 1;
   const stale = d !== state;
-  // CUF at the 33 kV bus (the profiles, after any other loss) and at the 220 kV billing meter
-  const busFactor = 1 - (state.inputs.lossPct || 0);
-  const meterFactor = busFactor * E.evacuationEfficiency(state.inputs);
-  const derived = { solarCuf: E.mean(solarCf) * busFactor, windCuf: E.mean(windCf) * busFactor, solarCufMeter: E.mean(solarCf) * meterFactor, windCufMeter: E.mean(windCf) * meterFactor };
+  // CUF at the 33 kV bus (the profile and its stages to the bus, after any other loss) and at the 220 kV billing meter
+  const aux = 1 - (state.inputs.lossPct || 0);
+  const derived = {
+    solarCuf: E.mean(solarCf) * lf.solar * aux, windCuf: E.mean(windCf) * lf.wind * aux,
+    solarCufMeter: E.mean(solarCf) * lf.solar * aux * lf.meter, windCufMeter: E.mean(windCf) * lf.wind * aux * lf.meter,
+  };
 
   // ---- plant capacity, annual energy and load factor are linked through locks
   function setTriplet(field, value) {
@@ -238,7 +246,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
     worker.postMessage({
       id,
       ctx: { demand: ctx.demand, solarCf: ctx.solarCf, windCf: ctx.windCf, plantMw: ctx.plantMw, bess: ctx.bess, lossPct: ctx.lossPct, trafoLossPct: ctx.trafoLossPct, lineLossPct: ctx.lineLossPct, sellSurplus: ctx.sellSurplus, extraExportMw: ctx.extraExportMw },
-      modelInput: { inputs: state.inputs, costs: state.costs, fin: state.fin, bess: state.bess, vars: state.vars, objective: state.objective, gridPoints: state.gridPoints },
+      modelInput: { inputs: state.inputs, costs: state.costs, fin: state.fin, bess: { ...state.bess, rte: E.rteAtBus(state.bess.rte, state.inputs.bessLoss, state.inputs.bessRteAt ?? E.LOSS_STAGES.bess.length) }, vars: state.vars, objective: state.objective, gridPoints: state.gridPoints },
       useHighs: tariffMode && state.solver !== "search",
     });
   }
@@ -452,7 +460,7 @@ export default function RtcTab({ initialScenario = null, user = null }) {
       </Section>
       <div className="story-divider"><span>Financial model · {state.fin.years} years</span></div>
       <FinanceView state={state} patch={patch} set={set} lockProps={lockProps} finance={finance} sizes={sizes} energyLines={METER_LINES} />
-      <AgeingImpact ctx={ctx} sizes={sizes} costs={d.costs} fin={finInput} bess={d.bess} dfrTarget={inputs.dfrTarget} finance={finance} />
+      <AgeingImpact ctx={ctx} sizes={sizes} costs={d.costs} fin={finInput} bess={bessBus} dfrTarget={inputs.dfrTarget} finance={finance} />
       <TariffMap opt={opt} sizes={sizes} applySizes={applySizes} />
       <Alternatives opt={opt} sizes={sizes} target={inputs.dfrTarget} applySizes={applySizes} />
       <SolverLog opt={opt} />

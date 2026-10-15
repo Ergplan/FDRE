@@ -50,3 +50,55 @@
 .meter-def svg { color: var(--signal); flex: none; margin-top: 2px; }
 .meter-def strong { display: block; margin-bottom: 4px; }
 .meter-def p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+
+/* loss chains (LossChain.jsx): one row per part, the wire running top to bottom through the icons */
+.loss-chain { --wire-dc: #f5b83d; --wire-lv: #b8b8b2; --wire-mv: #d4ff3f; --wire-hv: #f4f4f1; display: grid; border: 1px solid var(--line); background: var(--surface); padding: 6px 0; }
+.loss-row, .loss-point { display: grid; grid-template-columns: 150px minmax(0, 1fr) 210px; gap: 14px; align-items: center; padding-right: 14px; }
+.loss-row { min-height: 98px; }
+.loss-icon { position: relative; align-self: stretch; display: grid; place-items: center; }
+.loss-icon::before, .loss-icon::after, .loss-point-dot::before { content: ""; position: absolute; left: calc(50% - 1px); width: 2px; }
+.loss-icon::before { top: 0; height: 50%; background: var(--wire-in); }
+.loss-icon::after { top: 50%; bottom: 0; background: var(--wire-out); }
+.loss-row.source .loss-icon::before, .loss-row.meter .loss-icon::after { display: none; }
+.iso-icon { position: relative; z-index: 1; width: 140px; height: auto; display: block; }
+.loss-body { display: grid; gap: 3px; padding: 8px 0; }
+.loss-body > strong { font-size: 14px; }
+.loss-body > small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.loss-side { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+.loss-mu { color: #e0a040; font-weight: 600; }
+.loss-value { color: var(--ink); font-weight: 700; }
+.loss-value.meter { color: var(--signal); }
+.loss-muted { color: var(--muted); font-size: 12px; }
+.loss-row.is-dim .loss-body, .loss-row.is-dim .iso-icon { opacity: 0.45; }
+.loss-row.bus { background: color-mix(in srgb, var(--signal) 5%, transparent); }
+.loss-row.meter { background: color-mix(in srgb, var(--signal) 8%, transparent); }
+.loss-point { min-height: 30px; }
+.loss-point-dot { position: relative; align-self: stretch; display: grid; place-items: center; }
+.loss-point-dot::before { top: 0; bottom: 0; background: var(--wire-in); }
+.loss-point-dot i { position: relative; z-index: 1; width: 11px; height: 11px; border-radius: 50%; background: var(--surface); border: 2px solid var(--wire-in); }
+.loss-point.is-on .loss-point-dot i { width: 15px; height: 15px; background: var(--signal); border-color: var(--signal); box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 22%, transparent); }
+.loss-point-label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.loss-point-label input { accent-color: var(--signal); margin: 0; }
+.loss-point-label b { display: inline-flex; gap: 4px; align-items: center; color: var(--signal); font-weight: 600; }
+.loss-point.is-on .loss-point-label span { color: var(--ink); }
+.loss-point-note { text-align: right; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.loss-slider { display: flex; align-items: center; gap: 8px; margin-top: 6px; max-width: 420px; }
+.loss-slider input[type="range"] { flex: 1; accent-color: var(--signal); min-width: 80px; }
+.loss-slider input[type="number"] { width: 74px; box-sizing: border-box; border: 1px solid var(--line-2); padding: 5px 7px; background: var(--bg-2); color: var(--ink); font: inherit; font-size: 13px; }
+.loss-slider em { color: var(--muted); font-style: normal; font-size: 12px; }
+.loss-slider.is-off { opacity: 0.6; }
+.loss-foot { margin: 8px 14px 4px; }
+@media (max-width: 900px) {
+  .loss-row, .loss-point { grid-template-columns: 96px minmax(0, 1fr); }
+  .loss-side, .loss-point-note { grid-column: 2; text-align: left; }
+  .iso-icon { width: 92px; }
+}
+/* the global label / input styles are for form fields; the chain's radios and sliders are compact */
+.loss-point-label { display: flex; font-family: var(--font-sans); font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.loss-point-label input[type="radio"] { width: 14px; height: 14px; min-height: 0; padding: 0; flex: none; }
+.loss-slider input[type="range"] { width: auto; min-height: 0; padding: 0; }
+.loss-slider input[type="number"] { min-height: 0; }
+.iso-nacelle { fill: #d9d9d3; }
+.iso-wire.dc { stroke-width: 1.6; }
+.iso-icon .iso-wire.mv { stroke-width: 1.6; }
+.iso-icon .iso-turbine line { stroke-width: 2; }

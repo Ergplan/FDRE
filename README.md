@@ -78,10 +78,8 @@ the browser; only the HiGHS sizing LP (below) runs in the Python service.
 It reads as a story. Six chapters sit in a vertical rail, each with its own icon and colour:
 
 1. **Energy needed**: annual energy, plant capacity and load factor (linked by locks), plus
-   demand growth and **where the units are measured**: the hourly generation files are at the
-   plant's 33 kV main bus bar, the customer is billed at the 220 kV GSS (the point of
-   interconnection), and between them the 33/220 kV power transformer loses 0.4% and the
-   220 kV line 0.5% (both editable; an optional other loss before the bus, default 0).
+   demand growth and **where the units are measured**: the customer is billed at the 220 kV GSS
+   (the point of interconnection); an optional other loss at the 33 kV bus (auxiliary, default 0).
 2. **Supply type**: round-the-clock, peak-weighted, day-time or night-weighted presets,
    seasonality, or a profile drawn with the mouse or uploaded (8760 / 15-minute CSV).
 3. **DFR**: target, measured annually or every month, a lifetime design check, shortfall
@@ -103,6 +101,23 @@ It reads as a story. Six chapters sit in a vertical rail, each with its own icon
    (`node tools/build_solar_seed.mjs <file.xlsx> <out.json> <seedKey>`).
 6. **Battery storage**: a 2-hour or 4-hour discharge duration (energy = power × hours, so
    the optimizer sizes only MW), plus cost, efficiency, SoC window, fade and augmentation.
+
+**Losses to the billing meter.** The Solar, Wind and Battery chapters each draw their path to
+the meter as a vertical isometric chain (`LossChain.jsx`, `isoIcons.jsx`), one row per part with
+a loss slider, and the points between parts where the hourly file (or, for the battery, the
+round-trip efficiency) can be measured:
+
+| | Parts to the 33 kV main bus bar (typical loss) | Default measuring point |
+| --- | --- | --- |
+| Solar | modules → DC losses (2%) → inverters (1.5%) → inverter-duty transformers (1%) → 33 kV collection cables (0.5%) | 33 kV main bus bar |
+| Wind | turbines → WTG step-up transformers (1%) → 33 kV collection cables (0.5%) | 33 kV main bus bar |
+| Battery | containers → PCS (1.5%) → MV transformers (0.8%) → 33 kV feeder cables (0.3%), each way | 33 kV main bus bar |
+
+The stages above the measuring point are already in the file and are not applied (their sliders
+are off); the stages below it are applied to the profile (or twice, both ways, to the battery's
+round trip). All three then share the 33/220 kV power transformer (0.4%) and the 220 kV line
+(0.5%) to the 220 kV GSS billing meter; their sliders are the same in all three chapters. Each
+row shows the year-1 energy after the part (CUF for solar and wind) and the MU it loses.
 
 **Optimize least tariff** minimises the 25-year tariff at the target equity IRR, with the DFR
 required in every PPA year (solar/wind degradation, battery fade and augmentation, demand
@@ -138,11 +153,9 @@ remain available and use the search only.
 
 The answer is then revealed. Below it are:
 
-- **From the plant to the billing meter**: an isometric drawing of the solar park, the
-  inverters and inverter-duty transformers, the 33 kV collection cables, the 33 kV main bus
-  bar (where generation is measured), the battery, the 33/220 kV power transformer, the 220 kV
-  line and the GSS with the billing meter, each labelled with its loss; the year-1 ladder from
-  the bus to the meter; the solar CUF at the bus and at the meter; and the billing metering
+- **From the plant to the billing meter**: what the dispatch sends from the 33 kV bus to the
+  meter in year 1 (generation, battery, curtailment, injection, transformer and line losses,
+  delivered and sold), the solar CUF at the bus and at the meter, and the billing metering
   point defined (interface meters, main and check, at the 220 kV GSS).
 - the dispatch, with a Day / Month / Year toggle. The Day view uses the
   [Ergplan/charting](https://github.com/Ergplan/charting) `energy-flow-chart` library,
@@ -157,7 +170,8 @@ The answer is then revealed. Below it are:
 
 Every input has a lock toggle. Save the case to the database from the header.
 
-**Metering.** The dispatch runs at the 33 kV bus: solar, wind and the battery are there, and
+**Metering.** The profiles are taken to the 33 kV bus through the parts below their measuring
+point, and the battery's round trip is the one seen from the bus. The dispatch runs at the bus: solar, wind and the battery are there, and
 everything injected (direct supply, battery discharge, surplus sold) is multiplied by
 η = (1 − transformer loss) × (1 − line loss) = 99.102% on its way to the meter. Demand, the
 plant capacity, the DFR, the tariff revenue and surplus sales are all at the meter, so the
