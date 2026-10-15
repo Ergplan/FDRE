@@ -27,6 +27,12 @@ Roles: administrator, bid_manager, engineer, finance_reviewer, approver, viewer.
 
 Set `TENDER_ENGINE_URL` (and `TENDER_ENGINE_ADMIN_TOKEN`) to a live instance; the platform talks to it over HTTP only (`fdre_platform/integrations/tender_engine.py`). Without a URL the adapter answers from recorded fixtures and labels everything `fixture`. A local instance for development: clone `Ergplan/tender_engine`, install its `pyproject.toml` dependencies in a separate venv, create a database, run its `alembic upgrade head` and start `uvicorn api.main:create_app --factory --port 8100` with its `DATABASE_URL`, `DATA_DIR`, `TENANT_ID`, `PUBLIC_BASE_URL`, `TENDERS_ROOT` and `ANTHROPIC_API_KEY` set (extraction needs a real key; versions and parsing do not).
 
+## Historical results and workbook verification
+
+Seed (idempotent) the historical tender results from a checkout of `Ergplan/RE-tender-results`: `python -m fdre_platform.cli seed-awards --path <checkout> --commit <short sha>`. Records whose archived source is not on an admissible procurer host are refused and counted; nothing is converted between units. Re-run after pulling the dataset; existing rows are skipped by their stable key.
+
+Workbook exports (`POST /api/v1/orgs/{org}/runs/{run}/workbook`) are verified by recalculating the file with LibreOffice (`soffice` must be in `PATH` on the API host; package `libreoffice-calc`). Without it the artifact is still produced and labelled `verification: unavailable`.
+
 ## Checks
 
 - `make test-platform`: 19 tests against `TEST_DATABASE_URL`; the session fixture runs `alembic downgrade base`, `upgrade head` and `alembic check`, so a model change without a migration fails here.

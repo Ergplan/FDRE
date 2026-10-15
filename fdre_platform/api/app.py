@@ -20,7 +20,7 @@ from fdre_platform.storage import LocalStorage
 from . import errors
 from fdre_platform.integrations.tender_engine import build_engine
 
-from .routes import auth, health, notifications, orgs, runs, scenarios, supply, tender_intel, tenders
+from .routes import auth, collab_history, health, notifications, orgs, runs, scenarios, supply, tender_intel, tenders
 
 log = logging.getLogger("fdre_platform.api")
 
@@ -43,7 +43,7 @@ def create_app(settings: Settings | None = None, *, mount_legacy: bool = True) -
         return response
 
     errors.install(app)
-    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router, tender_intel.router, supply.router):
+    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router, tender_intel.router, supply.router, collab_history.router):
         app.include_router(router, prefix="/api/v1")
 
     if mount_legacy:

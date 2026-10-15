@@ -2,14 +2,20 @@
 // classification, tariff, finance summary and statement, contract-term table with the years
 // actually solved, binding constraints, sensitivities, certification and the search samples
 // with the certification boundary. Legacy evaluate/optimize runs keep the old tabs.
-import React from "react";
+import React, { useState } from "react";
+import { platformApi } from "./api";
 
 const fmt = (v, d = 2) => (v === null || v === undefined ? "—" : typeof v === "number" ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : String(v));
 const pct = (v) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(2)}%`);
 const cr = (v) => (v === null || v === undefined ? "—" : `₹${(v).toFixed(1)} cr`);
 
-export default function RunResultPanel({ run }) {
-  if (!run?.result) return null;
+export default function RunResultPanel({ run, org }) {
+  const [exporting, setExporting] = useState(null);
+  async function exportWorkbook() {
+    setExporting("working");
+    try { setExporting(await platformApi(`/orgs/${org.id}/runs/${run.id}/workbook?verify=true`, { method: "POST" })); } catch (e) { setExporting({ error: e.message }); }
+  }
+  if (!run?.result) return <section className="run-result"><div className="panel"><h3>Run {run?.id?.slice(0, 8)}: {run?.status}</h3><p className="note">{run?.error || run?.metrics?.status_reason || "no result"}</p></div></section>;
   const r = run.result;
   const fin = r.finance;
   const term = r.term;
@@ -24,7 +30,13 @@ export default function RunResultPanel({ run }) {
         {term?.worst_gap !== undefined && term?.worst_gap !== null && <span className="chip">gap {(term.worst_gap * 100).toFixed(3)}%</span>}
         {term?.certification_year1 && <span className={`chip ${term.certification_year1.status === "certified" ? "accepted" : "rejected"}`}>validation: {term.certification_year1.status}</span>}
         <span className="chip">run {run.id.slice(0, 8)} · inputs {run.snapshot?.inputs?.hash?.slice(0, 8)} · rules {run.snapshot?.rules_version}</span>
+        {fin && org && <button className="secondary" onClick={exportWorkbook} disabled={exporting === "working"}>{exporting === "working" ? "Building and verifying…" : "Export Excel model (formulas)"}</button>}
       </div>
+      {exporting && exporting !== "working" && (
+        <div className={`alert ${exporting.error || exporting.verification?.status !== "verified" ? "" : "ok"}`}>
+          {exporting.error ? exporting.error : <>Workbook <a href={exporting.artifact.download}>{exporting.artifact.filename}</a> (sha256 {exporting.artifact.sha256.slice(0, 10)}) · recalculation check: <strong>{exporting.verification.status}</strong>{exporting.verification.error ? ` (${exporting.verification.error})` : ""} {exporting.verification.comparisons?.map((c) => `${c.metric}: workbook ${typeof c.workbook === "number" ? c.workbook.toFixed(4) : c.workbook} vs backend ${typeof c.backend === "number" ? c.backend.toFixed(4) : c.backend} ${c.ok ? "✓" : "✗"}`).join(" · ")}</>}
+        </div>
+      )}
       {r.search_status && (
         <div className="panel">
           <h3>Search outcome: {r.search_status}</h3>

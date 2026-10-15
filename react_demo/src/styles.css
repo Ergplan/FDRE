@@ -1308,3 +1308,24 @@ tr.selected td {
 .run-result .table th, .run-result .table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e6eeea; }
 .run-result tr.muted td { color: #889; }
 .run-result pre.mono { font-size: 0.72rem; max-height: 240px; overflow: auto; background: #f3f8f5; padding: 8px; border-radius: 8px; }
+
+/* Platform: history and collaboration */
+.history .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; align-items: center; }
+.history .filters input, .history .filters select { padding: 6px 8px; border: 1px solid #c9d9d3; border-radius: 8px; }
+.history .table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: #fff; border-radius: 12px; }
+.history .table th, .history .table td { text-align: left; padding: 6px; border-bottom: 1px solid #e6eeea; vertical-align: top; }
+.history tr.muted td { color: #777; }
+.history .chip, .collab .chip, .run-result .alert.ok { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e3efe9; font-size: 0.75rem; }
+.history .chip.warn, .collab .chip.warn { background: #fff3d6; }
+.history .mono, .collab .mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.75rem; }
+.collab { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 6px 20px rgba(17,60,52,0.06); }
+.collab .comments { list-style: none; padding: 0; margin: 0 0 10px; }
+.collab .comment { padding: 6px 0; border-bottom: 1px solid #eef3f0; font-size: 0.9rem; }
+.collab .comment.deleted { color: #999; }
+.collab .comment ul { list-style: none; padding: 0; }
+.collab .chip.approved { background: #d7f0e3; } .collab .chip.rejected { background: #fde2e2; } .collab .chip.changes_requested { background: #fff3d6; }
+.collab .composer textarea { width: 100%; padding: 8px; border: 1px solid #c9d9d3; border-radius: 10px; }
+.collab .composer-row { display: flex; gap: 6px; margin-top: 6px; }
+.collab .composer-row select { padding: 5px 8px; border: 1px solid #c9d9d3; border-radius: 8px; }
+.collab .my-tasks ul { padding-left: 16px; font-size: 0.85rem; }
+.run-result .alert.ok { background: #d7f0e3; border: 1px solid #0b7a75; display: block; padding: 10px; border-radius: 10px; }

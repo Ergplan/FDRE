@@ -36,6 +36,8 @@ import WorkspaceBar from "./platform/WorkspaceBar";
 import TenderTab from "./platform/TenderTab";
 import SupplyTab from "./platform/SupplyTab";
 import RunResultPanel from "./platform/RunResultPanel";
+import HistoryTab from "./platform/HistoryTab";
+import CollaborationPanel from "./platform/CollaborationPanel";
 import { auth as platformAuth } from "./platform/api";
 
 async function api(path, body) {
@@ -3432,6 +3434,8 @@ function App() {
     ["project", Settings2, "Project Configuration"],
     ["supply", BatteryCharging, "Supply Modules"],
     ["runResult", TrendingUp, "Run Results"],
+    ["history", Search, "Historical Tenders"],
+    ["collab", MessageCircle, "Tender Chat"],
     ["yield", BarChart3, "Yield Assessment"],
     ["joulewiseReport", FileText, "Joulewise EYA Report"],
     ["finance", CircleDollarSign, "Financial Inputs"],
@@ -3483,7 +3487,9 @@ function App() {
         )}
         {activeTab === "tender" && tenderView === "platform" && <TenderTab org={org} tenderId={tenderId} me={me} />}
         {activeTab === "tender" && tenderView === "legacy" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
-        {activeTab === "runResult" && (platformRun ? <RunResultPanel run={platformRun} /> : <section className="panel"><p className="note">Queue a fixed-tariff evaluation or a bid tariff optimisation from the workspace bar, then open the run from the tray.</p></section>)}
+        {activeTab === "history" && <HistoryTab org={org} />}
+        {activeTab === "collab" && (tenderId ? <CollaborationPanel org={org} tenderId={tenderId} me={me} /> : <section className="panel"><p className="note">Select a tender to open its chat.</p></section>)}
+        {activeTab === "runResult" && (platformRun ? <RunResultPanel run={platformRun} org={org} /> : <section className="panel"><p className="note">Queue a fixed-tariff evaluation or a bid tariff optimisation from the workspace bar, then open the run from the tray.</p></section>)}
         {activeTab === "supply" && <SupplyTab org={org} scenarioId={platformScenario?.id} scenarioRevision={platformScenario?.revision} onSaved={(s) => setPlatformScenario((prev) => (prev ? { ...prev, revision: s.revision, current_input_version: s.current_input_version } : prev))} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}

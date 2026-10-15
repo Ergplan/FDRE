@@ -32,6 +32,9 @@ def main(argv: list[str] | None = None) -> int:
         u.add_argument(flag, required=True)
     sub.add_parser("migrate")
     sub.add_parser("check-integrations")
+    sa = sub.add_parser("seed-awards")
+    sa.add_argument("--path", required=True, help="checkout of Ergplan/RE-tender-results")
+    sa.add_argument("--commit", default="unknown")
     args = parser.parse_args(argv)
     settings = get_settings()
     if args.command == "check-integrations":
@@ -49,6 +52,14 @@ def main(argv: list[str] | None = None) -> int:
             auth.add_membership(session, system_actor(org.id, "bootstrap"), user, "administrator")
             session.commit()
             print(f"organisation {org.slug} ({org.id}) with administrator {user.email}")
+        elif args.command == "seed-awards":
+            import pathlib
+
+            from fdre_platform.services import history
+
+            report = history.import_dataset(session, pathlib.Path(args.path), commit_ref=args.commit)
+            session.commit()
+            print(report)
         elif args.command == "add-user":
             org = session.scalar(select(Organization).where(Organization.slug == args.org_slug))
             if org is None:
