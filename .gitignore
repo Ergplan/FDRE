@@ -28,3 +28,6 @@ htmlcov/
 
 # Platform runtime data (object store) and local databases
 /data/
+
+# staging secrets
+/deploy/.env.staging

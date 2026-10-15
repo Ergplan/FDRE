@@ -1,4 +1,4 @@
-# Operations (Day 1 version; completed on Day 7)
+# Operations
 
 ## Components
 
@@ -60,3 +60,40 @@ Awards are recorded by an approver from a succeeded, non-stale run and are froze
 ## Logs and request tracing
 
 Every API response carries `X-Request-Id` (taken from the request header when present). The same id is stored on every audit event the request wrote, so a user report can be traced to its mutations.
+
+## Staging deployment (Day 7 package, `deploy/`)
+
+| File | Purpose |
+|---|---|
+| `deploy/Dockerfile` | one image for API and worker: node build of the workspace, Python 3.12, LibreOffice (headless calc and writer) for workbook verification and PDF export, HiGHS wheel |
+| `deploy/docker-compose.staging.yml` | `db` (PostgreSQL 16), `api` (serves `/api/v1` and the built workspace), `worker` (replicas via `WORKER_REPLICAS`), `backup` (daily `backup.sh` into a volume), `caddy` (TLS, reverse proxy) |
+| `deploy/Caddyfile`, `deploy/.env.staging.example` | TLS site address and the secrets file template (`deploy/.env.staging` is gitignored) |
+| `deploy/backup.sh`, `deploy/restore.sh` | consistent backup (custom-format `pg_dump` + object-store tar + sha256 sums + manifest) and a checksum-verified restore into an empty database |
+
+```sh
+cp deploy/.env.staging.example deploy/.env.staging   # fill in POSTGRES_PASSWORD, SITE_ADDRESS, keys
+docker compose -f deploy/docker-compose.staging.yml --env-file deploy/.env.staging up -d --build
+docker compose -f deploy/docker-compose.staging.yml run --rm api python -m fdre_platform.cli migrate
+docker compose -f deploy/docker-compose.staging.yml run --rm api python -m fdre_platform.cli bootstrap --org-slug ergplan --org-name Ergplan --admin-email you@org --admin-name Admin --password '...'
+docker compose -f deploy/docker-compose.staging.yml run --rm api python -m fdre_platform.cli seed-awards --path /path/to/RE-tender-results --commit <sha>
+```
+
+The build container had no Docker daemon, so the image build and the compose bring-up are untested there; the same code runs as plain processes (`make api`, `make worker`) and that is what every test and demonstration in `docs/platform/` used.
+
+## Upgrades and migrations
+
+Migrations are reversible Alembic revisions (`migrations/versions/0001`..`0005`); the test suite downgrades to base and upgrades to head on every run, then runs `alembic check`. Upgrade procedure: back up (`deploy/backup.sh`), pull the image, `python -m fdre_platform.cli migrate`, restart `api` and `worker`. Rollback: `alembic downgrade <rev>` then the previous image; data written by the newer tables is lost on downgrade, which is why the backup comes first. Workers finish or lose their lease on restart; a reclaimed job records "lease expired; reclaimed" on the job row.
+
+## Backup and restore
+
+`deploy/backup.sh <dir>` writes `fdre-<UTC stamp>/db.dump`, `objectstore.tar.gz`, `SHA256SUMS`, `MANIFEST`. `deploy/restore.sh <backup-dir> <postgresql://...> <data-dir>` verifies the checksums, refuses a non-empty target database, restores with `pg_restore --exit-on-error` and unpacks the object store. The round trip was exercised on 2026-10-15 against the development database (32 tables, row counts equal, 7 immutability triggers present after restore; a second restore into the same database refused). Restore drills belong in the staging calendar; the `backup` service runs daily.
+
+## Monitoring and incident notes
+
+- `GET /api/v1/health` reports database and tender_engine configuration; the compose healthcheck uses it.
+- Every response carries `X-Request-Id`; audit events store it, so a user report can be joined to the audit trail (`GET /orgs/{org}/audit?...`) and to the API log.
+- Stuck runs: `GET /orgs/{org}/jobs/{id}` shows attempts, lease and last error; cancel through `POST /runs/{id}/cancel`. A job past `max_attempts` stays `failed` with its error.
+- Stale results after an amendment are expected and visible (`stale`, `stale_reason`); the rerun supersedes the old run and both remain readable.
+- Assistant: `provider` on each message says whether answers came from the provider or the recorded fake; proposals that were never confirmed expire and are listed with status `expired`.
+- Disk: the object store grows with documents, workbooks and DPR exports; artifacts are content-addressed and never rewritten.
+

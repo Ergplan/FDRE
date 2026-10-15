@@ -1,0 +1,42 @@
+{
+ "/health": {
+  "median_ms": 2.9,
+  "p95_ms": 3.4,
+  "n": 25
+ },
+ "/orgs/{org}/tenders": {
+  "median_ms": 8.1,
+  "p95_ms": 11.6,
+  "n": 25
+ },
+ "/orgs/{org}/tenders/{tender}/scenarios": {
+  "median_ms": 19.5,
+  "p95_ms": 25.1,
+  "n": 25
+ },
+ "/orgs/{org}/tenders/{tender}/runs": {
+  "median_ms": 52.4,
+  "p95_ms": 60.6,
+  "n": 25
+ },
+ "/orgs/{org}/history/awards": {
+  "median_ms": 13.2,
+  "p95_ms": 14.6,
+  "n": 25
+ },
+ "/orgs/{org}/assistant/knowledge": {
+  "median_ms": 65.5,
+  "p95_ms": 71.0,
+  "n": 25
+ },
+ "/orgs/{org}/tenders/{tender}/timeline": {
+  "median_ms": 9.3,
+  "p95_ms": 16.8,
+  "n": 25
+ },
+ "/orgs/{org}/runs/{run}": {
+  "median_ms": 46.6,
+  "p95_ms": 54.5,
+  "n": 25
+ }
+}

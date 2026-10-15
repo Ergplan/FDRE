@@ -93,7 +93,8 @@ class IngestOut(BaseModel):
 
 
 @router.get("/requirement-catalog")
-def catalog() -> list[dict[str, Any]]:
+def catalog(actor: ActorDep) -> list[dict[str, Any]]:
+    """Shared reference data, still served only to members of the organisation in the path."""
     return [f.__dict__ | {"enum": list(f.enum)} for f in FIELDS]
 
 
