@@ -33,6 +33,7 @@ import {
 import "./styles.css";
 import Login from "./platform/Login";
 import WorkspaceBar from "./platform/WorkspaceBar";
+import TenderTab from "./platform/TenderTab";
 import { auth as platformAuth } from "./platform/api";
 
 async function api(path, body) {
@@ -3108,6 +3109,8 @@ function ReportsTab({ defaults, optimizedResult, customResult, project, settings
 function App() {
   const [me, setMe] = useState(undefined); // undefined: checking; null: signed out
   const [org, setOrg] = useState(null);
+  const [tenderId, setTenderId] = useState("");
+  const [tenderView, setTenderView] = useState("platform");
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3457,11 +3460,20 @@ function App() {
           project={sidebarProject ? JSON.parse(JSON.stringify(sidebarProject)) : null}
           onLogout={() => platformAuth.logout().finally(() => { setMe(null); setOrg(null); })}
           onRunLoaded={showRun}
+          tenderId={tenderId}
+          setTenderId={setTenderId}
         />
         {error && <div className="alert">{error}</div>}
         {loading && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 
-        {activeTab === "tender" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
+        {activeTab === "tender" && (
+          <div className="tender-switch">
+            <button className={tenderView === "platform" ? "active" : ""} onClick={() => setTenderView("platform")}>Tender intelligence (tender_engine)</button>
+            <button className={tenderView === "legacy" ? "active" : ""} onClick={() => setTenderView("legacy")}>Local parse (legacy, browser-only)</button>
+          </div>
+        )}
+        {activeTab === "tender" && tenderView === "platform" && <TenderTab org={org} tenderId={tenderId} me={me} />}
+        {activeTab === "tender" && tenderView === "legacy" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}
         {activeTab === "joulewiseReport" && <JoulewiseReportTab report={defaults?.joulewise_report} customResult={customResult} settings={settings} setSettings={setSettings} />}

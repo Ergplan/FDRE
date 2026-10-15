@@ -11,6 +11,7 @@ PERMISSIONS = (
     "tender.create",
     "tender.read",
     "tender.edit",
+    "requirement.review",  # accept, correct or reject extracted requirements
     "scenario.create",
     "scenario.edit",     # technical inputs
     "scenario.lock",
@@ -29,18 +30,18 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "administrator": _ALL,
     "bid_manager": frozenset(
         {
-            "members.manage", "tender.create", "tender.read", "tender.edit",
+            "members.manage", "tender.create", "tender.read", "tender.edit", "requirement.review",
             "scenario.create", "scenario.edit", "scenario.lock", "finance.edit",
             "run.launch", "run.cancel", "dpr.edit", "comment.write", "audit.read",
         }
     ),
     "engineer": frozenset(
-        {"tender.read", "scenario.create", "scenario.edit", "run.launch", "run.cancel", "dpr.edit", "comment.write"}
+        {"tender.read", "requirement.review", "scenario.create", "scenario.edit", "run.launch", "run.cancel", "dpr.edit", "comment.write"}
     ),
     "finance_reviewer": frozenset(
-        {"tender.read", "scenario.create", "finance.edit", "finance.review", "run.launch", "comment.write", "audit.read"}
+        {"tender.read", "requirement.review", "scenario.create", "finance.edit", "finance.review", "run.launch", "comment.write", "audit.read"}
     ),
-    "approver": frozenset({"tender.read", "bid.approve", "finance.review", "comment.write", "audit.read"}),
+    "approver": frozenset({"tender.read", "requirement.review", "bid.approve", "finance.review", "comment.write", "audit.read"}),
     "viewer": frozenset({"tender.read"}),
 }
 

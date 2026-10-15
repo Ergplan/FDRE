@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from fdre_platform.services.auth import AuthError
 from fdre_platform.services.context import PermissionDenied
+from fdre_platform.services.documents import DuplicateDocument
 from fdre_platform.services.jobs import DuplicateJob
 from fdre_platform.services.tenders import Conflict, NotFound, ValidationFailed
 
@@ -35,3 +36,7 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(DuplicateJob)
     async def _dup(request: Request, exc: DuplicateJob) -> JSONResponse:
         return JSONResponse(status_code=409, content={"error": "idempotency_conflict", "message": "the idempotency key was used with different content"})
+
+    @app.exception_handler(DuplicateDocument)
+    async def _duplicate(request: Request, exc: DuplicateDocument) -> JSONResponse:
+        return JSONResponse(status_code=409, content={"error": "duplicate_document", "message": str(exc), "document_id": exc.document.id, "publication_order": exc.document.publication_order})

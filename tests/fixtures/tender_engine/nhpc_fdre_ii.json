@@ -1,0 +1,1325 @@
+{
+ "_note": "Recorded shapes of tender_engine GET /api/v1/tenders/{id}/view for a two-version FDRE tender (NHPC Tranche-II style). Fixture data, not a live extraction.",
+ "view": {
+  "1": {
+   "tender_id": "fx000000000000000000000000000001",
+   "tender_type": "fdre",
+   "current_version_no": 1,
+   "decided": 16,
+   "total": 60,
+   "fields": [
+    {
+     "field_path": "core.identity.issuing_agency",
+     "label": "Issuing agency",
+     "section": "identity_and_scope",
+     "value_type": "text",
+     "unit": null,
+     "decided": true,
+     "value": "NHPC Limited",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev92617351",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "NHPC Limited invites bids for selection of RE power developers",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.identity.tender_number",
+     "label": "Tender number",
+     "section": "identity_and_scope",
+     "value_type": "text",
+     "unit": null,
+     "decided": true,
+     "value": "NHPC/CP&M/FDRE-II/2024",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev88574678",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "RfS No. NHPC/CP&M/FDRE-II/2024",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.total_capacity_mw",
+     "label": "Capacity",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 1200,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev77221337",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "for supply of 1200 MW Firm and Dispatchable power from ISTS connected Renewable Energy Power Projects coupled with energy storage system",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.min_bid_mw",
+     "label": "Minimum bid",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 50,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev47507453",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 14,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The minimum bid capacity shall be 50 MW",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.max_bid_mw",
+     "label": "Maximum bid",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 600,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev80724826",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 14,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The maximum capacity that can be allotted to a bidder including its affiliates shall be 600 MW",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.ppa_tenure_years",
+     "label": "PPA tenure",
+     "section": "commercial",
+     "value_type": "int",
+     "unit": "years",
+     "decided": true,
+     "value": 25,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev92356369",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 22,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The PPA shall be valid for a period of 25 (twenty five) years from the Scheduled Commissioning Date",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.key_dates.bid_submission_deadline",
+     "label": "Bid submission deadline",
+     "section": "key_dates",
+     "value_type": "date",
+     "unit": null,
+     "decided": true,
+     "value": "2025-03-15",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev2786878",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 3,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "Last date and time for bid submission: 15.03.2025 up to 15:00 hrs",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.demand_profile",
+     "label": "Demand profile",
+     "section": "fdre_profile",
+     "value_type": "long_text",
+     "unit": null,
+     "decided": true,
+     "value": "Contracted capacity to be made available during the four daily peak hours (two in 05:00-10:00 and two in 18:00-23:00) as scheduled by NHPC, with an annual CUF declared by the bidder.",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev79734852",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 180,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The RE Power Developer shall make available the Contracted Capacity during the peak hours as scheduled by NHPC",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.assured_availability_percent",
+     "label": "Assured availability",
+     "section": "fdre_profile",
+     "value_type": "percent",
+     "unit": "percent",
+     "decided": true,
+     "value": 90,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev27233779",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 180,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "minimum availability of 90% of the Contracted Capacity during the peak hours, measured monthly",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.demand_profile_structured",
+     "label": "Demand profile, structured",
+     "section": "fdre_profile",
+     "value_type": "record",
+     "unit": null,
+     "decided": true,
+     "value": {
+      "basis": "availability_pct",
+      "peak_availability_pct": 90,
+      "peak_hours_per_day": 4,
+      "cuf_declared_min_pct": 40,
+      "cuf_band_lower_pct": 85,
+      "cuf_band_upper_pct": 110,
+      "external_sourcing_max_pct": 5
+     },
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev67548708",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 181,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "annual CUF of not less than 40% ... within a range of -15% and +10% of the declared CUF ... up to 5% of the annual energy from other green sources",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.shortfall_compensation_multiple",
+     "label": "Shortfall multiple",
+     "section": "fdre_profile",
+     "value_type": "decimal",
+     "unit": "x tariff",
+     "decided": true,
+     "value": 1.5,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev46458263",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 183,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "the RE Power Developer shall be liable to pay compensation at 1.5 (one point five) times the PPA tariff for the shortfall in energy",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.storage_mandatory",
+     "label": "Storage mandatory",
+     "section": "fdre_profile",
+     "value_type": "bool",
+     "unit": null,
+     "decided": true,
+     "value": true,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev72927957",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "Renewable Energy Power Projects coupled with energy storage system",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.bess_charging_rule",
+     "label": "Storage charging rule",
+     "section": "supply_sources",
+     "value_type": "record",
+     "unit": null,
+     "decided": true,
+     "value": {
+      "re_only": true,
+      "co_located_required": false
+     },
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev36382297",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 185,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The ESS shall be charged only from the renewable energy sources forming part of the project",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.tariff_ceiling_inr_per_kwh",
+     "label": "Ceiling tariff",
+     "section": "commercial",
+     "value_type": "decimal",
+     "unit": "INR per kWh",
+     "decided": true,
+     "value": 4.5,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev82087183",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 30,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The ceiling tariff for the e-reverse auction shall be Rs 4.50/kWh",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "platform.commercial.psm_charge_inr_per_kwh",
+     "label": "PSM charge",
+     "section": "commercial",
+     "value_type": "decimal",
+     "unit": "INR per kWh",
+     "decided": true,
+     "value": 0.02,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev33696604",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 31,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "NHPC shall deduct Rs 0.02/kWh towards payment security mechanism charges",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.guarantees.emd_per_mw_inr",
+     "label": "EMD",
+     "section": "guarantees",
+     "value_type": "decimal",
+     "unit": "INR per MW",
+     "decided": true,
+     "value": 1464000,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev43088927",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 40,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "EMD of Rs 14.64 Lakh per MW for ESS based projects",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    }
+   ]
+  },
+  "2": {
+   "tender_id": "fx000000000000000000000000000001",
+   "tender_type": "fdre",
+   "current_version_no": 2,
+   "decided": 20,
+   "total": 60,
+   "fields": [
+    {
+     "field_path": "core.identity.issuing_agency",
+     "label": "Issuing agency",
+     "section": "identity_and_scope",
+     "value_type": "text",
+     "unit": null,
+     "decided": true,
+     "value": "NHPC Limited",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev92617351",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "NHPC Limited invites bids for selection of RE power developers",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.identity.tender_number",
+     "label": "Tender number",
+     "section": "identity_and_scope",
+     "value_type": "text",
+     "unit": null,
+     "decided": true,
+     "value": "NHPC/CP&M/FDRE-II/2024",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev88574678",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "RfS No. NHPC/CP&M/FDRE-II/2024",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.total_capacity_mw",
+     "label": "Capacity",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 1200,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev77221337",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "for supply of 1200 MW Firm and Dispatchable power from ISTS connected Renewable Energy Power Projects coupled with energy storage system",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.min_bid_mw",
+     "label": "Minimum bid",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 50,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev47507453",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 14,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The minimum bid capacity shall be 50 MW",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.max_bid_mw",
+     "label": "Maximum bid",
+     "section": "identity_and_scope",
+     "value_type": "decimal",
+     "unit": "MW",
+     "decided": true,
+     "value": 600,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev80724826",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 14,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The maximum capacity that can be allotted to a bidder including its affiliates shall be 600 MW",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.ppa_tenure_years",
+     "label": "PPA tenure",
+     "section": "commercial",
+     "value_type": "int",
+     "unit": "years",
+     "decided": true,
+     "value": 25,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev92356369",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 22,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The PPA shall be valid for a period of 25 (twenty five) years from the Scheduled Commissioning Date",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.key_dates.bid_submission_deadline",
+     "label": "Bid submission deadline",
+     "section": "key_dates",
+     "value_type": "date",
+     "unit": null,
+     "decided": true,
+     "value": "2025-03-15",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev2786878",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 3,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "Last date and time for bid submission: 15.03.2025 up to 15:00 hrs",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.demand_profile",
+     "label": "Demand profile",
+     "section": "fdre_profile",
+     "value_type": "long_text",
+     "unit": null,
+     "decided": true,
+     "value": "Contracted capacity to be made available during the four daily peak hours (two in 05:00-10:00 and two in 18:00-23:00) as scheduled by NHPC, with an annual CUF declared by the bidder.",
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev79734852",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 180,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The RE Power Developer shall make available the Contracted Capacity during the peak hours as scheduled by NHPC",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.assured_availability_percent",
+     "label": "Assured availability",
+     "section": "fdre_profile",
+     "value_type": "percent",
+     "unit": "percent",
+     "decided": true,
+     "value": 90,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev27233779",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 180,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "minimum availability of 90% of the Contracted Capacity during the peak hours, measured monthly",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.demand_profile_structured",
+     "label": "Demand profile, structured",
+     "section": "fdre_profile",
+     "value_type": "record",
+     "unit": null,
+     "decided": true,
+     "value": {
+      "basis": "availability_pct",
+      "peak_availability_pct": 90,
+      "peak_hours_per_day": 4,
+      "cuf_declared_min_pct": 40,
+      "cuf_band_lower_pct": 85,
+      "cuf_band_upper_pct": 110,
+      "external_sourcing_max_pct": 5
+     },
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev67548708",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 181,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "annual CUF of not less than 40% ... within a range of -15% and +10% of the declared CUF ... up to 5% of the annual energy from other green sources",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.shortfall_compensation_multiple",
+     "label": "Shortfall multiple",
+     "section": "fdre_profile",
+     "value_type": "decimal",
+     "unit": "x tariff",
+     "decided": true,
+     "value": 1.5,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev46458263",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 183,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "the RE Power Developer shall be liable to pay compensation at 1.5 (one point five) times the PPA tariff for the shortfall in energy",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.storage_mandatory",
+     "label": "Storage mandatory",
+     "section": "fdre_profile",
+     "value_type": "bool",
+     "unit": null,
+     "decided": true,
+     "value": true,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev72927957",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "Renewable Energy Power Projects coupled with energy storage system",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.bess_charging_rule",
+     "label": "Storage charging rule",
+     "section": "supply_sources",
+     "value_type": "record",
+     "unit": null,
+     "decided": true,
+     "value": {
+      "re_only": true,
+      "co_located_required": false
+     },
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev36382297",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 185,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The ESS shall be charged only from the renewable energy sources forming part of the project",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.tariff_ceiling_inr_per_kwh",
+     "label": "Ceiling tariff",
+     "section": "commercial",
+     "value_type": "decimal",
+     "unit": "INR per kWh",
+     "decided": true,
+     "value": 4.5,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev82087183",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 30,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The ceiling tariff for the e-reverse auction shall be Rs 4.50/kWh",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "platform.commercial.psm_charge_inr_per_kwh",
+     "label": "PSM charge",
+     "section": "commercial",
+     "value_type": "decimal",
+     "unit": "INR per kWh",
+     "decided": true,
+     "value": 0.02,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev33696604",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 31,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "NHPC shall deduct Rs 0.02/kWh towards payment security mechanism charges",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.guarantees.emd_per_mw_inr",
+     "label": "EMD",
+     "section": "guarantees",
+     "value_type": "decimal",
+     "unit": "INR per MW",
+     "decided": true,
+     "value": 1464000,
+     "version_no": 1,
+     "version_kind": "original",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev43088927",
+       "document_id": "fx000000000000000000000000000001d1",
+       "page_no": 40,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "EMD of Rs 14.64 Lakh per MW for ESS based projects",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "core.key_dates.bid_submission_deadline",
+     "label": "Bid submission deadline",
+     "section": "key_dates",
+     "value_type": "date",
+     "unit": null,
+     "decided": true,
+     "value": "2025-04-05",
+     "version_no": 2,
+     "version_kind": "amendment",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev2814144",
+       "document_id": "fx000000000000000000000000000001d2",
+       "page_no": 1,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The last date for bid submission stands extended to 05.04.2025 up to 15:00 hrs",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.demand_profile_structured",
+     "label": "Demand profile, structured",
+     "section": "fdre_profile",
+     "value_type": "record",
+     "unit": null,
+     "decided": true,
+     "value": {
+      "cuf_band_lower_pct": 80,
+      "external_sourcing_max_pct": 10
+     },
+     "version_no": 2,
+     "version_kind": "amendment",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev38154610",
+       "document_id": "fx000000000000000000000000000001d2",
+       "page_no": 2,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "the lower limit of the annual CUF band is revised to -20% of the declared CUF and the allowance for energy from other green sources is raised to 10% of the annual energy",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.fdre.assured_availability_percent",
+     "label": "Assured availability",
+     "section": "fdre_profile",
+     "value_type": "percent",
+     "unit": "percent",
+     "decided": true,
+     "value": 90,
+     "version_no": 2,
+     "version_kind": "amendment",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev36061903",
+       "document_id": "fx000000000000000000000000000001d2",
+       "page_no": 2,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "The minimum availability of 90% of the Contracted Capacity during peak hours remains unchanged",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    },
+    {
+     "field_path": "sector.power.common.tariff_ceiling_inr_per_kwh",
+     "label": "Ceiling tariff",
+     "section": "commercial",
+     "value_type": "decimal",
+     "unit": "INR per kWh",
+     "decided": true,
+     "value": null,
+     "version_no": 2,
+     "version_kind": "amendment",
+     "canonical_fact_id": null,
+     "approval_id": null,
+     "effective_at": null,
+     "evidence": [
+      {
+       "id": "ev47945612",
+       "document_id": "fx000000000000000000000000000001d2",
+       "page_no": 3,
+       "bbox": [
+        72.0,
+        400.0,
+        520.0,
+        428.0
+       ],
+       "char_start": null,
+       "char_end": null,
+       "quote": "Clause 5.3 (ceiling tariff) stands deleted",
+       "resolution": "located",
+       "match_score": 1.0,
+       "match_method": "exact",
+       "ordinal": 1,
+       "source": "model"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "review_state": {
+  "object_type": "tender",
+  "object_id": "fx000000000000000000000000000001",
+  "object_version": 1,
+  "run": null,
+  "runs": [],
+  "fields": [],
+  "decided": 0,
+  "total": 0,
+  "required_undecided": 0
+ },
+ "amendments": {
+  "tender_id": "fx000000000000000000000000000001",
+  "title": "NHPC FDRE Tranche-II",
+  "versions": [],
+  "untouched": 0
+ }
+}

@@ -67,7 +67,7 @@ def _finish(session: Session, run: Run, status: str, result: dict[str, Any] | No
     run.error = error
     run.finished_at = datetime.now(UTC)
     session.flush()
-    audit.record(session, system_actor(run.organization_id, "worker"), "run.finish", "run", run.id, after={"status": status, "metrics": run.metrics, "error": (error or "")[:500] or None})
+    audit.record(session, system_actor(run.organization_id, "worker"), "run.finish", "run", run.id, after={"status": status, "metrics": run.metrics, "error": (error or "")[:500] or None}, tender_id=run.tender_id)
     session.commit()
 
 

@@ -1228,3 +1228,35 @@ tr.selected td {
 .run-chip.failed, .run-chip.infeasible { background: #fde2e2; }
 .run-chip.running, .run-chip.queued { background: #fff3d6; }
 .run-chip.stale { outline: 2px dashed #f6b13c; }
+
+/* Platform: tender intelligence */
+.tender-switch { display: flex; gap: 6px; margin: 8px 0 12px; }
+.tender-switch button { padding: 6px 12px; border-radius: 999px; background: #e3efe9; }
+.tender-switch button.active { background: #0b7a75; color: #fff; }
+.tender-intel .tender-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.tender-intel .subnav { display: flex; gap: 4px; flex-wrap: wrap; }
+.tender-intel .subnav button { padding: 5px 10px; border-radius: 8px; background: #fff; border: 1px solid #c9d9d3; text-transform: capitalize; }
+.tender-intel .subnav button.active { background: #0b7a75; color: #fff; border-color: #0b7a75; }
+.tender-intel .panel { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 6px 20px rgba(17,60,52,0.06); margin-bottom: 14px; }
+.tender-intel .table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tender-intel .table th, .tender-intel .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e6eeea; vertical-align: top; }
+.tender-intel .req-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.tender-intel .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e3efe9; font-size: 0.75rem; margin-right: 4px; }
+.tender-intel .chip.warn { background: #fff3d6; }
+.tender-intel .chip.changed, .tender-intel .chip.added { background: #fff3d6; }
+.tender-intel .chip.removed, .tender-intel .chip.rejected { background: #fde2e2; }
+.tender-intel .chip.accepted, .tender-intel .chip.approved, .tender-intel .chip.applied { background: #d7f0e3; }
+.tender-intel .chip.unreviewed, .tender-intel .chip.draft, .tender-intel .chip.open { background: #e8e8f6; }
+.tender-intel .evidence em { display: block; color: #4a6660; font-size: 0.78rem; }
+.tender-intel .actions { white-space: nowrap; }
+.tender-intel .actions button { margin-right: 4px; padding: 4px 8px; font-size: 0.8rem; }
+.tender-intel .correct-form { display: grid; gap: 4px; }
+.tender-intel .correct-form input { padding: 4px 6px; border: 1px solid #c9d9d3; border-radius: 6px; }
+.tender-intel .upload-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.tender-intel .upload-row input, .tender-intel .upload-row select { padding: 6px 8px; border: 1px solid #c9d9d3; border-radius: 8px; }
+.tender-intel .file-button { padding: 7px 12px; border-radius: 9px; background: #e3efe9; cursor: pointer; }
+.tender-intel .summary-group h4 { margin: 12px 0 4px; }
+.tender-intel .timeline, .tender-intel .tasks { list-style: none; padding: 0; margin: 0; }
+.tender-intel .timeline li, .tender-intel .tasks li { padding: 6px 0; border-bottom: 1px solid #e6eeea; font-size: 0.86rem; }
+.tender-intel .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
+.tender-intel tr.change-changed td, .tender-intel tr.change-added td, .tender-intel tr.change-removed td { background: #fffaf0; }

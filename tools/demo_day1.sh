@@ -9,7 +9,7 @@ ADMIN_EMAIL=${ADMIN_EMAIL:-admin@ergplan.test}
 ENG_EMAIL=${ENG_EMAIL:-engineer@ergplan.test}
 PASSWORD=${PASSWORD:-demo-pass-123}
 J='python3 -c'
-json() { python3 -c "import sys,json; d=json.load(sys.stdin); print($1)"; }
+json() { python3 tools/_jq.py "$1"; }
 
 login() { curl -sS "$API/auth/login" -H 'Content-Type: application/json' -d "{\"email\":\"$1\",\"password\":\"$PASSWORD\"}" | json 'd["token"]'; }
 BIDS_EMAIL=${BIDS_EMAIL:-bids@ergplan.test}

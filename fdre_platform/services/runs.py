@@ -61,7 +61,7 @@ def launch(session: Session, settings: Settings, actor: Actor, scenario_id: str,
     job = jobs.enqueue(session, organization_id=actor.organization_id, kind="run", payload={"run_id": run.id}, created_by=actor.user_id, idempotency_key=idempotency_key)
     run.job_id = job.id
     session.flush()
-    audit.record(session, actor, "run.launch", "run", run.id, object_version=version.version_no, after={"kind": kind, "scenario_id": scenario.id, "input_version_id": version.id, "inputs_hash": version.inputs_hash, "job_id": job.id})
+    audit.record(session, actor, "run.launch", "run", run.id, object_version=version.version_no, after={"kind": kind, "scenario_id": scenario.id, "input_version_id": version.id, "inputs_hash": version.inputs_hash, "job_id": job.id}, tender_id=tender.id)
     return run, job
 
 

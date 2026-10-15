@@ -18,7 +18,9 @@ from fdre_platform.db import make_engine, make_session_factory
 from fdre_platform.storage import LocalStorage
 
 from . import errors
-from .routes import auth, health, notifications, orgs, runs, scenarios, tenders
+from fdre_platform.integrations.tender_engine import build_engine
+
+from .routes import auth, health, notifications, orgs, runs, scenarios, tender_intel, tenders
 
 log = logging.getLogger("fdre_platform.api")
 
@@ -31,6 +33,7 @@ def create_app(settings: Settings | None = None, *, mount_legacy: bool = True) -
     app.state.engine = engine
     app.state.session_factory = make_session_factory(engine)
     app.state.storage = LocalStorage(settings.data_dir)
+    app.state.tender_engine = build_engine(settings)
 
     @app.middleware("http")
     async def request_ids(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
@@ -40,7 +43,7 @@ def create_app(settings: Settings | None = None, *, mount_legacy: bool = True) -
         return response
 
     errors.install(app)
-    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router):
+    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router, tender_intel.router):
         app.include_router(router, prefix="/api/v1")
 
     if mount_legacy:

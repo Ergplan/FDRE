@@ -23,6 +23,10 @@ cd react_demo && npm ci && npm run build   # or npm run dev for live reload
 
 Roles: administrator, bid_manager, engineer, finance_reviewer, approver, viewer. The matrix is `fdre_platform/permissions.py`.
 
+## tender_engine
+
+Set `TENDER_ENGINE_URL` (and `TENDER_ENGINE_ADMIN_TOKEN`) to a live instance; the platform talks to it over HTTP only (`fdre_platform/integrations/tender_engine.py`). Without a URL the adapter answers from recorded fixtures and labels everything `fixture`. A local instance for development: clone `Ergplan/tender_engine`, install its `pyproject.toml` dependencies in a separate venv, create a database, run its `alembic upgrade head` and start `uvicorn api.main:create_app --factory --port 8100` with its `DATABASE_URL`, `DATA_DIR`, `TENANT_ID`, `PUBLIC_BASE_URL`, `TENDERS_ROOT` and `ANTHROPIC_API_KEY` set (extraction needs a real key; versions and parsing do not).
+
 ## Checks
 
 - `make test-platform`: 19 tests against `TEST_DATABASE_URL`; the session fixture runs `alembic downgrade base`, `upgrade head` and `alembic check`, so a model change without a migration fails here.

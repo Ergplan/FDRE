@@ -14,6 +14,7 @@ class AuditEvent(IdMixin, OrgMixin, Base):
     """Append-only (database trigger). One row per persisted business mutation."""
 
     __tablename__ = "audit_event"
+    tender_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     actor_user_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     actor_label: Mapped[str] = mapped_column(String(200), nullable=False)
     action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)

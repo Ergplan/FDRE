@@ -5,10 +5,9 @@
 import React, { useEffect, useState } from "react";
 import { orgApi, ApiError } from "./api";
 
-export default function WorkspaceBar({ me, org, setOrg, settings, setSettings, project, onLogout, onRunLoaded }) {
+export default function WorkspaceBar({ me, org, setOrg, settings, setSettings, project, onLogout, onRunLoaded, tenderId, setTenderId }) {
   const api = org ? orgApi(org.id) : null;
   const [tenders, setTenders] = useState([]);
-  const [tenderId, setTenderId] = useState("");
   const [scenarios, setScenarios] = useState([]);
   const [scenario, setScenario] = useState(null);
   const [runs, setRuns] = useState([]);

@@ -33,6 +33,7 @@ def record(
     object_version: int | None = None,
     before: dict[str, Any] | None = None,
     after: dict[str, Any] | None = None,
+    tender_id: str | None = None,
 ) -> AuditEvent:
     event = AuditEvent(
         organization_id=actor.organization_id,
@@ -46,6 +47,7 @@ def record(
         before=scrub(before) if before is not None else None,
         after=scrub(after) if after is not None else None,
         request_id=actor.request_id,
+        tender_id=tender_id,
     )
     session.add(event)
     session.flush()
@@ -58,4 +60,9 @@ def events_for(session: Session, organization_id: str, object_type: str | None =
         stmt = stmt.where(AuditEvent.object_type == object_type)
     if object_id:
         stmt = stmt.where(AuditEvent.object_id == object_id)
+    return list(session.scalars(stmt.order_by(AuditEvent.at.desc(), AuditEvent.id.desc()).limit(limit)))
+
+
+def events_for_tender(session: Session, organization_id: str, tender_id: str, limit: int = 200) -> list[AuditEvent]:
+    stmt = select(AuditEvent).where(AuditEvent.organization_id == organization_id, AuditEvent.tender_id == tender_id)
     return list(session.scalars(stmt.order_by(AuditEvent.at.desc(), AuditEvent.id.desc()).limit(limit)))

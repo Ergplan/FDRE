@@ -56,7 +56,7 @@ def create(session: Session, actor: Actor, tender_id: str, *, name: str, workflo
     scenario = Scenario(organization_id=actor.organization_id, tender_id=tender.id, name=name.strip(), workflow=workflow, description=description, created_by=actor.user_id, updated_by=actor.user_id)
     session.add(scenario)
     session.flush()
-    audit.record(session, actor, "scenario.create", "scenario", scenario.id, object_version=0, after=_dump(scenario))
+    audit.record(session, actor, "scenario.create", "scenario", scenario.id, object_version=0, after=_dump(scenario), tender_id=tender.id)
     if inputs is not None:
         save_inputs(session, actor, scenario.id, expected_revision=0, inputs=inputs, note="initial inputs")
     return scenario
@@ -127,6 +127,7 @@ def save_inputs(session: Session, actor: Actor, scenario_id: str, *, expected_re
         session, actor, "scenario.inputs.save", "scenario", scenario.id, object_version=scenario.revision,
         before={"input_version": current.version_no if current else None, "inputs_hash": current.inputs_hash if current else None},
         after={"input_version": version.version_no, "inputs_hash": version.inputs_hash, "changed_paths": changes, "note": note},
+        tender_id=scenario.tender_id,
     )
     return version
 
