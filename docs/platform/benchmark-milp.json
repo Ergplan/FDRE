@@ -1,0 +1,40 @@
+[
+ {
+  "case": "A_lp_solar_wind_bess_8760h",
+  "status": "optimal",
+  "solver_status": "kOptimal",
+  "variables": 131413,
+  "constraints": 79219,
+  "binaries": 0,
+  "wall_seconds": 3.14,
+  "solver_seconds": 3.135,
+  "objective_inr": -2999844289.3723197,
+  "best_bound_inr": -2999844289.3723197,
+  "gap": 0.0,
+  "peak_rss_mb": 298.1,
+  "certified": "certified",
+  "ppa_gwh": 753.73,
+  "penalty_mwh": 0.0,
+  "peak_ok": true,
+  "annual_cuf": 0.42991420526101065
+ },
+ {
+  "case": "B_milp_plus_biomass_iex_8760h",
+  "status": "optimal",
+  "solver_status": "kOptimal",
+  "variables": 201493,
+  "constraints": 166816,
+  "binaries": 8760,
+  "wall_seconds": 20.91,
+  "solver_seconds": 20.887,
+  "objective_inr": -2999852046.7433896,
+  "best_bound_inr": -2999852046.7433896,
+  "gap": 0.0,
+  "peak_rss_mb": 640.6,
+  "certified": "certified",
+  "ppa_gwh": 753.94,
+  "penalty_mwh": 0.0,
+  "peak_ok": true,
+  "annual_cuf": 0.43003492942871663
+ }
+]

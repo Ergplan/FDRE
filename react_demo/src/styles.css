@@ -1295,3 +1295,16 @@ tr.selected td {
 .supply .profile-form { display: grid; gap: 4px; }
 .supply .profile-form input, .supply .profile-form select { padding: 4px 6px; border: 1px solid #c9d9d3; border-radius: 6px; }
 .supply .file-button { padding: 6px 10px; border-radius: 8px; background: #e3efe9; cursor: pointer; text-align: center; }
+
+/* Platform: run results */
+.run-result .panel { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 6px 20px rgba(17,60,52,0.06); margin-bottom: 14px; }
+.run-result .req-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.run-result .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e3efe9; font-size: 0.75rem; }
+.run-result .chip.warn, .run-result .chip.time_limited { background: #fff3d6; } .run-result .chip.accepted, .run-result .chip.succeeded { background: #d7f0e3; } .run-result .chip.rejected, .run-result .chip.failed, .run-result .chip.infeasible { background: #fde2e2; }
+.run-result .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.run-result .kpi { background: #f3f8f5; border-radius: 10px; padding: 8px 10px; display: grid; }
+.run-result .kpi small { color: #4a6660; } .run-result .kpi strong { font-size: 1.1rem; }
+.run-result .table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.run-result .table th, .run-result .table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e6eeea; }
+.run-result tr.muted td { color: #889; }
+.run-result pre.mono { font-size: 0.72rem; max-height: 240px; overflow: auto; background: #f3f8f5; padding: 8px; border-radius: 8px; }

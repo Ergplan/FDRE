@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base, IdMixin, OrgMixin
 
-RUN_KINDS = ("evaluate", "optimize", "validate")
+RUN_KINDS = ("evaluate", "optimize", "validate", "bid_tariff", "fixed_tariff", "milp_dispatch")
 RUN_STATUSES = ("queued", "running", "succeeded", "infeasible", "time_limited", "failed", "cancelled")
 TERMINAL_RUN_STATUSES = ("succeeded", "infeasible", "time_limited", "failed", "cancelled")
 JOB_STATUSES = ("queued", "running", "done", "failed", "cancelled")

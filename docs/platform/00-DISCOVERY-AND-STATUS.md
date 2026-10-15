@@ -45,7 +45,7 @@ and the day checklists are updated at the end of every day, in the same commit a
 | Amendment impact: diff, draft requirement version, stale flags, notifications, tasks | diff exists in tender_engine; impact mapping, staleness, notifications missing | 2 |
 | Six supply modules with isometric diagrams and loss chains | solar/wind/BESS inputs exist (no thermal, biomass, IEX; no loss chain reconciliation; no diagrams) | 3 |
 | Profile validation (timezone, interval, leap year, duplicates) | missing (synthetic profiles, one CSV path) | 3 |
-| MILP dispatch with commitment, SOC continuity, obligations | missing (greedy dispatch) | 4 |
+| MILP dispatch with commitment, SOC continuity, obligations | done Day 4 (`fdre_platform/optimization`) | 4 |
 | Tariff search over fixed-tariff MILP with validated monotonicity | partial (bisection over greedy dispatch + finance) | 4 |
 | Fixed-tariff investment evaluation (workflow B) | partial (`/api/evaluate` with fixed sizing) | 4 |
 | Independent physical and financial validation | partial (`/api/optimizer/validate` compares to itself) | 4 |
@@ -71,7 +71,7 @@ and the day checklists are updated at the end of every day, in the same commit a
 - [x] **Day 1 — foundation** (done 2026-10-15, `DAY-1-REPORT.md`): package layout, settings, migrations, identity, organisations, memberships, roles, tenders (platform record), scenarios with revision checks, runs + input snapshots, jobs + worker, audit events, notifications table, storage interface, legacy mount, login and workspace bar in the UI, gate tests, Day 1 report.
 - [x] **Day 2 — tender engine and amendments** (done 2026-10-15, `DAY-2-REPORT.md`): adapter, tender documents and amendment chain, requirement versions, rule-set versions, impact mapping, stale flags, notifications, tasks, timeline, gate tests.
 - [x] **Day 3 — supply inputs and isometric flows** (done 2026-10-15, `DAY-3-REPORT.md`): six modules, profiles with validation, loss chains with reconciliation, diagrams, gate tests.
-- [ ] **Day 4 — MILP and both economic workflows**: formulation, tariff search, fixed-tariff evaluation, job controls, independent validation, benchmark, gate tests.
+- [x] **Day 4 — MILP and both economic workflows** (done 2026-10-15, `DAY-4-REPORT.md`, `FORMULATION.md`): formulation, tariff search, fixed-tariff evaluation, job controls, independent validation, benchmark, gate tests.
 - [ ] **Day 5 — financial export, history and collaboration**: formula workbook with LibreOffice recalculation check, historical awards seed and comparables, chat/comments/mentions, concurrent-edit tests.
 - [ ] **Day 6 — chat, voice and DPR**: tool registry, knowledge layer, assistant, RealTalk, DPR workspace, adversarial tests.
 - [ ] **Day 7 — validation and release**: regression, isolation, recovery, performance, deployment package, operations docs, known limitations.

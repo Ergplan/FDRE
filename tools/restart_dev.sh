@@ -12,7 +12,7 @@ for pid in os.listdir("/proc"):
         cmd = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode()
     except Exception:
         continue
-    if cmd.startswith(("python", "/")) and ("uvicorn fdre_platform.api.app" in cmd or "fdre_platform.worker" in cmd) and "restart_dev" not in cmd:
+    if ("uvicorn fdre_platform.api.app" in cmd or "fdre_platform.worker" in cmd) and "restart_dev" not in cmd and "bash" not in cmd:
         os.kill(int(pid), signal.SIGTERM)
         print("stopped", pid, cmd[:60])
 PY

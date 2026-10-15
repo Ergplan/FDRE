@@ -35,6 +35,7 @@ import Login from "./platform/Login";
 import WorkspaceBar from "./platform/WorkspaceBar";
 import TenderTab from "./platform/TenderTab";
 import SupplyTab from "./platform/SupplyTab";
+import RunResultPanel from "./platform/RunResultPanel";
 import { auth as platformAuth } from "./platform/api";
 
 async function api(path, body) {
@@ -3113,6 +3114,7 @@ function App() {
   const [tenderId, setTenderId] = useState("");
   const [tenderView, setTenderView] = useState("platform");
   const [platformScenario, setPlatformScenario] = useState(null);
+  const [platformRun, setPlatformRun] = useState(null);
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3215,6 +3217,7 @@ function App() {
   }, []);
 
   function showRun(run) {
+    if (["bid_tariff", "fixed_tariff", "milp_dispatch"].includes(run.kind)) { setPlatformRun(run); setActiveTab("runResult"); return; }
     if (run.kind === "optimize") setOptimizedResult(run.result);
     else setCustomResult(run.result);
     setActiveTab("results");
@@ -3428,6 +3431,7 @@ function App() {
     ["tender", FileText, "Tender Upload"],
     ["project", Settings2, "Project Configuration"],
     ["supply", BatteryCharging, "Supply Modules"],
+    ["runResult", TrendingUp, "Run Results"],
     ["yield", BarChart3, "Yield Assessment"],
     ["joulewiseReport", FileText, "Joulewise EYA Report"],
     ["finance", CircleDollarSign, "Financial Inputs"],
@@ -3479,6 +3483,7 @@ function App() {
         )}
         {activeTab === "tender" && tenderView === "platform" && <TenderTab org={org} tenderId={tenderId} me={me} />}
         {activeTab === "tender" && tenderView === "legacy" && <TenderUploadTab settings={settings} setSettings={setSettings} />}
+        {activeTab === "runResult" && (platformRun ? <RunResultPanel run={platformRun} /> : <section className="panel"><p className="note">Queue a fixed-tariff evaluation or a bid tariff optimisation from the workspace bar, then open the run from the tray.</p></section>)}
         {activeTab === "supply" && <SupplyTab org={org} scenarioId={platformScenario?.id} scenarioRevision={platformScenario?.revision} onSaved={(s) => setPlatformScenario((prev) => (prev ? { ...prev, revision: s.revision, current_input_version: s.current_input_version } : prev))} />}
         {activeTab === "project" && <ProjectConfigurationTab settings={settings} setSettings={setSettings} result={null} defaults={defaults} project={sidebarProject} />}
         {activeTab === "yield" && <YieldAssessmentTab defaults={defaults} settings={settings} pvsystReports={pvsystReports} setPvsystReports={setPvsystReports} optimizedResult={optimizedResult} />}

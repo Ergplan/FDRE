@@ -32,7 +32,9 @@ Set `TENDER_ENGINE_URL` (and `TENDER_ENGINE_ADMIN_TOKEN`) to a live instance; th
 - `make test-platform`: 19 tests against `TEST_DATABASE_URL`; the session fixture runs `alembic downgrade base`, `upgrade head` and `alembic check`, so a model change without a migration fails here.
 - `make test-engine`: the pre-existing engine and legacy API tests (about 7 minutes).
 - `make check-integrations`: database and migration head, tender_engine reachability (or fixture mode), presence of `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, LibreOffice for workbook recalculation, the MILP solver.
-- `tools/demo_day1.sh`: the Day 1 demonstration against a running API and worker.
+- `tools/restart_dev.sh`: stop and restart the API and worker as background processes (development).
+- `tools/demo_day1.sh`, `demo_day2.sh`, `demo_day4.sh`: the daily demonstrations against a running API and worker.
+- `tools/benchmark_milp.py [seconds]`: the declared MILP benchmark; writes `docs/platform/benchmark-milp.json`.
 - `tools/ui_smoke_day1.py`: Playwright smoke of sign-in, tender and scenario creation, save and sign-out (`CHROMIUM_PATH` optional).
 
 ## Data and immutability

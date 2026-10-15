@@ -65,17 +65,18 @@ export default function WorkspaceBar({ me, org, setOrg, settings, setSettings, p
     const s = await api.createScenario(tenderId, { name: newScenario, inputs: currentInputs() });
     setScenarios((prev) => [s, ...prev]); setNewScenario(""); await loadScenario(s.id);
   }
-  async function launch(kind) {
+  const [tariffInput, setTariffInput] = useState("4.50");
+  async function launch(kind, solverSettings = {}) {
     setBusy("run");
     try {
-      const run = await api.launchRun(scenario.id, kind, {}, `${scenario.id}:${scenario.current_input_version?.id}:${kind}:${Date.now()}`);
+      const run = await api.launchRun(scenario.id, kind, solverSettings, `${scenario.id}:${scenario.current_input_version?.id}:${kind}:${Date.now()}`);
       setRuns((prev) => [run, ...prev]);
       setMessage(`Run ${run.id.slice(0, 8)} queued (job ${run.job?.id.slice(0, 8)})`);
     } catch (err) { setMessage(err.message); } finally { setBusy(""); }
   }
   async function openRun(id) {
     const run = await api.run(id, true);
-    if (run.result) { onRunLoaded(run); setMessage(`Showing run ${id.slice(0, 8)} (${run.status}${run.stale ? ", stale" : ""})`); }
+    if (run.result || ["infeasible", "failed", "time_limited"].includes(run.status)) { onRunLoaded(run); setMessage(`Showing run ${id.slice(0, 8)} (${run.status}${run.stale ? ", stale" : ""})`); }
   }
 
   return (
@@ -102,7 +103,14 @@ export default function WorkspaceBar({ me, org, setOrg, settings, setSettings, p
         {scenario && (can("scenario.edit") || can("finance.edit")) && scenario.status === "draft" && (
           <button className="primary" disabled={busy === "save"} onClick={() => save()}>Save inputs (rev {scenario.revision})</button>
         )}
-        {scenario && can("run.launch") && <button className="secondary" disabled={busy === "run"} onClick={() => launch("evaluate")}>Queue evaluate run</button>}
+        {scenario && can("run.launch") && (
+          <span className="inline-create">
+            <input style={{ width: 70 }} value={tariffInput} onChange={(e) => setTariffInput(e.target.value)} title="Tariff ₹/kWh for the fixed-tariff evaluation" />
+            <button className="secondary" disabled={busy === "run"} onClick={() => launch("fixed_tariff", { tariff: Number(tariffInput), dispatch: "milp", years_mode: settings.yearsMode })}>Evaluate at tariff (B)</button>
+            <button className="primary" disabled={busy === "run"} onClick={() => launch("bid_tariff", { years_mode: settings.yearsMode })}>Optimise bid tariff (A)</button>
+            <button className="link" disabled={busy === "run"} onClick={() => launch("evaluate")}>legacy evaluate</button>
+          </span>
+        )}
         <button className="link" onClick={onLogout}>Sign out</button>
       </div>
       {conflict && (

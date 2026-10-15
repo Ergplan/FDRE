@@ -74,7 +74,7 @@ def _finish(session: Session, run: Run, status: str, result: dict[str, Any] | No
 def _run_engine(run: Run, heartbeat: Heartbeat) -> tuple[dict[str, Any], dict[str, Any], str]:
     E, legacy = _engine_modules()
     inputs = run.snapshot and _inputs_of(run)
-    options = inputs.get("run_options", {}) if isinstance(inputs, dict) else {}
+    options = {**(inputs.get("run_options", {}) if isinstance(inputs, dict) else {}), **((run.snapshot or {}).get("solver_settings") or {})}
     project = legacy._project_from_payload(inputs.get("project"))
     years = legacy._years(options.get("years_mode", "fast"), project)
     custom_cf = _custom_cf(inputs, legacy, options)
@@ -104,6 +104,18 @@ def _run_engine(run: Run, heartbeat: Heartbeat) -> tuple[dict[str, Any], dict[st
         response["optimizer"] = legacy._clean(result.get("optimizer", {}))
         response["mode"] = "capacity_search_legacy"
         extra = {"solver": "highs_lp_seed+candidate_search", "optimality": "screening (not certified)", "gap": None}
+    elif run.kind in ("bid_tariff", "fixed_tariff", "milp_dispatch"):
+        from sqlalchemy.orm import object_session
+
+        from . import runs_milp
+
+        session = object_session(run)
+        assert session is not None
+        response, extra, status = runs_milp.execute(run.kind, inputs, options, session=session, organization_id=run.organization_id, heartbeat=heartbeat)
+        if status == "cancelled":
+            raise RunCancelled()
+        metrics = {"status_reason": extra.pop("status_reason", status), "years_simulated": list(years), **extra}
+        return response, metrics, status
     else:
         raise ValueError(f"run kind {run.kind} has no handler yet")
     tariff = response.get("tariff")
