@@ -1329,3 +1329,26 @@ tr.selected td {
 .collab .composer-row select { padding: 5px 8px; border: 1px solid #c9d9d3; border-radius: 8px; }
 .collab .my-tasks ul { padding-left: 16px; font-size: 0.85rem; }
 .run-result .alert.ok { background: #d7f0e3; border: 1px solid #0b7a75; display: block; padding: 10px; border-radius: 10px; }
+
+/* Day 6: assistant and DPR */
+.assistant { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 6px 20px rgba(17,60,52,0.06); }
+.assistant .chat { list-style: none; padding: 0; margin: 10px 0; max-height: 420px; overflow: auto; }
+.assistant .msg { padding: 8px 10px; margin: 4px 0; border-radius: 10px; font-size: 0.9rem; max-width: 85%; }
+.assistant .msg.user { background: #e3efe9; margin-left: auto; }
+.assistant .msg.assistant { background: #f3f6f4; }
+.assistant .msg.tool { background: transparent; font-size: 0.8rem; max-width: 100%; }
+.assistant .msg pre { white-space: pre-wrap; max-height: 160px; overflow: auto; }
+.assistant .proposals { border: 1px solid #f0d89a; background: #fff8e6; border-radius: 10px; padding: 10px; margin: 8px 0; }
+.assistant .proposal { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 4px 0; }
+.assistant .composer-row { display: flex; gap: 8px; }
+.assistant .composer-row input { flex: 1; padding: 8px 10px; border: 1px solid #c9d9d3; border-radius: 8px; }
+.assistant .chip, .dpr .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e3efe9; font-size: 0.75rem; }
+.assistant .chip.accepted, .dpr .chip.accepted, .dpr .chip.issued { background: #d9f2e2; }
+.assistant .chip.warn, .dpr .chip.warn, .dpr .chip.rejected { background: #fff3d6; }
+.assistant .mono, .dpr .mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.75rem; }
+.dpr .table { width: 100%; border-collapse: collapse; font-size: 0.82rem; background: #fff; }
+.dpr .table th, .dpr .table td { text-align: left; padding: 6px; border-bottom: 1px solid #e6eeea; vertical-align: top; }
+.dpr .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dpr .filters input, .dpr .filters select, .dpr .req-head input { padding: 6px 8px; border: 1px solid #c9d9d3; border-radius: 8px; }
+.dpr .dpr-section { margin: 8px 0; }
+.dpr .dpr-section textarea { width: 100%; padding: 8px; border: 1px solid #c9d9d3; border-radius: 8px; font: inherit; }

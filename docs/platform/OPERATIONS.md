@@ -33,6 +33,14 @@ Seed (idempotent) the historical tender results from a checkout of `Ergplan/RE-t
 
 Workbook exports (`POST /api/v1/orgs/{org}/runs/{run}/workbook`) are verified by recalculating the file with LibreOffice (`soffice` must be in `PATH` on the API host; package `libreoffice-calc`). Without it the artifact is still produced and labelled `verification: unavailable`.
 
+## Assistant and RealTalk voice
+
+`OPENAI_API_KEY` (server only) switches the assistant from the recorded fake to the provider; `OPENAI_CHAT_MODEL` and `OPENAI_REALTIME_MODEL` name the models, `ASSISTANT_PROVIDER=recorded` forces the fake. Every message stores its provider, so a deployment without a key is visible in the data (`provider = recorded`). Voice sessions hand the browser a short-lived provider secret minted by the API; the key itself is never sent. The API refuses any event carrying audio (422) and stores captions and tool calls only; proposals expire after `ASSISTANT_ACTION_TTL_MINUTES`, voice grants after `VOICE_SESSION_TTL_MINUTES`. Tools are listed at `GET /api/v1/orgs/{org}/assistant/tools`; adding one means adding a function in `fdre_platform/assistant/tools.py` with its permission; there is deliberately no delete, SQL or shell tool.
+
+## Post-award DPR
+
+Awards are recorded by an approver from a succeeded, non-stale run and are frozen (database trigger). DPR versions are immutable; PDF export needs LibreOffice (`soffice`) like the workbook verification, DOCX does not.
+
 ## Checks
 
 - `make test-platform`: 19 tests against `TEST_DATABASE_URL`; the session fixture runs `alembic downgrade base`, `upgrade head` and `alembic check`, so a model change without a migration fails here.

@@ -1,0 +1,21 @@
+{
+  "note": "Deterministic stand-in for the OpenAI model when no key is configured. Patterns over the user's message only; $1.. are regex groups, $tender_id / $scenario_id / $revision come from the conversation context. Never reads retrieved content.",
+  "rules": [
+    {"pattern": "create (?:a )?scenario (?:called|named) ['\"]?([^'\"]+?)['\"]?(?: copying (?:from )?([0-9a-f]{32}))?(?: and .*)?$", "tool_calls": [{"tool": "create_scenario", "arguments": {"tender_id": "$tender_id", "name": "$1", "copy_from_scenario_id": "$2"}}], "answer": "Proposing a new scenario."},
+    {"pattern": "launch (?:a )?fixed[ -]tariff (?:run|evaluation)(?: at ([0-9.]+))?.*?(?:on|for) scenario ([0-9a-f]{32})", "tool_calls": [{"tool": "launch_run", "arguments": {"scenario_id": "$2", "kind": "fixed_tariff", "tariff": "$1"}}], "answer": "Proposing a fixed-tariff run."},
+    {"pattern": "launch (?:a )?fixed[ -]tariff (?:run|evaluation)(?: at ([0-9.]+))?", "tool_calls": [{"tool": "launch_run", "arguments": {"scenario_id": "$scenario_id", "kind": "fixed_tariff", "tariff": "$1"}}], "answer": "Proposing a fixed-tariff run on the current scenario."},
+    {"pattern": "(?:optimi[sz]e|find) (?:the )?(?:bid )?tariff.*?scenario ([0-9a-f]{32})", "tool_calls": [{"tool": "launch_run", "arguments": {"scenario_id": "$1", "kind": "bid_tariff"}}], "answer": "Proposing a bid tariff optimisation."},
+    {"pattern": "(?:optimi[sz]e|find) (?:the )?(?:bid )?tariff", "tool_calls": [{"tool": "launch_run", "arguments": {"scenario_id": "$scenario_id", "kind": "bid_tariff"}}], "answer": "Proposing a bid tariff optimisation on the current scenario."},
+    {"pattern": "set ([a-z_.0-9]+) to ([0-9.]+|true|false)(?: on scenario ([0-9a-f]{32}))?", "tool_calls": [{"tool": "set_scenario_setting", "arguments": {"scenario_id": "$3", "path": "$1", "value": "$2", "expected_revision": "$revision"}}], "answer": "Proposing the change."},
+    {"pattern": "(?:post|say|tell the team) ['\"]?(.+?)['\"]? (?:in|to) (?:the )?chat", "tool_calls": [{"tool": "post_comment", "arguments": {"tender_id": "$tender_id", "body": "$1"}}], "answer": "Proposing the chat message."},
+    {"pattern": "(?:summari[sz]e|summary of|what does) (?:the |this )?tender", "tool_calls": [{"tool": "get_tender_summary", "arguments": {"tender_id": "$tender_id"}}], "answer": ""},
+    {"pattern": "list (?:the )?tenders", "tool_calls": [{"tool": "list_tenders", "arguments": {}}], "answer": ""},
+    {"pattern": "list (?:the )?scenarios", "tool_calls": [{"tool": "list_scenarios", "arguments": {"tender_id": "$tender_id"}}], "answer": ""},
+    {"pattern": "list (?:the )?runs", "tool_calls": [{"tool": "list_runs", "arguments": {"tender_id": "$tender_id"}}], "answer": ""},
+    {"pattern": "(?:show|get) (?:the )?result(?:s)? (?:of|for) run ([0-9a-f]{32})", "tool_calls": [{"tool": "get_run_result", "arguments": {"run_id": "$1"}}], "answer": ""},
+    {"pattern": "(?:show|get|describe) scenario ([0-9a-f]{32})", "tool_calls": [{"tool": "get_scenario", "arguments": {"scenario_id": "$1"}}], "answer": ""},
+    {"pattern": "comparable (?:awards|tenders|tariffs)(?: for)?(?: ([0-9.]+) ?mw)?(?: (fdre|hybrid|solar|wind|bess|solar_storage))?", "tool_calls": [{"tool": "historical_comparables", "arguments": {"capacity_mw": "$1", "tender_family": "$2", "storage": true}}], "answer": ""},
+    {"pattern": "my tasks", "tool_calls": [{"tool": "list_my_tasks", "arguments": {"tender_id": "$tender_id"}}], "answer": ""},
+    {"pattern": "^(?:hi|hello|help)\\b", "answer": "Hello. I can summarise the tender, list scenarios and runs, show a run's result, find comparable historical awards, and propose actions (create a scenario, launch a run, post to chat, change a setting) that you confirm. (recorded assistant)"}
+  ]
+}

@@ -52,8 +52,8 @@ and the day checklists are updated at the end of every day, in the same commit a
 | Formula-based Excel model with verified recalculation | missing (static xlsx in `Enterprise_Build/`) | 5 |
 | Historical comparable tenders with units and sources | dataset exists; no ingestion, no comparison | 5 |
 | Chat, threaded comments, mentions, tasks, notifications | missing | 5 |
-| Assistant with server-authorised tool registry; RealTalk voice | missing | 6 |
-| Post-award DPR with frozen baseline, versions, exports | missing | 6 |
+| Assistant with server-authorised tool registry; RealTalk voice | missing (built Day 6; live provider path untested here, recorded model labelled) | 6 |
+| Post-award DPR with frozen baseline, versions, exports | missing (built Day 6) | 6 |
 | Regression, isolation, recovery, performance tests; deployment docs | partial (engine tests only) | 7 |
 
 ## 4. Architecture decisions for the pilot
@@ -73,5 +73,5 @@ and the day checklists are updated at the end of every day, in the same commit a
 - [x] **Day 3 — supply inputs and isometric flows** (done 2026-10-15, `DAY-3-REPORT.md`): six modules, profiles with validation, loss chains with reconciliation, diagrams, gate tests.
 - [x] **Day 4 — MILP and both economic workflows** (done 2026-10-15, `DAY-4-REPORT.md`, `FORMULATION.md`): formulation, tariff search, fixed-tariff evaluation, job controls, independent validation, benchmark, gate tests.
 - [x] **Day 5 — financial export, history and collaboration**: formula workbook with LibreOffice recalculation check, historical awards seed and comparables, chat/comments/mentions, concurrent-edit tests. Report: `DAY-5-REPORT.md`. Full platform suite on 2026-10-15: `pytest tests/platform -q`: 58 passed, 1 skipped (live tender_engine test when no instance is configured) in 145 s.
-- [ ] **Day 6 — chat, voice and DPR**: tool registry, knowledge layer, assistant, RealTalk, DPR workspace, adversarial tests.
+- [x] **Day 6 — chat, voice and DPR**: tool registry, knowledge layer, assistant, RealTalk, DPR workspace, adversarial tests. Report: `DAY-6-REPORT.md`. Full platform suite on 2026-10-15: `pytest tests/platform -q`: 63 passed, 1 skipped (live tender_engine test when no instance is configured) in 164 s.
 - [ ] **Day 7 — validation and release**: regression, isolation, recovery, performance, deployment package, operations docs, known limitations.

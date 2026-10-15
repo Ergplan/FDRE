@@ -13,14 +13,14 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
+from fdre_platform.assistant.llm import build_model
 from fdre_platform.config import Settings, get_settings
 from fdre_platform.db import make_engine, make_session_factory
+from fdre_platform.integrations.tender_engine import build_engine
 from fdre_platform.storage import LocalStorage
 
 from . import errors
-from fdre_platform.integrations.tender_engine import build_engine
-
-from .routes import auth, collab_history, health, notifications, orgs, runs, scenarios, supply, tender_intel, tenders
+from .routes import assistant, auth, collab_history, dpr, health, notifications, orgs, runs, scenarios, supply, tender_intel, tenders
 
 log = logging.getLogger("fdre_platform.api")
 
@@ -34,6 +34,7 @@ def create_app(settings: Settings | None = None, *, mount_legacy: bool = True) -
     app.state.session_factory = make_session_factory(engine)
     app.state.storage = LocalStorage(settings.data_dir)
     app.state.tender_engine = build_engine(settings)
+    app.state.chat_model = build_model(settings)   # OpenAI with the server-side key, or the labelled recorded fake
 
     @app.middleware("http")
     async def request_ids(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
@@ -43,7 +44,7 @@ def create_app(settings: Settings | None = None, *, mount_legacy: bool = True) -
         return response
 
     errors.install(app)
-    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router, tender_intel.router, supply.router, collab_history.router):
+    for router in (health.router, auth.router, orgs.router, tenders.router, scenarios.router, runs.router, notifications.router, tender_intel.router, supply.router, collab_history.router, assistant.router, dpr.router):
         app.include_router(router, prefix="/api/v1")
 
     if mount_legacy:

@@ -30,6 +30,17 @@ class Settings(BaseSettings):
     engine_version: str = "fdre_enterprise_engine@legacy-greedy-1"
     finance_version: str = "financial_model@legacy-1"
     rules_version: str = "nhpc_fdre_rules@legacy-1"
+    # Assistant and RealTalk voice (Day 6). The provider key never leaves the server. With no
+    # key (or assistant_provider=recorded) the deterministic recorded model answers and every
+    # message is labelled provider="recorded".
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_chat_model: str = "gpt-5"
+    openai_realtime_model: str = "gpt-realtime"
+    assistant_provider: str = "auto"          # auto | openai | recorded
+    assistant_fixture: pathlib.Path = REPO_ROOT / "tests" / "fixtures" / "assistant" / "recorded.json"
+    assistant_action_ttl_minutes: int = 30
+    voice_session_ttl_minutes: int = 15
 
 
 def get_settings() -> Settings:
