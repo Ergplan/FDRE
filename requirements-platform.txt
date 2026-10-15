@@ -1,0 +1,10 @@
+sqlalchemy>=2.0.36,<3
+alembic>=1.14,<2
+pydantic-settings>=2.7,<3
+psycopg[binary]>=3.2,<4
+bcrypt>=4.2
+httpx>=0.28,<1
+openpyxl>=3.1
+formulas>=1.2
+highspy>=1.8
+pulp>=2.9

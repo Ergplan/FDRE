@@ -31,6 +31,9 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
+import Login from "./platform/Login";
+import WorkspaceBar from "./platform/WorkspaceBar";
+import { auth as platformAuth } from "./platform/api";
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -3103,6 +3106,8 @@ function ReportsTab({ defaults, optimizedResult, customResult, project, settings
 }
 
 function App() {
+  const [me, setMe] = useState(undefined); // undefined: checking; null: signed out
+  const [org, setOrg] = useState(null);
   const [defaults, setDefaults] = useState(null);
   const [optimizedResult, setOptimizedResult] = useState(null);
   const [customResult, setCustomResult] = useState(null);
@@ -3196,6 +3201,19 @@ function App() {
     reportBessSite: "Bikaner / project PoI",
     technologyOption: "Hybrid",
   });
+
+  useEffect(() => {
+    platformAuth.me().then((who) => { setMe(who); setOrg(who.organizations[0] || null); }).catch(() => setMe(null));
+    const signOut = () => { setMe(null); setOrg(null); };
+    window.addEventListener("fdre:unauthenticated", signOut);
+    return () => window.removeEventListener("fdre:unauthenticated", signOut);
+  }, []);
+
+  function showRun(run) {
+    if (run.kind === "optimize") setOptimizedResult(run.result);
+    else setCustomResult(run.result);
+    setActiveTab("results");
+  }
 
   const sidebarProject = useMemo(() => {
     if (!defaults?.project) return null;
@@ -3417,6 +3435,9 @@ function App() {
     ["reports", Database, "Reports"],
   ];
 
+  if (me === undefined) return <div className="loading"><Loader2 className="spin" size={18} /> Checking session</div>;
+  if (me === null) return <Login onLogin={(who) => { setMe(who); setOrg(who.organizations[0] || null); }} />;
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -3427,6 +3448,16 @@ function App() {
         loading={loading}
       />
       <main>
+        <WorkspaceBar
+          me={me}
+          org={org}
+          setOrg={setOrg}
+          settings={settings}
+          setSettings={setSettings}
+          project={sidebarProject ? JSON.parse(JSON.stringify(sidebarProject)) : null}
+          onLogout={() => platformAuth.logout().finally(() => { setMe(null); setOrg(null); })}
+          onRunLoaded={showRun}
+        />
         {error && <div className="alert">{error}</div>}
         {loading && <div className="loading"><Loader2 className="spin" size={18} /> {loading}</div>}
 

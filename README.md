@@ -1,5 +1,14 @@
 # Enterprise FDRE Optimization Engine
 
+## Enterprise platform (in progress, seven-day pilot build)
+
+`fdre_platform/` adds identity, organisations and roles, durable versioned scenarios,
+immutable runs executed by a background worker, and an audit trail around the existing
+engine and React workspace. Start with `docs/platform/00-DISCOVERY-AND-STATUS.md` (what
+exists, gaps, the seven-day checklist), `docs/platform/OPERATIONS.md` (how to run it) and
+the daily reports `docs/platform/DAY-N-REPORT.md`. `make api`, `make worker`, `make web`,
+`make test-platform`.
+
 ## Developer Handoff
 
 Start with the [Enterprise Development Handoff](docs/enterprise/README.md) for

@@ -1,0 +1,11 @@
+# Lint configuration for the platform package and its tests (the legacy engine files are not linted).
+line-length = 160
+target-version = "py312"
+extend-exclude = ["react_demo", "Enterprise_Build", "app.py", "fdre_*.py", "enterprise_fdre_engine.py", "tools", "migrations/versions"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+"fdre_platform/api/routes/*.py" = ["B008"]  # FastAPI dependency defaults
